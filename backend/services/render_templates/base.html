@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ deck_title }}</title>
+
+    <!-- Reveal.js 核心样式 (本地/离线兼容) -->
+    <link rel="stylesheet" href="./static/reveal.js/dist/reveal.css">
+    <link rel="stylesheet" href="./static/reveal.js/dist/theme/white.css">
+
+    <!-- 自定义样式 -->
+    <link rel="stylesheet" href="./static/css/vocational.css">
+    <link rel="stylesheet" href="./static/css/image-slot.css">
+
+    <style>
+        /* CSS Variables - 从 StyleConfig 动态生成 */
+        :root {
+            {{ css_variables | safe }}
+        }
+
+        /* 渐变背景 */
+        .reveal {
+            background: var(--color-background);
+            background: var(--color-bg-gradient, var(--color-background));
+        }
+
+        /* 毛玻璃卡片效果 (Glassmorphism) */
+        .slide-content,
+        .bullets-container,
+        .content-bullets,
+        .content-steps,
+        .comparison-left,
+        .comparison-right,
+        .grid-item {
+            background: var(--color-surface, rgba(255, 255, 255, 0.8));
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* 深色主题下的毛玻璃调整 */
+        .reveal[data-theme="dark"] .slide-content,
+        .reveal[data-theme="dark"] .bullets-container {
+            background: var(--color-surface, rgba(30, 41, 59, 0.7));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* 图片生成控制面板 */
+        .image-generation-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 9999;
+            min-width: 300px;
+        }
+
+        .image-generation-panel h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .image-generation-panel button {
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .image-generation-panel button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .image-generation-panel button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .progress-container {
+            margin-top: 10px;
+            display: none;
+        }
+
+        .progress-container.visible {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #eee;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .progress-status {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #333;
+            text-align: center;
+        }
+
+        .progress-status.success {
+            color: #27ae60;
+        }
+
+        .progress-status.warning {
+            color: #f39c12;
+        }
+
+        /* 加载动画 */
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 教法环节标签 */
+        .pedagogy-phase-tag {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 12px;
+            background: var(--color-primary);
+            color: white;
+            font-size: 12px;
+            border-radius: 4px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 图片生成状态监控面板 -->
+    <div class="image-generation-panel" id="imagePanel">
+        <h4>📊 智能配图状态</h4>
+        <div style="margin-bottom: 10px;">
+            <button id="generateImagesBtn" onclick="window.parent.postMessage({type: 'START_IMAGE_GENERATION'}, '*')">
+                🚀 开始生成教学配图
+            </button>
+        </div>
+        <div class="progress-container visible" id="imageProgressContainer">
+            <div class="progress-bar">
+                <div class="progress-bar-fill" id="imageProgressBar"></div>
+            </div>
+            <div class="progress-text">
+                <span id="imageProgressText">0 / {{ total_image_slots }}</span>
+                <span id="imageProgressLabel">等待生成...</span>
+            </div>
+            <div class="progress-status" id="imageProgressStatus">点击上方按钮开始生成配图</div>
+        </div>
+    </div>
+
+    <div class="reveal">
+        <div class="slides">
+            {% for slide in slides %}
+            {% include 'slide.html' %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Reveal.js 核心脚本 -->
+    <script src="./static/reveal.js/dist/reveal.js"></script>
+
+    <script>
+        // Reveal.js 配置 (导出友好, 无3D效果)
+        Reveal.initialize({
+            width: 1920,
+            height: 1080,
+            margin: 0.04,
+
+            // 禁用复杂动画
+            transition: 'slide',
+            transitionSpeed: 'default',
+            backgroundTransition: 'fade',
+
+            // 控制选项
+            controls: true,
+            progress: true,
+            center: false,
+            hash: true,
+
+            // 键盘导航
+            keyboard: true,
+            overview: true,
+            touch: true,
+
+            // 无插件
+            plugins: []
+        });
+
+        // 图片状态更新函数 (供父窗口调用)
+        window.updateImageProgress = function(done, total, status) {
+            const progressBar = document.getElementById('imageProgressBar');
+            const progressText = document.getElementById('imageProgressText');
+            const progressStatus = document.getElementById('imageProgressStatus');
+            
+            const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+            progressBar.style.width = percent + '%';
+            progressText.textContent = done + ' / ' + total;
+            progressStatus.textContent = status;
+            
+            if (done === total && total > 0) {
+                progressStatus.classList.add('success');
+            }
+        };
+
+        // 图片加载函数 (供父窗口调用)
+        window.loadImage = function(slotId, imageUrl) {
+            const placeholder = document.querySelector('[data-slot-id="' + slotId + '"]');
+            if (placeholder) {
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                img.style.borderRadius = '8px';
+                placeholder.innerHTML = '';
+                placeholder.appendChild(img);
+            }
+        };
+    </script>
+</body>
+
+</html>

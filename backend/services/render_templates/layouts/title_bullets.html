@@ -1,0 +1,10 @@
+<div class="layout-title-bullets">
+    <h2 class="slide-title">{{ slide.title }}</h2>
+    <div class="bullets-container">
+        <ul class="bullet-list">
+            {% for bullet in slide.bullets %}
+            <li class="bullet-item">{{ bullet }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>

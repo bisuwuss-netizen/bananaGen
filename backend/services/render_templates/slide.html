@@ -1,0 +1,34 @@
+<section 
+    class="slide-{{ slide.layout_id }}" 
+    data-slide-type="{{ slide.slide_type }}"
+    data-page-index="{{ slide.index }}"
+>
+    {% if slide.pedagogy_phase %}
+    <div class="pedagogy-phase-tag">{{ slide.pedagogy_phase }}</div>
+    {% endif %}
+
+    {% if slide.layout_id == 'title_only_center' %}
+    {% include 'layouts/title_only_center.html' %}
+    {% elif slide.layout_id == 'title_bullets' %}
+    {% include 'layouts/title_bullets.html' %}
+    {% elif slide.layout_id == 'title_bullets_right_img' %}
+    {% include 'layouts/title_bullets_right_img.html' %}
+    {% elif slide.layout_id == 'operation_steps' %}
+    {% include 'layouts/operation_steps.html' %}
+    {% elif slide.layout_id == 'concept_comparison' %}
+    {% include 'layouts/concept_comparison.html' %}
+    {% elif slide.layout_id == 'grid_4' %}
+    {% include 'layouts/grid_4.html' %}
+    {% elif slide.layout_id == 'center_visual' %}
+    {% include 'layouts/center_visual.html' %}
+    {% elif slide.layout_id == 'split_vertical' %}
+    {% include 'layouts/split_vertical.html' %}
+    {% elif slide.layout_id == 'timeline_horizontal' %}
+    {% include 'layouts/timeline_horizontal.html' %}
+    {% elif slide.layout_id == 'toc_sidebar_right' %}
+    {% include 'layouts/toc_sidebar_right.html' %}
+    {% else %}
+    <!-- 默认布局 -->
+    {% include 'layouts/title_bullets.html' %}
+    {% endif %}
+</section>

@@ -1,0 +1,16 @@
+<div class="layout-timeline-horizontal">
+    <h2 class="slide-title">{{ slide.title }}</h2>
+    <div class="timeline-container">
+        <div class="timeline-line"></div>
+        <div class="timeline-items">
+            {% for bullet in slide.bullets %}
+            <div class="timeline-item">
+                <div class="timeline-marker">{{ loop.index }}</div>
+                <div class="timeline-content">
+                    <p>{{ bullet }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>

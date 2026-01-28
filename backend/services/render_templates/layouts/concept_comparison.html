@@ -1,0 +1,39 @@
+<div class="layout-concept-comparison">
+    <h2 class="slide-title">{{ slide.title }}</h2>
+    <div class="comparison-left">
+        {% if slide.image_slots and slide.image_slots|length > 0 %}
+        {% set slot = slide.image_slots[0] %}
+        <div class="image-placeholder" data-slot-id="{{ slot.slot_id }}">
+            <div class="placeholder-content">
+                <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21,15 16,10 5,21"/>
+                </svg>
+                <p class="placeholder-text">{{ slot.theme }}</p>
+            </div>
+        </div>
+        {% endif %}
+        {% if slide.bullets and slide.bullets|length > 0 %}
+        <p class="comparison-label">{{ slide.bullets[0] }}</p>
+        {% endif %}
+    </div>
+    <div class="comparison-right">
+        {% if slide.image_slots and slide.image_slots|length > 1 %}
+        {% set slot = slide.image_slots[1] %}
+        <div class="image-placeholder" data-slot-id="{{ slot.slot_id }}">
+            <div class="placeholder-content">
+                <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21,15 16,10 5,21"/>
+                </svg>
+                <p class="placeholder-text">{{ slot.theme }}</p>
+            </div>
+        </div>
+        {% endif %}
+        {% if slide.bullets and slide.bullets|length > 1 %}
+        <p class="comparison-label">{{ slide.bullets[1] }}</p>
+        {% endif %}
+    </div>
+</div>
