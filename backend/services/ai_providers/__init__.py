@@ -290,22 +290,28 @@ class QwenImageProviderAdapter(ImageProvider):
         # 将分辨率和宽高比转换为尺寸
         size = self._get_size_from_params(aspect_ratio, resolution)
         
-        logger.info(f"[QwenAdapter] Generating image with size={size}")
+        logger.info(f"[QwenAdapter] Generating image with size={size}, prompt length={len(prompt)}")
         
         # 调用底层 provider
         result = self._provider.generate(prompt=prompt, size=size)
         
-        if result.get("status") == "success" and result.get("image_url"):
+        logger.info(f"[QwenAdapter] Provider result: status={result.get('status')}, has_url={bool(result.get('image_url'))}")
+        
+        # QwenImageProvider 返回 status="done" 表示成功
+        if result.get("status") == "done" and result.get("image_url"):
             # 下载图片并返回 PIL Image
             try:
+                logger.info(f"[QwenAdapter] Downloading image from URL...")
                 response = requests.get(result["image_url"], timeout=60)
                 response.raise_for_status()
-                return Image.open(BytesIO(response.content))
+                img = Image.open(BytesIO(response.content))
+                logger.info(f"[QwenAdapter] Image downloaded successfully, size={img.size}")
+                return img
             except Exception as e:
                 logger.error(f"[QwenAdapter] Failed to download image: {e}")
                 return None
         else:
-            logger.error(f"[QwenAdapter] Image generation failed: {result.get('error')}")
+            logger.error(f"[QwenAdapter] Image generation failed: status={result.get('status')}, error={result.get('error')}")
             return None
     
     def _get_size_from_params(self, aspect_ratio: str, resolution: str) -> str:
