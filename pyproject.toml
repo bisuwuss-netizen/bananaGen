@@ -25,6 +25,11 @@ dependencies = [
     "jinja2>=3.1.0",
     "requests>=2.31.0",
     "premailer>=3.10.0",  # 可选：CSS 内联化（离线模式）
+    # WebSocket 支持
+    "flask-socketio>=5.3.0",
+    "python-socketio>=5.10.0",
+    "gevent>=23.9.0",
+    "gevent-websocket>=0.10.1",
 ]
 
 [project.optional-dependencies]

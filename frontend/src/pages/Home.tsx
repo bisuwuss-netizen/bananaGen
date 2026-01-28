@@ -1,19 +1,22 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, FileText, FileEdit, ImagePlus, Paperclip, Palette, Lightbulb, Search, Settings, FolderOpen, HelpCircle } from 'lucide-react';
+import { Sparkles, FileText, FileEdit, ImagePlus, Paperclip, Palette, Lightbulb, Search, Settings, FolderOpen, HelpCircle, GraduationCap, Wand2 } from 'lucide-react';
 import { Button, Textarea, Card, useToast, MaterialGeneratorModal, MaterialCenterModal, ReferenceFileList, ReferenceFileSelector, FilePreviewModal, ImagePreviewList, HelpModal } from '@/components/shared';
 import { TemplateSelector, getTemplateFile } from '@/components/shared/TemplateSelector';
+import { VocationalSetup } from '@/components/shared/VocationalSetup';
 import { listUserTemplates, type UserTemplate, uploadReferenceFile, type ReferenceFile, associateFileToProject, triggerFileParse, uploadMaterial, associateMaterialsToProject, listProjects } from '@/api/endpoints';
 import { useProjectStore } from '@/store/useProjectStore';
 import { PRESET_STYLES } from '@/config/presetStyles';
 
 type CreationType = 'idea' | 'outline' | 'description';
+type EditorMode = 'smart' | 'vocational';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
   const { initializeProject, isGlobalLoading } = useProjectStore();
   const { show, ToastContainer } = useToast();
   
+  const [editorMode, setEditorMode] = useState<EditorMode>('smart');
   const [activeTab, setActiveTab] = useState<CreationType>('idea');
   const [content, setContent] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<File | null>(null);
@@ -464,7 +467,11 @@ export const Home: React.FC = () => {
         console.log('No materials to associate');
       }
       
-      if (activeTab === 'idea' || activeTab === 'outline') {
+      // 根据编辑器模式跳转到不同页面
+      if (editorMode === 'vocational') {
+        // 职教模式：跳转到职教编辑器
+        navigate(`/project/${projectId}/vocational`);
+      } else if (activeTab === 'idea' || activeTab === 'outline') {
         navigate(`/project/${projectId}/outline`);
       } else if (activeTab === 'description') {
         // 从描述生成：直接跳到描述生成页（因为已经自动生成了大纲和描述）
@@ -622,42 +629,111 @@ export const Home: React.FC = () => {
           </div>
         </div>
 
+        {/* 模式切换开关 */}
+        <div className="flex items-center justify-center gap-4 mb-6">
+          <button
+            onClick={() => setEditorMode('smart')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+              editorMode === 'smart'
+                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg'
+                : 'bg-white/80 text-gray-600 hover:bg-white border border-gray-200'
+            }`}
+          >
+            <Wand2 size={18} />
+            <span>智能模式</span>
+          </button>
+          
+          <div className="relative">
+            <div
+              className={`w-14 h-7 rounded-full transition-colors cursor-pointer ${
+                editorMode === 'vocational' ? 'bg-blue-500' : 'bg-gray-300'
+              }`}
+              onClick={() => setEditorMode(editorMode === 'smart' ? 'vocational' : 'smart')}
+            >
+              <div
+                className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                  editorMode === 'vocational' ? 'translate-x-7' : 'translate-x-0.5'
+                }`}
+              />
+            </div>
+          </div>
+          
+          <button
+            onClick={() => setEditorMode('vocational')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+              editorMode === 'vocational'
+                ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg'
+                : 'bg-white/80 text-gray-600 hover:bg-white border border-gray-200'
+            }`}
+          >
+            <GraduationCap size={18} />
+            <span>职教模式</span>
+          </button>
+        </div>
+        
+        {/* 模式说明 */}
+        <div className="text-center mb-6">
+          <p className="text-sm text-gray-500">
+            {editorMode === 'smart' 
+              ? '✨ 智能模式：AI 生成完整页面图片，适合演示展示'
+              : '📚 职教模式：模板化渲染，支持编辑导出 PPTX，适合教学课件'
+            }
+          </p>
+        </div>
+
         {/* 创建卡片 */}
         <Card className="p-4 md:p-10 bg-white/90 backdrop-blur-xl shadow-2xl border-0 hover:shadow-3xl transition-all duration-300">
-          {/* 选项卡 */}
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-6 md:mb-8">
-            {(Object.keys(tabConfig) as CreationType[]).map((type) => {
-              const config = tabConfig[type];
-              return (
-                <button
-                  key={type}
-                  onClick={() => setActiveTab(type)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-6 py-2.5 md:py-3 rounded-lg font-medium transition-all text-sm md:text-base touch-manipulation ${
-                    activeTab === type
-                      ? 'bg-gradient-to-r from-banana-500 to-banana-600 text-black shadow-yellow'
-                      : 'bg-white border border-gray-200 text-gray-700 hover:bg-banana-50 active:bg-banana-100'
-                  }`}
-                >
-                  <span className="scale-90 md:scale-100">{config.icon}</span>
-                  <span className="truncate">{config.label}</span>
-                </button>
-              );
-            })}
-          </div>
+          {/* ===== 智能模式内容 ===== */}
+          {editorMode === 'smart' && (
+            <>
+              {/* 选项卡 */}
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-6 md:mb-8">
+                {(Object.keys(tabConfig) as CreationType[]).map((type) => {
+                  const config = tabConfig[type];
+                  return (
+                    <button
+                      key={type}
+                      onClick={() => setActiveTab(type)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-6 py-2.5 md:py-3 rounded-lg font-medium transition-all text-sm md:text-base touch-manipulation ${
+                        activeTab === type
+                          ? 'bg-gradient-to-r from-banana-500 to-banana-600 text-black shadow-yellow'
+                          : 'bg-white border border-gray-200 text-gray-700 hover:bg-banana-50 active:bg-banana-100'
+                      }`}
+                    >
+                      <span className="scale-90 md:scale-100">{config.icon}</span>
+                      <span className="truncate">{config.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
 
-          {/* 描述 */}
-          <div className="relative">
-            <p className="text-sm md:text-base mb-4 md:mb-6 leading-relaxed">
-              <span className="inline-flex items-center gap-2 text-gray-600">
-                <Lightbulb size={16} className="text-banana-600 flex-shrink-0" />
-                <span className="font-semibold">
-                  {tabConfig[activeTab].description}
-                </span>
-              </span>
-            </p>
-          </div>
+              {/* 描述 */}
+              <div className="relative">
+                <p className="text-sm md:text-base mb-4 md:mb-6 leading-relaxed">
+                  <span className="inline-flex items-center gap-2 text-gray-600">
+                    <Lightbulb size={16} className="text-banana-600 flex-shrink-0" />
+                    <span className="font-semibold">
+                      {tabConfig[activeTab].description}
+                    </span>
+                  </span>
+                </p>
+              </div>
+            </>
+          )}
+          
+          {/* ===== 职教模式内容 ===== */}
+          {editorMode === 'vocational' && (
+            <VocationalSetup
+              onConfigChange={(config) => {
+                // 存储职教配置
+                console.log('职教配置变更:', config);
+              }}
+              className="mb-6"
+            />
+          )}
 
-          {/* 输入区 - 带按钮 */}
+          {/* 智能模式：输入区 - 带按钮 */}
+          {editorMode === 'smart' && (
           <div className="relative mb-2 group">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-banana-400 to-orange-400 rounded-lg opacity-0 group-hover:opacity-20 blur transition-opacity duration-300"></div>
             <Textarea
@@ -698,6 +774,7 @@ export const Home: React.FC = () => {
               </Button>
             </div>
           </div>
+          )}
 
           {/* 隐藏的文件输入 */}
           <input
@@ -725,7 +802,7 @@ export const Home: React.FC = () => {
             className="mb-4"
           />
 
-          {/* 模板选择 */}
+          {/* 智能模式：模板选择 */}
           <div className="mb-6 md:mb-8 pt-4 border-t border-gray-100">
             <div className="flex items-center justify-between mb-3 md:mb-4">
               <div className="flex items-center gap-2">
@@ -831,6 +908,37 @@ export const Home: React.FC = () => {
               />
             )}
           </div>
+          
+          {/* 职教模式：输入大纲 */}
+          {editorMode === 'vocational' && (
+            <div className="space-y-4">
+              {/* 大纲输入 */}
+              <div className="relative">
+                <Textarea
+                  ref={textareaRef}
+                  placeholder="输入课程主题或粘贴大纲内容...&#10;&#10;例如：&#10;数控车床基础操作培训&#10;&#10;或：&#10;第一部分：数控车床概述&#10;- 数控车床的定义与特点&#10;- 主要组成部分&#10;&#10;第二部分：安全操作规程&#10;- 操作前检查&#10;- 安全注意事项"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  onPaste={handlePaste}
+                  rows={8}
+                  className="text-sm md:text-base border-2 border-gray-200 focus:border-blue-400 transition-colors duration-200"
+                />
+              </div>
+              
+              {/* 开始按钮 */}
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleSubmit}
+                  loading={isGlobalLoading}
+                  disabled={!content.trim()}
+                  className="px-6"
+                >
+                  <GraduationCap size={18} className="mr-2" />
+                  进入职教编辑器
+                </Button>
+              </div>
+            </div>
+          )}
 
         </Card>
       </main>

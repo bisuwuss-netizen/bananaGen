@@ -1070,6 +1070,33 @@ export const renderHTML = async (
 };
 
 /**
+ * 渲染 HTML 预览并返回预览 URL
+ * @param projectId 项目ID
+ * @param templateId 模板ID
+ * @param pedagogyMethod 教法模式
+ */
+export const renderHtmlPreview = async (
+  projectId: string,
+  templateId: string,
+  pedagogyMethod: string
+): Promise<ApiResponse<{
+  html_url: string;
+  html_content?: string;
+  image_slots: ImageSlotRequest[];
+  layouts_used: Record<string, number>;
+  total_pages: number;
+}>> => {
+  const response = await apiClient.post<ApiResponse<any>>(
+    `/api/projects/${projectId}/render/html-preview`,
+    {
+      template_id: templateId,
+      pedagogy_method: pedagogyMethod
+    }
+  );
+  return response.data;
+};
+
+/**
  * 启动图片插槽生成任务
  * @param projectId 项目ID
  * @param imageSlots 图片插槽列表
@@ -1127,6 +1154,74 @@ export const exportTemplatePPTX = async (
     {
       template_id: templateId || 'theory_professional',
       image_paths: imagePaths || {}
+    }
+  );
+  return response.data;
+};
+
+/**
+ * 单图重绘（独立计费）
+ * @param projectId 项目ID
+ * @param slotId 插槽ID
+ * @param slotData 插槽数据
+ * @param subject 学科领域
+ */
+export const regenerateSingleSlot = async (
+  projectId: string,
+  slotId: string,
+  slotData: ImageSlotRequest,
+  subject?: string
+): Promise<ApiResponse<{ task_id: string; status: string; slot_id: string; billing: string }>> => {
+  const response = await apiClient.post<ApiResponse<any>>(
+    `/api/projects/${projectId}/render/regenerate-slot/${slotId}`,
+    {
+      slot_data: slotData,
+      subject: subject || '职业教育'
+    }
+  );
+  return response.data;
+};
+
+/**
+ * 上传替换图片（临时缓存）
+ * @param projectId 项目ID
+ * @param slotId 插槽ID
+ * @param file 图片文件
+ */
+export const uploadSlotImage = async (
+  projectId: string,
+  slotId: string,
+  file: File
+): Promise<ApiResponse<{ slot_id: string; image_path: string; image_url: string; storage: string }>> => {
+  const formData = new FormData();
+  formData.append('image', file);
+  
+  const response = await apiClient.post<ApiResponse<any>>(
+    `/api/projects/${projectId}/render/upload-slot-image/${slotId}`,
+    formData
+  );
+  return response.data;
+};
+
+/**
+ * 批量重绘（带确认）
+ * @param projectId 项目ID
+ * @param slotIds 插槽ID列表
+ * @param slotsData 插槽数据映射
+ * @param subject 学科领域
+ */
+export const batchRegenerateSlots = async (
+  projectId: string,
+  slotIds: string[],
+  slotsData: Record<string, ImageSlotRequest>,
+  subject?: string
+): Promise<ApiResponse<{ task_id: string; status: string; total_slots: number; billing: string }>> => {
+  const response = await apiClient.post<ApiResponse<any>>(
+    `/api/projects/${projectId}/render/batch-regenerate`,
+    {
+      slot_ids: slotIds,
+      slots_data: slotsData,
+      subject: subject || '职业教育'
     }
   );
   return response.data;

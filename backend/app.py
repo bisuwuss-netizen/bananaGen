@@ -40,6 +40,14 @@ from controllers.reference_file_controller import reference_file_bp
 from controllers.settings_controller import settings_bp
 from controllers import project_bp, page_bp, template_bp, user_template_bp, export_bp, file_bp, render_bp
 
+# WebSocket 支持（可选）
+try:
+    from services.websocket_service import init_socketio, socketio
+    WEBSOCKET_ENABLED = True
+except ImportError:
+    WEBSOCKET_ENABLED = False
+    socketio = None
+
 
 # Enable SQLite WAL mode for all connections
 @event.listens_for(Engine, "connect")
@@ -124,6 +132,14 @@ def create_app():
     app.register_blueprint(reference_file_bp, url_prefix='/api/reference-files')
     app.register_blueprint(settings_bp)
     app.register_blueprint(render_bp)  # 模板化渲染相关 API
+
+    # 初始化 WebSocket（如果可用）
+    if WEBSOCKET_ENABLED:
+        try:
+            init_socketio(app)
+            logging.info("WebSocket (SocketIO) 初始化成功")
+        except Exception as e:
+            logging.warning(f"WebSocket 初始化失败（可选功能）: {e}")
 
     # #region agent log - Request/Response logging middleware
     @app.before_request
