@@ -237,37 +237,52 @@ def get_outline_generation_prompt(project_context: 'ProjectContext', language: s
     """
     files_xml = _format_reference_files_xml(project_context.reference_files_content)
     idea_prompt = project_context.idea_prompt or ""
+    practice_ratio = getattr(project_context, 'practice_ratio', 0.5)
+    
+    # 计算理论和实训的比例说明
+    theory_percent = int((1 - practice_ratio) * 100)
+    practice_percent = int(practice_ratio * 100)
+    
+    if practice_ratio < 0.3:
+        ratio_instruction = f"This is a THEORY-FOCUSED course ({theory_percent}% theory, {practice_percent}% practice). Most pages should be 'theory' type with conceptual content. Only include a few 'practice' pages for demonstrations."
+    elif practice_ratio > 0.7:
+        ratio_instruction = f"This is a PRACTICE-FOCUSED course ({theory_percent}% theory, {practice_percent}% practice). Most pages should be 'practice' type with hands-on exercises and case studies. Include minimal 'theory' pages for essential concepts."
+    else:
+        ratio_instruction = f"This is a BALANCED course ({theory_percent}% theory, {practice_percent}% practice). Balance 'theory' and 'practice' pages appropriately."
     
     prompt = (f"""\
-You are a helpful assistant that generates an outline for a ppt.
+You are a helpful assistant that generates an outline for a vocational education PPT.
 
-You can organize the content in two ways:
+IMPORTANT: This is a vocational/technical training course. You MUST organize content using the part-based format with "theory" and "practice" parts:
 
-1. Simple format (for short PPTs without major sections):
-[{{"title": "title1", "points": ["point1", "point2"]}}, {{"title": "title2", "points": ["point1", "point2"]}}]
-
-2. Part-based format (for longer PPTs with major sections):
 [
     {{
-    "part": "Part 1: Introduction",
+    "part": "theory",
     "pages": [
-        {{"title": "Welcome", "points": ["point1", "point2"]}},
-        {{"title": "Overview", "points": ["point1", "point2"]}}
+        {{"title": "Concept Overview", "points": ["key concept 1", "key concept 2"]}},
+        {{"title": "Theoretical Foundation", "points": ["principle 1", "principle 2"]}}
     ]
     }},
     {{
-    "part": "Part 2: Main Content",
+    "part": "practice", 
     "pages": [
-        {{"title": "Topic 1", "points": ["point1", "point2"]}},
-        {{"title": "Topic 2", "points": ["point1", "point2"]}}
+        {{"title": "Hands-on Exercise 1", "points": ["step 1", "step 2"]}},
+        {{"title": "Case Study", "points": ["scenario", "solution"]}}
     ]
     }}
 ]
 
-Choose the format that best fits the content. Use parts when the PPT has clear major sections.
-Unless otherwise specified, the first page should be kept simplest, containing only the title, subtitle, and presenter information.
+CONTENT RATIO REQUIREMENT:
+{ratio_instruction}
 
-The user's request: {idea_prompt}. Now generate the outline, don't include any other text.
+Rules:
+1. ALWAYS use the part-based format with "part": "theory" or "part": "practice"
+2. "theory" pages cover: concepts, principles, definitions, background knowledge
+3. "practice" pages cover: exercises, case studies, demonstrations, hands-on activities, real-world applications
+4. The first page should be kept simple (title, subtitle, presenter info only)
+5. Ensure the ratio of theory vs practice pages matches the requirement above
+
+The user's request: {idea_prompt}. Now generate the outline following the format above.
 {get_language_instruction(language)}
 """)
     

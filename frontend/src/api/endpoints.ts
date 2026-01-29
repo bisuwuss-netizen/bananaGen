@@ -104,12 +104,16 @@ export const updatePagesOrder = async (
  * 生成大纲
  * @param projectId 项目ID
  * @param language 输出语言（可选，默认从 sessionStorage 获取）
+ * @param practiceRatio 实训比例 0-100（可选）
  */
-export const generateOutline = async (projectId: string, language?: OutputLanguage): Promise<ApiResponse> => {
+export const generateOutline = async (projectId: string, language?: OutputLanguage, practiceRatio?: number): Promise<ApiResponse> => {
   const lang = language || await getStoredOutputLanguage();
   const response = await apiClient.post<ApiResponse>(
     `/api/projects/${projectId}/generate/outline`,
-    { language: lang }
+    { 
+      language: lang,
+      practice_ratio: practiceRatio !== undefined ? practiceRatio / 100 : undefined  // 转换为 0-1
+    }
   );
   return response.data;
 };

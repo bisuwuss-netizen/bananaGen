@@ -18,11 +18,11 @@ def serve_file(project_id, file_type, filename):
     
     Args:
         project_id: Project UUID
-        file_type: 'template' or 'pages'
+        file_type: 'template', 'pages', 'html_output', etc.
         filename: File name
     """
     try:
-        if file_type not in ['template', 'pages', 'materials', 'exports']:
+        if file_type not in ['template', 'pages', 'materials', 'exports', 'html_output', 'export']:
             return not_found('File')
         
         # Construct file path

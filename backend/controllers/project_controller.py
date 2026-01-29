@@ -349,7 +349,8 @@ def generate_outline(project_id):
     Request body (optional):
     {
         "idea_prompt": "...",  # for idea type
-        "language": "zh"  # output language: zh, en, ja, auto
+        "language": "zh",  # output language: zh, en, ja, auto
+        "practice_ratio": 0.5  # 实训比例 0-1 (0=纯理论, 1=纯实训)
     }
     """
     try:
@@ -364,6 +365,7 @@ def generate_outline(project_id):
         # Get request data and language parameter
         data = request.get_json() or {}
         language = data.get('language', current_app.config.get('OUTPUT_LANGUAGE', 'zh'))
+        practice_ratio = data.get('practice_ratio', 0.5)  # 默认 50% 实训
         
         # Get reference files content and create project context
         reference_files_content = _get_project_reference_files_content(project_id)
@@ -396,7 +398,7 @@ def generate_outline(project_id):
             project.idea_prompt = idea_prompt
             
             # Create project context and generate outline from idea
-            project_context = ProjectContext(project, reference_files_content)
+            project_context = ProjectContext(project, reference_files_content, practice_ratio=practice_ratio)
             outline = ai_service.generate_outline(project_context, language=language)
         
         # Flatten outline to pages

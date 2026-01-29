@@ -32,11 +32,13 @@ logger = logging.getLogger(__name__)
 class ProjectContext:
     """项目上下文数据类，统一管理 AI 需要的所有项目信息"""
     
-    def __init__(self, project_or_dict, reference_files_content: Optional[List[Dict[str, str]]] = None):
+    def __init__(self, project_or_dict, reference_files_content: Optional[List[Dict[str, str]]] = None, 
+                 practice_ratio: float = 0.5):
         """
         Args:
             project_or_dict: 项目对象（Project model）或项目字典（project.to_dict()）
             reference_files_content: 参考文件内容列表
+            practice_ratio: 实训比例 0-1 (0=纯理论, 1=纯实训)
         """
         # 支持直接传入 Project 对象，避免 to_dict() 调用，提升性能
         if hasattr(project_or_dict, 'idea_prompt'):
@@ -53,6 +55,7 @@ class ProjectContext:
             self.creation_type = project_or_dict.get('creation_type', 'idea')
         
         self.reference_files_content = reference_files_content or []
+        self.practice_ratio = practice_ratio  # 实训比例
     
     def to_dict(self) -> Dict:
         """转换为字典，方便传递"""
@@ -61,7 +64,8 @@ class ProjectContext:
             'outline_text': self.outline_text,
             'description_text': self.description_text,
             'creation_type': self.creation_type,
-            'reference_files_content': self.reference_files_content
+            'reference_files_content': self.reference_files_content,
+            'practice_ratio': self.practice_ratio
         }
 
 
