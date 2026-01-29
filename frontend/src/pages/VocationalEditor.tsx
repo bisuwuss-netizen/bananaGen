@@ -208,8 +208,8 @@ export const VocationalEditor: React.FC = () => {
     setGlobalTaskMessage('正在生成大纲结构，请稍候...');
     
     try {
-      // 传递实训比例参数
-      const response = await api.generateOutline(projectId, undefined, practiceRatio);
+      // 传递实训比例和教学法参数
+      const response = await api.generateOutline(projectId, undefined, practiceRatio, selectedPedagogy);
       
       if (response.data?.pages) {
         const vocationalPages = response.data.pages.map((page: any) => ({
@@ -240,7 +240,7 @@ export const VocationalEditor: React.FC = () => {
       setIsGeneratingOutline(false);
       setGlobalTaskMessage(null);
     }
-  }, [projectId, setPages, syncProject, show, autoGeneratePreview, practiceRatio]);
+  }, [projectId, setPages, syncProject, show, autoGeneratePreview, practiceRatio, selectedPedagogy]);
   
   // 步骤2：生成页面描述
   const handleGenerateDescriptions = useCallback(async () => {
@@ -671,14 +671,26 @@ export const VocationalEditor: React.FC = () => {
             {WORKFLOW_STEPS.map((step, index) => {
               const isCompleted = completedSteps.has(step.id);
               const isCurrent = currentStep === step.id;
+              // 允许点击：已完成的步骤 OR 第一个步骤 OR 前一个步骤已完成
               const isClickable = !isAnyTaskRunning && (isCompleted || 
                 (index === 0) ||
                 (index > 0 && completedSteps.has(WORKFLOW_STEPS[index - 1].id)));
               
+              // #region agent log
+              if (step.id === 'outline' || step.id === 'descriptions') {
+                fetch('http://127.0.0.1:7243/ingest/01d1cac3-0eb2-4c61-bad6-08450f86d57b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VocationalEditor.tsx:nav:render',message:'Nav button render',data:{stepId:step.id,index,isCompleted,isCurrent,isClickable,isAnyTaskRunning,completedStepsArray:Array.from(completedSteps)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'NAV'})}).catch(()=>{});
+              }
+              // #endregion
+              
               return (
                 <React.Fragment key={step.id}>
                   <button
-                    onClick={() => isClickable && setCurrentStep(step.id)}
+                    onClick={() => {
+                      // #region agent log
+                      fetch('http://127.0.0.1:7243/ingest/01d1cac3-0eb2-4c61-bad6-08450f86d57b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'VocationalEditor.tsx:nav:click',message:'Nav button clicked',data:{stepId:step.id,isClickable,willChange:isClickable},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'NAV'})}).catch(()=>{});
+                      // #endregion
+                      if (isClickable) setCurrentStep(step.id);
+                    }}
                     disabled={!isClickable}
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
                       isCurrent 
@@ -752,6 +764,7 @@ export const VocationalEditor: React.FC = () => {
                 value={practiceRatio}
                 onChange={handleRatioChange}
                 step={5}
+                totalPages={pages.length > 0 ? pages.length : 10}
               />
             </section>
             
@@ -892,6 +905,44 @@ export const VocationalEditor: React.FC = () => {
             {/* 页码信息 */}
             <div className="text-sm text-gray-500">
               第 {currentPageIndex + 1} / {pages.length || 0} 页
+            </div>
+          </div>
+          
+          {/* 当前步骤提示条 */}
+          <div className={`px-4 py-2 border-b transition-all ${
+            currentStep === 'outline' ? 'bg-blue-50 border-blue-200' :
+            currentStep === 'descriptions' ? 'bg-purple-50 border-purple-200' :
+            currentStep === 'images' ? 'bg-green-50 border-green-200' :
+            'bg-orange-50 border-orange-200'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-medium ${
+                  currentStep === 'outline' ? 'text-blue-700' :
+                  currentStep === 'descriptions' ? 'text-purple-700' :
+                  currentStep === 'images' ? 'text-green-700' :
+                  'text-orange-700'
+                }`}>
+                  {WORKFLOW_STEPS.find(s => s.id === currentStep)?.label}
+                </span>
+                <span className="text-xs text-gray-500">
+                  {WORKFLOW_STEPS.find(s => s.id === currentStep)?.description}
+                </span>
+              </div>
+              {/* 步骤进度指示 */}
+              <div className="flex items-center gap-1">
+                {WORKFLOW_STEPS.map((step, idx) => (
+                  <div 
+                    key={step.id}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      completedSteps.has(step.id) ? 'bg-green-500' :
+                      currentStep === step.id ? 'bg-blue-500 animate-pulse' :
+                      'bg-gray-300'
+                    }`}
+                    title={step.label}
+                  />
+                ))}
+              </div>
             </div>
           </div>
           

@@ -33,12 +33,13 @@ class ProjectContext:
     """项目上下文数据类，统一管理 AI 需要的所有项目信息"""
     
     def __init__(self, project_or_dict, reference_files_content: Optional[List[Dict[str, str]]] = None, 
-                 practice_ratio: float = 0.5):
+                 practice_ratio: float = 0.5, pedagogy_method: str = 'five_step'):
         """
         Args:
             project_or_dict: 项目对象（Project model）或项目字典（project.to_dict()）
             reference_files_content: 参考文件内容列表
             practice_ratio: 实训比例 0-1 (0=纯理论, 1=纯实训)
+            pedagogy_method: 教法模式 ID (如 'five_step', 'action_oriented' 等)
         """
         # 支持直接传入 Project 对象，避免 to_dict() 调用，提升性能
         if hasattr(project_or_dict, 'idea_prompt'):
@@ -56,6 +57,7 @@ class ProjectContext:
         
         self.reference_files_content = reference_files_content or []
         self.practice_ratio = practice_ratio  # 实训比例
+        self.pedagogy_method = pedagogy_method  # 教法模式
     
     def to_dict(self) -> Dict:
         """转换为字典，方便传递"""
@@ -65,7 +67,8 @@ class ProjectContext:
             'description_text': self.description_text,
             'creation_type': self.creation_type,
             'reference_files_content': self.reference_files_content,
-            'practice_ratio': self.practice_ratio
+            'practice_ratio': self.practice_ratio,
+            'pedagogy_method': self.pedagogy_method
         }
 
 

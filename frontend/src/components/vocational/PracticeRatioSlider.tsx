@@ -7,6 +7,7 @@ interface PracticeRatioSliderProps {
   onChange: (value: number) => void;
   step?: number;
   disabled?: boolean;
+  totalPages?: number; // 实际页面总数，默认为10
 }
 
 // 本地预览估算：根据比例估算理论和实训页面数量
@@ -21,6 +22,7 @@ export const PracticeRatioSlider: React.FC<PracticeRatioSliderProps> = ({
   onChange,
   step = 5,
   disabled = false,
+  totalPages = 10, // 默认10页，但应由父组件传入实际值
 }) => {
   const [localValue, setLocalValue] = useState(value);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -43,8 +45,8 @@ export const PracticeRatioSlider: React.FC<PracticeRatioSliderProps> = ({
     throttledOnChange(newValue);
   }, [throttledOnChange]);
   
-  // 假设总页面数为 10 用于本地预览
-  const { theoryPages, practicePages } = estimatePageDistribution(localValue, 10);
+  // 使用实际页面数计算预估分布
+  const { theoryPages, practicePages } = estimatePageDistribution(localValue, totalPages);
   
   // 计算滑块位置百分比
   const thumbPosition = (localValue / 100) * 100;

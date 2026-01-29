@@ -226,7 +226,7 @@ def _format_reference_files_xml(reference_files_content: Optional[List[Dict[str,
 
 def get_outline_generation_prompt(project_context: 'ProjectContext', language: str = None) -> str:
     """
-    生成 PPT 大纲的 prompt
+    生成 PPT 大纲的 prompt（融入教法模型）
     
     Args:
         project_context: 项目上下文对象，包含所有原始信息
@@ -235,59 +235,81 @@ def get_outline_generation_prompt(project_context: 'ProjectContext', language: s
     Returns:
         格式化后的 prompt 字符串
     """
+    from .pedagogy_models import get_pedagogy
+    
     files_xml = _format_reference_files_xml(project_context.reference_files_content)
     idea_prompt = project_context.idea_prompt or ""
     practice_ratio = getattr(project_context, 'practice_ratio', 0.5)
+    pedagogy_method = getattr(project_context, 'pedagogy_method', 'five_step')
+    
+    # 获取教法定义
+    pedagogy = get_pedagogy(pedagogy_method)
+    pedagogy_name = pedagogy.name if pedagogy else "五步教学法"
+    pedagogy_guidance = pedagogy.prompt_guidance if pedagogy else ""
+    pedagogy_structure = pedagogy.structure if pedagogy else ["情境导入", "探究新知", "示范演练", "巩固拓展", "总结评价"]
     
     # 计算理论和实训的比例说明
     theory_percent = int((1 - practice_ratio) * 100)
     practice_percent = int(practice_ratio * 100)
     
     if practice_ratio < 0.3:
-        ratio_instruction = f"This is a THEORY-FOCUSED course ({theory_percent}% theory, {practice_percent}% practice). Most pages should be 'theory' type with conceptual content. Only include a few 'practice' pages for demonstrations."
+        ratio_instruction = f"侧重理论讲解 ({theory_percent}% 理论, {practice_percent}% 实训)。多使用概念页、对比页，少量实操演示。"
     elif practice_ratio > 0.7:
-        ratio_instruction = f"This is a PRACTICE-FOCUSED course ({theory_percent}% theory, {practice_percent}% practice). Most pages should be 'practice' type with hands-on exercises and case studies. Include minimal 'theory' pages for essential concepts."
+        ratio_instruction = f"侧重实训操作 ({theory_percent}% 理论, {practice_percent}% 实训)。多使用步骤页、案例页，理论内容简洁。"
     else:
-        ratio_instruction = f"This is a BALANCED course ({theory_percent}% theory, {practice_percent}% practice). Balance 'theory' and 'practice' pages appropriately."
+        ratio_instruction = f"理实结合 ({theory_percent}% 理论, {practice_percent}% 实训)。理论与实操穿插进行。"
+
+    # 教法环节结构说明
+    structure_str = " → ".join(pedagogy_structure)
     
-    prompt = (f"""\
-You are a helpful assistant that generates an outline for a vocational education PPT.
+    prompt = f"""\
+你是一位资深高职教育课程设计专家。请根据以下要求设计PPT大纲。
 
-IMPORTANT: This is a vocational/technical training course. You MUST organize content using the part-based format with "theory" and "practice" parts:
+## 教学主题
+{idea_prompt}
 
-[
-    {{
-    "part": "theory",
-    "pages": [
-        {{"title": "Concept Overview", "points": ["key concept 1", "key concept 2"]}},
-        {{"title": "Theoretical Foundation", "points": ["principle 1", "principle 2"]}}
-    ]
-    }},
-    {{
-    "part": "practice", 
-    "pages": [
-        {{"title": "Hands-on Exercise 1", "points": ["step 1", "step 2"]}},
-        {{"title": "Case Study", "points": ["scenario", "solution"]}}
-    ]
-    }}
-]
+## 教法模式：{pedagogy_name}
+{pedagogy_guidance}
 
-CONTENT RATIO REQUIREMENT:
+教学环节结构：{structure_str}
+
+## 理实比例要求
 {ratio_instruction}
 
-Rules:
-1. ALWAYS use the part-based format with "part": "theory" or "part": "practice"
-2. "theory" pages cover: concepts, principles, definitions, background knowledge
-3. "practice" pages cover: exercises, case studies, demonstrations, hands-on activities, real-world applications
-4. The first page should be kept simple (title, subtitle, presenter info only)
-5. Ensure the ratio of theory vs practice pages matches the requirement above
+## 输出格式要求
+请按照教法模式的结构设计大纲，每个教学环节对应1-3页幻灯片。
+输出格式为 JSON，使用 part-based 格式区分理论和实训内容：
 
-The user's request: {idea_prompt}. Now generate the outline following the format above.
+```json
+[
+    {{
+        "part": "theory",
+        "pedagogy_phase": "情境导入",
+        "pages": [
+            {{"title": "具体的页面标题", "points": ["要点1", "要点2", "要点3"]}}
+        ]
+    }},
+    {{
+        "part": "practice",
+        "pedagogy_phase": "示范演练", 
+        "pages": [
+            {{"title": "实操演示页标题", "points": ["步骤1", "步骤2", "步骤3"]}}
+        ]
+    }}
+]
+```
+
+**注意**：
+1. 每个 points 项必须是完整的、有实际内容的句子，禁止使用占位符
+2. pedagogy_phase 必须填写当前部分对应的教法环节名称（如：{pedagogy_structure[0]}、{pedagogy_structure[-1]}）
+3. part 必须是 "theory" 或 "practice"
+4. 第一页应为标题页，简洁明了
+
 {get_language_instruction(language)}
-""")
+"""
     
     final_prompt = files_xml + prompt
-    logger.debug(f"[get_outline_generation_prompt] Final prompt:\n{final_prompt}")
+    logger.debug(f"[get_outline_generation_prompt] Pedagogy method: {pedagogy_method}, Final prompt:\n{final_prompt}")
     return final_prompt
 
 

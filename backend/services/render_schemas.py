@@ -178,33 +178,60 @@ def page_to_slide_page(page_data: Any, index: int) -> SlidePage:
     Returns:
         SlidePage 对象
     """
-    # 处理 SQLAlchemy 模型或字典
-    if hasattr(page_data, '__dict__'):
-        # SQLAlchemy 模型
-        title = getattr(page_data, 'title', '') or ''
-        description = getattr(page_data, 'description', '') or ''
-        slide_type = getattr(page_data, 'slide_type', 'concept') or 'concept'
-    else:
-        # 字典
-        title = page_data.get('title', '')
-        description = page_data.get('description', '')
-        slide_type = page_data.get('slide_type', 'concept')
-    
-    # 解析描述内容为要点
+    title = ''
     bullets = []
-    if description:
-        # 尝试从描述中提取要点
-        lines = description.split('\n')
-        for line in lines:
-            line = line.strip()
-            if line.startswith('- ') or line.startswith('• '):
-                bullets.append(line[2:].strip())
-            elif line.startswith('* '):
-                bullets.append(line[2:].strip())
-            elif line and not line.startswith('页面标题') and not line.startswith('页面文字'):
-                # 其他非空行也作为内容
-                if len(line) > 3:
-                    bullets.append(line)
+    slide_type = 'concept'
+    speaker_notes = ''
+    
+    # 处理 SQLAlchemy 模型
+    if hasattr(page_data, 'get_outline_content'):
+        # 从 outline_content 提取标题和要点
+        outline = page_data.get_outline_content()
+        if outline:
+            title = outline.get('title', '') or ''
+            bullets = outline.get('points', []) or []
+        
+        # 从 description_content 提取更详细的内容（如果有）
+        description = page_data.get_description_content()
+        if description:
+            desc_text = description.get('text', '') if isinstance(description, dict) else str(description)
+            speaker_notes = desc_text
+            
+            # 如果没有从 outline 获取到要点，尝试从描述中提取
+            if not bullets and desc_text:
+                for line in desc_text.split('\n'):
+                    line = line.strip()
+                    if line.startswith('- ') or line.startswith('• '):
+                        bullets.append(line[2:].strip())
+                    elif line.startswith('* '):
+                        bullets.append(line[2:].strip())
+        
+        # 获取页面类型（从 part 字段推断）
+        part = getattr(page_data, 'part', None)
+        if part:
+            if 'theory' in part.lower() or '理论' in part:
+                slide_type = 'concept'
+            elif 'practice' in part.lower() or '实训' in part:
+                slide_type = 'steps'
+    
+    # 处理字典格式
+    elif isinstance(page_data, dict):
+        # 尝试从 outline_content 提取
+        outline = page_data.get('outline_content', {})
+        if isinstance(outline, dict):
+            title = outline.get('title', '') or page_data.get('title', '')
+            bullets = outline.get('points', []) or []
+        else:
+            title = page_data.get('title', '')
+        
+        # 从 description_content 提取
+        description = page_data.get('description_content', {})
+        if isinstance(description, dict):
+            speaker_notes = description.get('text', '')
+        elif description:
+            speaker_notes = str(description)
+        
+        slide_type = page_data.get('slide_type', 'concept')
     
     # 创建元素
     elements = []
@@ -228,5 +255,5 @@ def page_to_slide_page(page_data: Any, index: int) -> SlidePage:
         slide_type=final_slide_type,
         title=title,
         elements=elements,
-        speaker_notes=description
+        speaker_notes=speaker_notes
     )

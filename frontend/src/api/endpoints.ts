@@ -105,14 +105,21 @@ export const updatePagesOrder = async (
  * @param projectId 项目ID
  * @param language 输出语言（可选，默认从 sessionStorage 获取）
  * @param practiceRatio 实训比例 0-100（可选）
+ * @param pedagogyMethod 教法模式（可选，如 'five_step', 'action_oriented' 等）
  */
-export const generateOutline = async (projectId: string, language?: OutputLanguage, practiceRatio?: number): Promise<ApiResponse> => {
+export const generateOutline = async (
+  projectId: string, 
+  language?: OutputLanguage, 
+  practiceRatio?: number,
+  pedagogyMethod?: string
+): Promise<ApiResponse> => {
   const lang = language || await getStoredOutputLanguage();
   const response = await apiClient.post<ApiResponse>(
     `/api/projects/${projectId}/generate/outline`,
     { 
       language: lang,
-      practice_ratio: practiceRatio !== undefined ? practiceRatio / 100 : undefined  // 转换为 0-1
+      practice_ratio: practiceRatio !== undefined ? practiceRatio / 100 : undefined,  // 转换为 0-1
+      pedagogy_method: pedagogyMethod || 'five_step'  // 默认五步教学法
     }
   );
   return response.data;

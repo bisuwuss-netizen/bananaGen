@@ -11,38 +11,36 @@ from werkzeug.utils import secure_filename
 file_bp = Blueprint('files', __name__, url_prefix='/files')
 
 
-@file_bp.route('/<project_id>/<file_type>/<filename>', methods=['GET'])
-def serve_file(project_id, file_type, filename):
+@file_bp.route('/<project_id>/<file_type>/<path:filepath>', methods=['GET'])
+def serve_file(project_id, file_type, filepath):
     """
-    GET /files/{project_id}/{type}/{filename} - Serve static files
+    GET /files/{project_id}/{type}/{filepath} - Serve static files (supports nested paths)
     
     Args:
         project_id: Project UUID
         file_type: 'template', 'pages', 'html_output', etc.
-        filename: File name
+        filepath: File path (can be nested like static/css/style.css)
     """
     try:
         if file_type not in ['template', 'pages', 'materials', 'exports', 'html_output', 'export']:
             return not_found('File')
         
-        # Construct file path
-        file_dir = os.path.join(
-            current_app.config['UPLOAD_FOLDER'],
-            project_id,
-            file_type
-        )
+        # Base directory for this file type
+        base_dir = Path(current_app.config['UPLOAD_FOLDER']) / project_id / file_type
         
-        # Check if directory exists
-        if not os.path.exists(file_dir):
-            return not_found('File')
+        # Resolve the full path
+        full_path = (base_dir / filepath).resolve()
+        
+        # Security check: prevent path traversal attacks
+        if not str(full_path).startswith(str(base_dir.resolve())):
+            return error_response('INVALID_PATH', 'Invalid file path', 403)
         
         # Check if file exists
-        file_path = os.path.join(file_dir, filename)
-        if not os.path.exists(file_path):
+        if not full_path.exists() or not full_path.is_file():
             return not_found('File')
         
-        # Serve file
-        return send_from_directory(file_dir, filename)
+        # Serve file from its parent directory
+        return send_from_directory(str(full_path.parent), full_path.name)
     
     except Exception as e:
         return error_response('SERVER_ERROR', str(e), 500)
