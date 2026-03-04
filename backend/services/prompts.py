@@ -237,6 +237,13 @@ You can organize the content in two ways:
 Choose the format that best fits the content. Use parts when the PPT has clear major sections.
 Unless otherwise specified, the first page should be kept simplest, containing only the title, subtitle, and presenter information.
 
+Narrative quality hard constraints (must follow):
+- If a page introduces an overview/roadmap with multiple points, each point must be expanded in at least one later page.
+- If a page mentions a case/example, include a later follow-up page that explains method, result, and takeaway.
+- Avoid topic jumps: adjacent pages should have clear semantic transition.
+- Before the ending page, include a summary/Q&A style page to close the story loop.
+- Never leave \"promised but missing\" topics in the final outline.
+
 The user's request: {idea_prompt}. Now generate the outline, don't include any other text.
 {get_language_instruction(language)}
 """)
@@ -402,6 +409,10 @@ def get_page_description_prompt(project_context: 'ProjectContext', outline: list
 3. 条理清晰，使用列表形式组织内容
 4. 确保内容可读性强，适合在教学时展示
 5. 不要包含任何额外的说明性文字或注释
+6. 必须覆盖当前页面大纲中的每个 points 条目，不能遗漏承诺点
+7. 每个 bullet 必须是完整句，禁止半句、断句、占位词（如“待补充”“...”）
+8. 如果当前页是案例/示例页，必须包含：问题背景、方法动作、结果启示
+9. 与前后页保持衔接：本页结尾要能自然引出下一页主题（简短一句即可）
 
 输出格式示例：
 页面标题：原始社会：与自然共生
@@ -636,6 +647,9 @@ Important rules:
 - If the text has clear sections/parts, use the part-based format
 - Preserve the logical structure and organization from the original text
 - The points should be concise summaries of the main content for each page
+- If one page contains roadmap/overview points, later pages must cover those points (no orphan promises)
+- If a page mentions case/example, reserve a later page for case breakdown or takeaway
+- Ensure there is a summary/Q&A style page before the ending page
 
 Now extract the outline structure from the description text above. Return only the JSON, don't include any other text.
 {get_language_instruction(language)}
@@ -699,6 +713,9 @@ Important rules:
 - Preserve all important content from the original text
 - Keep the format consistent with the example above
 - If a page in the outline doesn't have a clear description in the text, create a reasonable description based on the outline
+- For each page, every item in that page's outline points must appear in the final page description
+- Do not leave half sentences or broken bullet fragments; every bullet must be a complete sentence
+- Keep cross-page continuity: if a page promises \"case/step/comparison\", the related page descriptions must be explicitly linked
 
 Now split the description text into individual page descriptions. Return only the JSON array, don't include any other text.
 {get_language_instruction(language)}
@@ -792,6 +809,12 @@ You are a helpful assistant that modifies PPT outlines based on user requirement
 
 选择最适合内容的格式。当 PPT 有清晰的主要章节时使用章节格式。
 
+质量与连贯性硬约束：
+- 若有概述/框架页，其中 points 的每个主题都必须在后续页面被展开。
+- 若出现案例/示例，必须有后续复盘或结果启示页。
+- 保持相邻页面语义连续，避免主题突变。
+- 结束页前必须有总结或答疑页面，形成闭环。
+
 现在请根据用户要求修改大纲，只输出 JSON 格式的大纲，不要包含其他文字。
 {get_language_instruction(language)}
 """)
@@ -877,6 +900,9 @@ You are a helpful assistant that modifies PPT page descriptions based on user re
 - 调整描述的结构和表达
 - 确保所有页面描述都符合用户的要求
 - 如果当前没有内容，请根据大纲和用户要求创建新的描述
+- 每一页必须覆盖该页 outline points，不得遗漏
+- 所有 bullet 必须是完整句，禁止“半句/截断句/占位词”
+- 案例页必须包含：背景问题、方法动作、结果启示
 
 请为每个页面生成修改后的描述，格式如下：
 
@@ -1623,6 +1649,13 @@ def get_structured_outline_prompt(topic: str, requirements: str = "", language: 
 - “对比/差异/优缺点/选择”优先使用对比布局（two_column 或其方案对应布局）。
 - “流程/步骤/路径/操作”优先使用步骤布局（process_steps 或其方案对应布局）。
 
+内容连贯性硬约束（必须严格遵守）：
+- 若某页是“概述/框架/要点总览”页，points 中每个要点都必须在后续至少一页被展开说明。
+- 若某页标题或 points 提到“案例/示例”，必须在后续安排“案例复盘/结果启示”页。
+- 页间必须有语义桥接：避免从 A 主题直接跳到无关 B 主题。
+- 倒数第二到倒数第四页之间必须出现“总结/回顾/答疑”类页面，形成闭环。
+- 严禁出现“提到了但后面完全没讲”的断链主题。
+
 关于 has_image 字段（图片插槽）：
 - image_full 布局必须设置 has_image=true（布局的核心就是图片）
 - title_content、title_bullets、process_steps 布局**强烈建议设置 has_image=true**，配图可以让内容更生动直观
@@ -1722,6 +1755,10 @@ def get_structured_page_content_prompt(page_outline: dict, full_outline: dict = 
 8. 如果是 bullets 或 steps，提供合适的 FontAwesome 图标（如 fa-check、fa-star、fa-lightbulb 等）
 9. 每页要点/段落不超过6个（目录页 toc 布局除外，必须列出所有章节）
 10. 如果页面标题包含“学习资源/资源推荐/参考资料/工具推荐/学习路径/课程推荐”，必须输出可执行的资源清单（资源名称+用途/适用人群+使用建议），不要只放图片
+11. 页面内容必须覆盖该页大纲 points 的核心语义，不得遗漏要点
+12. 所有描述必须是完整句，禁止半句、截断句、占位词（如“待补充”“...”）
+13. 案例相关页面必须包含：背景问题、方法动作、结果启示
+14. 若是过渡页/总结页，必须明确与前后页的衔接关系（至少一句）
 {toc_instruction}
 {section_instruction}
 只返回 JSON 对象，不要包含其他文字。
