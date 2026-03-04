@@ -500,27 +500,17 @@ export const SlidePreview: React.FC = () => {
     const getPrompt = (
       layoutId: LayoutId,
       slotPath: string,
-      schemeId: string,
       facts: string[]
     ): string => {
       const topicLine = facts.length > 0
         ? `页面主题与信息：${facts.slice(0, 6).join('；')}`
         : '页面主题与信息：专业知识讲解场景';
 
-      const schemeStyleMap: Record<string, string> = {
-        tech_blue: '视觉风格：科技教学插画，冷蓝与青灰配色，专业克制，细节清晰。',
-        academic: '视觉风格：学术讲解插画，冷灰与深蓝配色，理性严谨，构图干净。',
-        interactive: '视觉风格：课堂互动插画，明亮但低饱和，亲和活泼，元素清楚。',
-        visual: '视觉风格：叙事感插画，灰度基调+单一强调色，层次分明。',
-        practical: '视觉风格：实操训练插画，工业橙与深灰，强调工具与步骤。',
-        modern: '视觉风格：现代商务视觉，干净留白，几何结构与柔和层次。',
-      };
-
       return [
         '任务：为PPT生成“内容解释型配图”，目标是帮助观众理解页面知识点。',
         topicLine,
         getLayoutIntent(layoutId, slotPath),
-        schemeStyleMap[schemeId] || schemeStyleMap.tech_blue,
+        '目标：图像用于讲解辅助，不是装饰背景，需可读可讲。',
         '构图要求：主体明确，包含2-4个与主题强相关的具体元素，避免大面积空白。',
         '禁止：文字、数字、Logo、水印、纯抽象渐变、纯装饰边框、无意义背景纹理。',
       ].join(' ');
@@ -539,12 +529,13 @@ export const SlidePreview: React.FC = () => {
         const facts = collectPageFacts(page, model);
         const pageTitle = cleanText(model?.title) || cleanText(page?.outline_content?.title) || '';
         const visualGoal = getLayoutIntent(layoutId, slotPath);
-        const prompt = getPrompt(layoutId, slotPath, schemeId, facts);
+        const prompt = getPrompt(layoutId, slotPath, facts);
         slots.push({
           page_id: pageId,
           slot_path: slotPath,
           prompt,
           context: {
+            asset_type: 'content',
             layout_id: layoutId,
             scheme_id: schemeId,
             slot_role: inferSlotRole(slotPath),
@@ -607,51 +598,30 @@ export const SlidePreview: React.FC = () => {
       || pages[0].outline_content?.title
       || '';
     const schemeId = currentProject?.scheme_id || 'tech_blue';
-    const schemePromptMap: Record<string, string[]> = {
-      tech_blue: [
-        '科技风统一背景图，冷蓝/青灰/微光渐变，结构清晰。',
-        '边缘点缀科技网格、粒子、曲线光带，中心保持干净留白。',
-        '低饱和、柔和不抢正文，纹理细腻，避免过曝。'
-      ],
-      academic: [
-        '学术严谨风统一背景图，冷灰/深蓝/米白，纸张质感。',
-        '边缘点缀学术网格、书页边角、细线框，中心留白。',
-        '避免夸张装饰与强视觉冲击。'
-      ],
-      interactive: [
-        '互动活泼风统一背景图，明亮多彩但低饱和。',
-        '边缘点缀贴纸/涂鸦/对话气泡，中心留白。',
-        '氛围轻松、有课堂互动感。'
-      ],
-      visual: [
-        '视觉叙事风统一背景图，高级灰度+单一强调色。',
-        '边缘带摄影/海报质感光影，中心留白。',
-        '图像感强，但避免文字干扰。'
-      ],
-      practical: [
-        '实践操作风统一背景图，工业橙+深灰+白。',
-        '边缘点缀工具轮廓、警示条、工程标记，中心留白。',
-        '强调操作与安全提示的氛围。'
-      ],
-    };
+    const sampledTitles = pages
+      .map((p) => cleanText(p.outline_content?.title || ''))
+      .filter(Boolean)
+      .slice(0, 5);
 
     const prompt = [
-      '高质量知识点教学PPT统一背景图。',
+      '高质量教学PPT统一背景图。',
       titleSeed ? `主题：${titleSeed}。` : '',
-      ...(schemePromptMap[schemeId] || schemePromptMap.tech_blue),
+      sampledTitles.length > 0 ? `页面线索：${sampledTitles.join('；')}。` : '',
+      '目标：中心留白、边缘氛围化、低干扰可读。',
       '禁止出现任何文字、数字、符号、水印、Logo 或可识别标记。',
-    ].filter(Boolean).join('');
+    ].filter(Boolean).join(' ');
 
     return [{
       page_id: pageId,
       slot_path: 'background_image',
       prompt,
       context: {
+        asset_type: 'background',
         layout_id: 'cover',
         scheme_id: schemeId,
         slot_role: 'background',
         page_title: cleanText(titleSeed),
-        page_facts: titleSeed ? [cleanText(titleSeed)] : [],
+        page_facts: titleSeed ? [cleanText(titleSeed), ...sampledTitles] : sampledTitles,
         project_topic: cleanText(currentProject?.idea_prompt || ''),
         extra_requirements: cleanText(currentProject?.extra_requirements || ''),
         template_style: cleanText(currentProject?.template_style || ''),

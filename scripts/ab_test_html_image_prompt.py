@@ -194,6 +194,7 @@ def run_experiment(
             "context": {
                 "layout_id": layout_id,
                 "scheme_id": scheme_id,
+                "asset_type": "background" if "background" in real_slot_path else "content",
                 "slot_role": (
                     "left" if real_slot_path.startswith("left")
                     else "right" if real_slot_path.startswith("right")

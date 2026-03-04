@@ -917,6 +917,7 @@ export interface HtmlImageSlot {
   slot_path: string;
   prompt: string;
   context?: {
+    asset_type?: 'content' | 'background';
     layout_id?: string;
     scheme_id?: string;
     slot_role?: 'main' | 'left' | 'right' | 'background';
