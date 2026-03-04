@@ -4,7 +4,7 @@ AI Service Prompts - 集中管理所有 AI 服务的 prompt 模板
 import json
 import logging
 from textwrap import dedent
-from typing import List, Dict, Optional, TYPE_CHECKING
+from typing import List, Dict, Optional, TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from services.ai_service import ProjectContext
@@ -147,6 +147,88 @@ def _format_reference_files_xml(reference_files_content: Optional[List[Dict[str,
     xml_parts.append('')  # Empty line after XML
     
     return '\n'.join(xml_parts)
+
+
+def _flatten_outline_pages(outline: list) -> List[Dict]:
+    """Flatten part-based outline to page list for prompt context."""
+    pages: List[Dict] = []
+    if not isinstance(outline, list):
+        return pages
+
+    for item in outline:
+        if not isinstance(item, dict):
+            continue
+        if "part" in item and isinstance(item.get("pages"), list):
+            for page in item.get("pages", []):
+                if isinstance(page, dict):
+                    page_copy = page.copy()
+                    page_copy["part"] = item.get("part")
+                    pages.append(page_copy)
+        else:
+            pages.append(item)
+    return pages
+
+
+def _build_compact_outline_context(outline: list, focus_page_index: Optional[int] = None) -> str:
+    """
+    Build compact outline context for prompts to reduce token cost.
+
+    Returns a short JSON snippet containing:
+    - key page sequence (title + first 2 points)
+    - optional local window around current page
+    """
+    pages = _flatten_outline_pages(outline)
+    if not pages:
+        return "[]"
+
+    compact_pages = []
+    for idx, page in enumerate(pages, 1):
+        points = page.get("points") if isinstance(page.get("points"), list) else []
+        compact_pages.append({
+            "index": idx,
+            "title": page.get("title", ""),
+            "part": page.get("part", ""),
+            "points": [str(p) for p in points[:2]]
+        })
+
+    selected: List[Dict] = []
+    total = len(compact_pages)
+
+    # keep global skeleton
+    selected.extend(compact_pages[:3])
+    if total > 6:
+        selected.extend(compact_pages[-2:])
+
+    # keep local neighborhood around current page
+    if focus_page_index is not None and 1 <= focus_page_index <= total:
+        start = max(1, focus_page_index - 2)
+        end = min(total, focus_page_index + 2)
+        for i in range(start, end + 1):
+            selected.append(compact_pages[i - 1])
+
+    # de-duplicate by index while preserving order
+    seen = set()
+    deduped = []
+    for item in selected:
+        idx = item.get("index")
+        if idx in seen:
+            continue
+        seen.add(idx)
+        deduped.append(item)
+
+    return json.dumps(deduped, ensure_ascii=False, indent=2)
+
+
+def _truncate_prompt_text(text: str, max_chars: int = 1200) -> str:
+    """Trim very long free-text context to control token growth."""
+    if not text:
+        return ""
+    value = str(text)
+    if len(value) <= max_chars:
+        return value
+    head = value[: max_chars // 2]
+    tail = value[-max_chars // 3:]
+    return f"{head}\n...\n{tail}"
 
 
 def get_outline_generation_prompt(project_context: 'ProjectContext', language: str = None, render_mode: str = 'image', scheme_id: str = None) -> str:
@@ -363,8 +445,8 @@ Now parse the outline text above into the structured format. Return only the JSO
     return final_prompt
 
 
-def get_page_description_prompt(project_context: 'ProjectContext', outline: list, 
-                                page_outline: dict, page_index: int, 
+def get_page_description_prompt(project_context: 'ProjectContext', outline: list,
+                                page_outline: dict, page_index: int,
                                 part_info: str = "",
                                 language: str = None) -> str:
     """
@@ -390,11 +472,14 @@ def get_page_description_prompt(project_context: 'ProjectContext', outline: list
         original_input = f"用户提供的描述：\n{project_context.description_text}"
     else:
         original_input = project_context.idea_prompt or ""
+    original_input = _truncate_prompt_text(original_input, max_chars=1200)
     
+    outline_context = _build_compact_outline_context(outline, focus_page_index=page_index)
+
     prompt = (f"""\
 我们正在为PPT的每一页生成内容描述。
 用户的原始需求是：\n{original_input}\n
-我们已经有了完整的大纲：\n{outline}\n{part_info}
+我们已经有了压缩后的大纲上下文（仅保留关键页和当前页附近页面）：\n{outline_context}\n{part_info}
 现在请为第 {page_index} 页生成描述：
 {page_outline}
 {"**除非特殊要求，第一页的内容需要保持极简，只放标题副标题以及演讲人等（输出到标题后）, 不添加任何素材。**" if page_index == 1 else ""}
@@ -433,6 +518,71 @@ def get_page_description_prompt(project_context: 'ProjectContext', outline: list
     
     final_prompt = files_xml + prompt
     logger.debug(f"[get_page_description_prompt] Final prompt:\n{final_prompt}")
+    return final_prompt
+
+
+def get_page_descriptions_batch_prompt(project_context: 'ProjectContext',
+                                       outline: list,
+                                       batch_pages: List[Dict[str, Any]],
+                                       language: str = None) -> str:
+    """
+    生成批量页面描述 prompt（一次请求生成多个页面），用于提速。
+
+    batch_pages item format:
+    {
+      "page_index": 3,
+      "page_outline": {"title": "...", "points": [...], ...}
+    }
+    """
+    files_xml = _format_reference_files_xml(project_context.reference_files_content)
+
+    if project_context.creation_type == 'idea' and project_context.idea_prompt:
+        original_input = project_context.idea_prompt
+    elif project_context.creation_type == 'outline' and project_context.outline_text:
+        original_input = f"用户提供的大纲：\n{project_context.outline_text}"
+    elif project_context.creation_type == 'descriptions' and project_context.description_text:
+        original_input = f"用户提供的描述：\n{project_context.description_text}"
+    else:
+        original_input = project_context.idea_prompt or ""
+    original_input = _truncate_prompt_text(original_input, max_chars=1200)
+
+    compact_outline_context = _build_compact_outline_context(outline, focus_page_index=None)
+    batch_payload = json.dumps(batch_pages, ensure_ascii=False, indent=2)
+
+    prompt = f"""\
+我们正在为PPT批量生成页面描述，请一次性完成以下页面。
+
+用户原始需求：
+{original_input}
+
+大纲关键上下文（压缩版）：
+{compact_outline_context}
+
+待生成页面列表（严格按 page_index 顺序返回）：
+{batch_payload}
+
+输出要求（每一页都必须满足）：
+1. 覆盖该页 page_outline.points 的全部核心语义，不得遗漏。
+2. 每页总字数 120-180 字。
+3. 使用“页面标题 + 页面文字（bullet）”格式。
+4. 每个 bullet 必须是完整句，禁止半句、断句、占位词。
+5. 案例页必须包含：问题背景、方法动作、结果启示。
+6. 与前后页保持衔接，结尾可用一句过渡语。
+
+请返回严格 JSON 数组，格式如下：
+[
+  {{"page_index": 1, "description": "页面标题：...\\n\\n页面文字：\\n- ...\\n- ..."}},
+  {{"page_index": 2, "description": "页面标题：...\\n\\n页面文字：\\n- ...\\n- ..."}}
+]
+
+注意：
+- page_index 必须和输入一致，不能漏页、不能新增页。
+- 只返回 JSON，不要返回其他解释文本。
+{get_language_instruction(language)}
+"""
+
+    final_prompt = files_xml + prompt
+    logger.debug(f"[get_page_descriptions_batch_prompt] Final prompt:\n{final_prompt}")
     return final_prompt
 
 

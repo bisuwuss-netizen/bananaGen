@@ -25,6 +25,13 @@ def _env_positive_int(name: str, default: int) -> int:
         return default
 
 
+def _chunked(items: List[Any], chunk_size: int) -> List[List[Any]]:
+    """Split list into chunks."""
+    if chunk_size <= 0:
+        chunk_size = 1
+    return [items[i:i + chunk_size] for i in range(0, len(items), chunk_size)]
+
+
 # Timeout guard for stuck tasks (seconds)
 # These are only used when a task is still PENDING/PROCESSING but no worker is active.
 TASK_STALE_TIMEOUT_SECONDS = {
@@ -301,7 +308,8 @@ def generate_descriptions_task(task_id: str, project_id: str, ai_service,
             # Generate descriptions in parallel
             completed = 0
             failed = 0
-            
+            description_batch_size = max(1, int(app.config.get('DESCRIPTION_BATCH_SIZE', 3)))
+
             def generate_single_desc(page_id, page_outline, page_index, page_layout_id=None):
                 """
                 Generate description for a single page
@@ -382,48 +390,124 @@ def generate_descriptions_task(task_id: str, project_id: str, ai_service,
                         error_detail = traceback.format_exc()
                         logger.error(f"Failed to generate description for page {page_id}: {error_detail}")
                         return (page_id, None, str(e))
-            
-            # Use ThreadPoolExecutor for parallel generation
-            # 关键：提前提取 page.id 和 page.layout_id，不要传递 ORM 对象到子线程
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                futures = [
-                    executor.submit(generate_single_desc, page.id, page_data, i, page.layout_id)
+
+            def update_page_result(page_id, result_data, error):
+                nonlocal completed, failed
+                page = Page.query.get(page_id)
+                if not page:
+                    failed += 1
+                    return
+
+                if error:
+                    page.status = 'FAILED'
+                    failed += 1
+                    return
+
+                if render_mode == 'html':
+                    page.set_html_model(result_data.get('html_model'))
+                    if result_data.get('layout_id'):
+                        page.layout_id = result_data.get('layout_id')
+                    page.status = 'HTML_MODEL_GENERATED'
+                else:
+                    page.set_description_content(result_data.get('description_content'))
+                    page.status = 'DESCRIPTION_GENERATED'
+                completed += 1
+
+            # Image mode optimization: batch multiple pages per model call to reduce API round trips.
+            if render_mode != 'html' and description_batch_size > 1:
+                page_jobs = [
+                    (page.id, page_data, i, page.layout_id)
                     for i, (page, page_data) in enumerate(zip(pages, pages_data), 1)
                 ]
+                batches = _chunked(page_jobs, description_batch_size)
+                worker_count = max(1, min(max_workers, len(batches)))
+                logger.info(
+                    f"Description batch mode enabled: pages={len(page_jobs)}, "
+                    f"batch_size={description_batch_size}, workers={worker_count}, batches={len(batches)}"
+                )
 
-                # Process results as they complete
-                for future in as_completed(futures):
-                    page_id, result_data, error = future.result()
+                def generate_desc_batch(batch_items):
+                    with app.app_context():
+                        from services.ai_service_manager import get_ai_service
+                        ai_service = get_ai_service()
 
-                    db.session.expire_all()
+                        batch_payload = [
+                            {'page_index': idx, 'page_outline': page_outline}
+                            for _, page_outline, idx, _ in batch_items
+                        ]
+                        batch_desc_map = {}
+                        try:
+                            batch_desc_map = ai_service.generate_page_descriptions_batch(
+                                project_context=project_context,
+                                outline=outline,
+                                batch_pages=batch_payload,
+                                language=language
+                            )
+                        except Exception as batch_err:
+                            logger.warning(
+                                f"Batch description generation failed for {len(batch_items)} pages, "
+                                f"fallback to single-page mode. Error: {batch_err}"
+                            )
 
-                    # Update page in database
-                    page = Page.query.get(page_id)
-                    if page:
-                        if error:
-                            page.status = 'FAILED'
-                            failed += 1
-                        else:
-                            if render_mode == 'html':
-                                # HTML mode: set html_model and layout_id
-                                page.set_html_model(result_data.get('html_model'))
-                                if result_data.get('layout_id'):
-                                    page.layout_id = result_data.get('layout_id')
-                                page.status = 'HTML_MODEL_GENERATED'
-                            else:
-                                # Traditional mode: set description_content
-                                page.set_description_content(result_data.get('description_content'))
-                                page.status = 'DESCRIPTION_GENERATED'
-                            completed += 1
+                        results = []
+                        for page_id, page_outline, idx, page_layout_id in batch_items:
+                            desc_text = batch_desc_map.get(idx)
+                            if isinstance(desc_text, str) and desc_text.strip():
+                                desc_content = {
+                                    "text": desc_text,
+                                    "generated_at": datetime.utcnow().isoformat()
+                                }
+                                results.append((page_id, {'description_content': desc_content}, None))
+                                continue
 
+                            # Fallback per page to keep robustness and quality.
+                            results.append(generate_single_desc(page_id, page_outline, idx, page_layout_id))
+                        return results
+
+                with ThreadPoolExecutor(max_workers=worker_count) as executor:
+                    futures = [executor.submit(generate_desc_batch, batch_items) for batch_items in batches]
+
+                    for future in as_completed(futures):
+                        batch_results = future.result()
+                        db.session.expire_all()
+
+                        for page_id, result_data, error in batch_results:
+                            update_page_result(page_id, result_data, error)
+
+                        # Commit once per batch to reduce DB write overhead.
                         db.session.commit()
 
-                    # Update task progress
-                    task = Task.query.get(task_id)
-                    if task:
-                        task.update_progress(completed=completed, failed=failed)
+                        task = Task.query.get(task_id)
+                        if task:
+                            task.update_progress(completed=completed, failed=failed)
+                            db.session.commit()
+                            logger.info(
+                                f"Description Progress: {completed}/{len(pages)} pages completed "
+                                f"(failed={failed})"
+                            )
+            else:
+                # HTML mode or explicit single-page mode.
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    futures = [
+                        executor.submit(generate_single_desc, page.id, page_data, i, page.layout_id)
+                        for i, (page, page_data) in enumerate(zip(pages, pages_data), 1)
+                    ]
+
+                    for future in as_completed(futures):
+                        page_id, result_data, error = future.result()
+
+                        db.session.expire_all()
+                        update_page_result(page_id, result_data, error)
                         db.session.commit()
-                        logger.info(f"Description Progress: {completed}/{len(pages)} pages completed")
+
+                        task = Task.query.get(task_id)
+                        if task:
+                            task.update_progress(completed=completed, failed=failed)
+                            db.session.commit()
+                            logger.info(
+                                f"Description Progress: {completed}/{len(pages)} pages completed "
+                                f"(failed={failed})"
+                            )
             
             # Mark task as completed
             task = Task.query.get(task_id)

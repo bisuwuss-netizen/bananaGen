@@ -93,6 +93,8 @@ class Config:
     
     # 并发配置
     MAX_DESCRIPTION_WORKERS = int(os.getenv('MAX_DESCRIPTION_WORKERS', '5'))
+    # 描述生成批次大小（image 模式下每次请求生成多少页，>1 可显著减少请求数）
+    DESCRIPTION_BATCH_SIZE = int(os.getenv('DESCRIPTION_BATCH_SIZE', '3'))
     MAX_IMAGE_WORKERS = int(os.getenv('MAX_IMAGE_WORKERS', '8'))
     
     # 图片生成配置

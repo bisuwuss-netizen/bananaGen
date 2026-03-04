@@ -16,6 +16,7 @@ from .prompts import (
     get_outline_generation_prompt,
     get_outline_parsing_prompt,
     get_page_description_prompt,
+    get_page_descriptions_batch_prompt,
     get_image_generation_prompt,
     get_image_edit_prompt,
     get_description_to_outline_prompt,
@@ -584,6 +585,59 @@ class AIService:
         response_text = self.text_provider.generate_text(desc_prompt, thinking_budget=1000)
         
         return dedent(response_text)
+
+    def generate_page_descriptions_batch(self,
+                                         project_context: ProjectContext,
+                                         outline: List[Dict],
+                                         batch_pages: List[Dict[str, Dict]],
+                                         language='zh') -> Dict[int, str]:
+        """
+        Generate descriptions for multiple pages in one model call.
+
+        Args:
+            project_context: Project context
+            outline: Full outline
+            batch_pages: List of {"page_index": int, "page_outline": {...}}
+            language: Output language
+
+        Returns:
+            Dict mapping page_index -> description text
+        """
+        if not batch_pages:
+            return {}
+
+        prompt = get_page_descriptions_batch_prompt(
+            project_context=project_context,
+            outline=outline,
+            batch_pages=batch_pages,
+            language=language
+        )
+        result = self.generate_json(prompt, thinking_budget=1000)
+
+        output: Dict[int, str] = {}
+        if isinstance(result, list):
+            for item in result:
+                if not isinstance(item, dict):
+                    continue
+                page_index = item.get('page_index')
+                description = item.get('description')
+                try:
+                    page_index_int = int(page_index)
+                except Exception:
+                    continue
+                if isinstance(description, str) and description.strip():
+                    output[page_index_int] = dedent(description)
+        elif isinstance(result, dict):
+            # fallback compatibility: {"1": "...", "2": "..."}
+            for k, v in result.items():
+                try:
+                    idx = int(k)
+                except Exception:
+                    continue
+                if isinstance(v, str) and v.strip():
+                    output[idx] = dedent(v)
+
+        return output
     
     def generate_outline_text(self, outline: List[Dict]) -> str:
         """
