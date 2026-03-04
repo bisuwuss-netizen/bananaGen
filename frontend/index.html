@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+<!--    <link rel="icon" type="image/svg+xml" href="/banana.svg" />-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="format-detection" content="telephone=no" />
+    <title>AI 原生 PPT 生成器</title>
+    <script src="http://jxzytest.gstudying.com/public/home/js/canvg.min.js"></script>
+    <script src="http://jxzytest.gstudying.com/public/home/js/HTMLtoPPT.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <iframe id="ppt-loader-frame" style="width: 1920px; height: 1080px; position: absolute; left: -10000px; visibility: hidden;"></iframe>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

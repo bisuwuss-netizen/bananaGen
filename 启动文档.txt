@@ -1,0 +1,20 @@
+创建虚拟环境：
+conda env -n <名称> python=3.10
+
+使用环境
+conda activate <名称>
+
+安装uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+在项目根目录下运行：
+uv sync
+
+前端启动：
+cd frontend
+npm install
+npm run dev
+
+后端启动：
+cd backend
+uv run alembic upgrade head && uv run python app.py

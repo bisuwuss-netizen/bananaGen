@@ -1,0 +1,529 @@
+/**
+ * 标题+要点布局组件
+ * 支持有图/无图两种渲染模式
+ */
+
+import React from 'react';
+import { TitleBulletsModel, ThemeConfig } from '../types/schema';
+import {
+  toInlineStyle,
+  getBaseSlideStyle,
+  getTitleStyle,
+  getSubtitleStyle,
+  getCardStyle,
+} from '../utils/styleHelper';
+
+interface TitleBulletsLayoutProps {
+  model: TitleBulletsModel;
+  theme: ThemeConfig;
+  onImageUpload?: () => void; // 图片上传回调
+}
+
+export const TitleBulletsLayout: React.FC<TitleBulletsLayoutProps> = ({ model, theme, onImageUpload }) => {
+  const { title, subtitle, bullets, image, background_image } = model;
+  const hasImage = image && (image.src || image.src === '');
+
+  const slideStyle: React.CSSProperties = {
+    ...getBaseSlideStyle(theme),
+    ...(background_image
+      ? {
+        backgroundImage: `linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)), url(${background_image})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }
+      : {}),
+  };
+  const titleStyle = toInlineStyle({ ...getTitleStyle(theme), textShadow: '0 1px 2px rgba(0,0,0,0.1)' });
+  const subtitleStyle = toInlineStyle(getSubtitleStyle(theme));
+
+  // 有图模式：左侧要点列表 + 右侧图片
+  if (hasImage) {
+    const imagePosition = image.position || 'right';
+    const imageWidth = image.width || '45%';
+
+    const flexContainerStyle = toInlineStyle({
+      display: 'flex',
+      flexDirection: imagePosition === 'left' ? 'row-reverse' : 'row',
+      gap: '30px',
+      marginTop: '30px',
+      flex: '1',
+      alignItems: 'stretch',
+      height: 'calc(100% - 140px)',
+      minHeight: '380px',
+    });
+
+    const bulletsColumnStyle = toInlineStyle({
+      flex: '1',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '16px',
+    });
+
+    const imageColumnStyle = toInlineStyle({
+      width: imageWidth,
+      flexShrink: '0',
+      display: 'flex',
+      alignItems: 'stretch',
+    });
+
+    const imageFrameStyle = toInlineStyle({
+      width: '100%',
+      height: '100%',
+      minHeight: '360px',
+      borderRadius: '12px',
+      overflow: 'hidden',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    });
+
+    const imageStyle = toInlineStyle({
+      width: '100%',
+      height: '100%',
+      objectFit: 'contain',
+      objectPosition: 'center',
+    });
+
+    const placeholderStyle = toInlineStyle({
+      width: '100%',
+      height: '100%',
+      minHeight: '360px',
+      backgroundColor: theme.colors.backgroundAlt,
+      borderRadius: '12px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: theme.colors.textLight,
+      fontSize: '14px',
+      border: `2px dashed ${theme.colors.secondary}`,
+    });
+
+    return (
+      <section style={slideStyle}>
+        <h2 style={parseStyle(titleStyle)}>{title}</h2>
+        {subtitle && <p style={parseStyle(subtitleStyle)}>{subtitle}</p>}
+        <div style={parseStyle(flexContainerStyle)}>
+          <div style={parseStyle(bulletsColumnStyle)}>
+            {bullets.map((bullet, index) => (
+              <BulletCard key={index} bullet={bullet} theme={theme} compact />
+            ))}
+          </div>
+          <div style={parseStyle(imageColumnStyle)}>
+            {image.src ? (
+              <div style={parseStyle(imageFrameStyle)}>
+                <img src={image.src} alt={image.alt || ''} style={parseStyle(imageStyle)} />
+              </div>
+            ) : (
+              <div
+                style={parseStyle(placeholderStyle)}
+                onClick={onImageUpload}
+                title="点击上传图片"
+              >
+                <span>点击上传图片</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // 无图模式：原有Grid布局
+  const bulletsContainerStyle = toInlineStyle({
+    marginTop: '40px',
+    display: 'grid',
+    gridTemplateColumns: bullets.length <= 3 ? 'repeat(auto-fit, minmax(300px, 1fr))' : 'repeat(2, 1fr)',
+    gap: '24px',
+  });
+
+  const keyTakeawayStyle = toInlineStyle({
+    marginTop: '30px',
+    padding: '16px 20px',
+    backgroundColor: theme.colors.backgroundAlt,
+    borderRadius: theme.decorations?.borderRadius || '12px',
+    borderLeft: `4px solid ${theme.colors.primary}`,
+    fontSize: theme.sizes.bodySize,
+    color: theme.colors.text,
+    lineHeight: '1.5',
+  });
+
+  return (
+    <section style={slideStyle}>
+      <h2 style={parseStyle(titleStyle)}>{title}</h2>
+      {subtitle && <p style={parseStyle(subtitleStyle)}>{subtitle}</p>}
+      <div style={parseStyle(bulletsContainerStyle)}>
+        {bullets.map((bullet, index) => (
+          <BulletCard key={index} bullet={bullet} theme={theme} />
+        ))}
+      </div>
+
+      {/* 页面核心要点总结 */}
+      {model.keyTakeaway && (
+        <div style={parseStyle(keyTakeawayStyle)}>
+          <strong>🎯 核心要点：</strong>{model.keyTakeaway}
+        </div>
+      )}
+    </section>
+  );
+};
+
+const BulletCard: React.FC<{
+  bullet: {
+    icon?: string;
+    text: string;
+    description?: string;
+    example?: string;
+    note?: string;
+    dataPoint?: {
+      value: string;
+      unit: string;
+      source?: string;
+    };
+  };
+  theme: ThemeConfig;
+  compact?: boolean;
+}> = ({ bullet, theme, compact }) => {
+  // 使用getCardStyle应用主题装饰配置
+  const baseCardStyle = getCardStyle(theme);
+  const cardStyle = toInlineStyle({
+    ...baseCardStyle,
+    padding: compact ? '16px 20px' : '24px',
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: compact ? '12px' : '16px',
+  });
+
+  const iconContainerStyle = toInlineStyle({
+    width: compact ? '40px' : '48px',
+    height: compact ? '40px' : '48px',
+    borderRadius: '10px',
+    backgroundColor: theme.colors.secondary,
+    color: '#ffffff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: compact ? '16px' : '20px',
+    flexShrink: '0',
+  });
+
+  const textContainerStyle = toInlineStyle({
+    flex: '1',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  });
+
+  const bulletTextStyle = toInlineStyle({
+    fontSize: compact ? '17px' : '20px',
+    fontWeight: '600',
+    color: theme.colors.text,
+    margin: '0',
+  });
+
+  const descriptionStyle = toInlineStyle({
+    fontSize: compact ? '14px' : '16px',
+    color: theme.colors.textLight,
+    margin: '0',
+    lineHeight: '1.5',
+  });
+
+  const exampleStyle = toInlineStyle({
+    fontSize: '14px',
+    color: theme.colors.text,
+    backgroundColor: theme.colors.backgroundAlt,
+    padding: '8px 12px',
+    borderRadius: '6px',
+    borderLeft: `3px solid ${theme.colors.accent}`,
+    margin: '0',
+    lineHeight: '1.4',
+  });
+
+  const noteStyle = toInlineStyle({
+    fontSize: '13px',
+    color: '#d97706',
+    backgroundColor: '#fffbeb',
+    padding: '6px 10px',
+    borderRadius: '6px',
+    border: '1px solid #fcd34d',
+    margin: '0',
+    lineHeight: '1.3',
+  });
+
+  const dataPointStyle = toInlineStyle({
+    display: 'inline-flex',
+    alignItems: 'baseline',
+    gap: '4px',
+    padding: '4px 10px',
+    borderRadius: '6px',
+    backgroundColor: theme.colors.secondary,
+    color: '#ffffff',
+  });
+
+  const dataValueStyle = toInlineStyle({
+    fontSize: '18px',
+    fontWeight: 'bold',
+  });
+
+  const dataUnitStyle = toInlineStyle({
+    fontSize: '12px',
+    opacity: '0.9',
+  });
+
+  return (
+    <div style={parseStyle(cardStyle)}>
+      <div style={parseStyle(iconContainerStyle)}>
+        {bullet.icon ? (
+          <i className={bullet.icon.startsWith('fa') ? bullet.icon : `fa ${bullet.icon}`} />
+        ) : (
+          <i className="fa fa-check" />
+        )}
+      </div>
+      <div style={parseStyle(textContainerStyle)}>
+        <p style={parseStyle(bulletTextStyle)}>{bullet.text}</p>
+        {bullet.description && (
+          <p style={parseStyle(descriptionStyle)}>{bullet.description}</p>
+        )}
+
+        {/* 数据支撑标签 */}
+        {bullet.dataPoint && (
+          <div style={parseStyle(dataPointStyle)}>
+            <span style={parseStyle(dataValueStyle)}>{bullet.dataPoint.value}</span>
+            <span style={parseStyle(dataUnitStyle)}>{bullet.dataPoint.unit}</span>
+          </div>
+        )}
+
+        {/* 具体案例 */}
+        {bullet.example && (
+          <div style={parseStyle(exampleStyle)}>
+            💡 案例：{bullet.example}
+          </div>
+        )}
+
+        {/* 注意事项 */}
+        {bullet.note && (
+          <div style={parseStyle(noteStyle)}>
+            ⚠️ 注意：{bullet.note}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export function renderTitleBulletsLayoutHTML(model: TitleBulletsModel, theme: ThemeConfig): string {
+  const { title, subtitle, bullets, image, background_image } = model;
+  const hasImage = image && (image.src !== undefined);
+
+  const slideStyle = toInlineStyle({
+    width: `${theme.sizes.slideWidth}px`,
+    height: `${theme.sizes.slideHeight}px`,
+    position: 'relative',
+    overflow: 'hidden',
+    fontFamily: theme.fonts.body,
+    color: theme.colors.text,
+    backgroundColor: theme.colors.background,
+    ...(background_image
+      ? {
+        backgroundImage: `url(${background_image})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }
+      : {}),
+    boxSizing: 'border-box',
+    padding: theme.spacing.padding,
+  });
+
+  const titleStyle = toInlineStyle({
+    fontSize: theme.sizes.titleSize,
+    fontWeight: 'bold',
+    color: theme.colors.primary,
+    margin: '0',
+    lineHeight: '1.3',
+    fontFamily: theme.fonts.title,
+  });
+
+  const subtitleStyle = toInlineStyle({
+    fontSize: theme.sizes.subtitleSize,
+    color: theme.colors.textLight,
+    margin: '0',
+    marginTop: '12px',
+    lineHeight: '1.4',
+  });
+
+  // 有图模式
+  if (hasImage) {
+    const imagePosition = image.position || 'right';
+    const imageWidth = image.width || '45%';
+
+    const flexContainerStyle = toInlineStyle({
+      display: 'flex',
+      flexDirection: imagePosition === 'left' ? 'row-reverse' : 'row',
+      gap: '30px',
+      marginTop: '30px',
+      flex: '1',
+      alignItems: 'stretch',
+      height: 'calc(100% - 140px)',
+      minHeight: '380px',
+    });
+
+    const bulletsColumnStyle = toInlineStyle({
+      flex: '1',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '16px',
+    });
+
+    const imageColumnStyle = toInlineStyle({
+      width: imageWidth,
+      flexShrink: '0',
+      display: 'flex',
+      alignItems: 'stretch',
+    });
+
+    const bulletsHTML = bullets.map((bullet) => renderBulletCardHTML(bullet, theme, true)).join('\n      ');
+
+    let imageHTML = '';
+    if (image.src) {
+      const imageFrameStyle = toInlineStyle({
+        width: '100%',
+        height: '100%',
+        minHeight: '360px',
+        borderRadius: '12px',
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      });
+      const imageStyle = toInlineStyle({
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain',
+        objectPosition: 'center',
+      });
+      imageHTML = `<div style="${imageFrameStyle}"><img src="${image.src}" alt="${image.alt || ''}" style="${imageStyle}" /></div>`;
+    } else {
+      const placeholderStyle = toInlineStyle({
+        width: '100%',
+        height: '100%',
+        minHeight: '360px',
+        backgroundColor: theme.colors.backgroundAlt,
+        borderRadius: '12px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: theme.colors.textLight,
+        fontSize: '14px',
+        border: `2px dashed ${theme.colors.secondary}`,
+      });
+      imageHTML = `<div style="${placeholderStyle}"><span>点击上传图片</span></div>`;
+    }
+
+    return `<section style="${slideStyle}">
+  <h2 style="${titleStyle}">${title}</h2>
+  ${subtitle ? `<p style="${subtitleStyle}">${subtitle}</p>` : ''}
+  <div style="${flexContainerStyle}">
+    <div style="${bulletsColumnStyle}">
+      ${bulletsHTML}
+    </div>
+    <div style="${imageColumnStyle}">
+      ${imageHTML}
+    </div>
+  </div>
+</section>`;
+  }
+
+  // 无图模式
+  const bulletsContainerStyle = toInlineStyle({
+    marginTop: '40px',
+    display: 'grid',
+    gridTemplateColumns: bullets.length <= 3 ? 'repeat(auto-fit, minmax(300px, 1fr))' : 'repeat(2, 1fr)',
+    gap: '24px',
+  });
+
+  const bulletsHTML = bullets.map((bullet) => renderBulletCardHTML(bullet, theme, false)).join('\n    ');
+
+  return `<section style="${slideStyle}">
+  <h2 style="${titleStyle}">${title}</h2>
+  ${subtitle ? `<p style="${subtitleStyle}">${subtitle}</p>` : ''}
+  <div style="${bulletsContainerStyle}">
+    ${bulletsHTML}
+  </div>
+</section>`;
+}
+
+function renderBulletCardHTML(
+  bullet: { icon?: string; text: string; description?: string },
+  theme: ThemeConfig,
+  compact: boolean
+): string {
+  const cardStyle = toInlineStyle({
+    padding: compact ? '16px 20px' : '24px',
+    backgroundColor: theme.colors.backgroundAlt,
+    borderRadius: '12px',
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: compact ? '12px' : '16px',
+  });
+
+  const iconContainerStyle = toInlineStyle({
+    width: compact ? '40px' : '48px',
+    height: compact ? '40px' : '48px',
+    borderRadius: '10px',
+    backgroundColor: theme.colors.secondary,
+    color: '#ffffff',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: compact ? '16px' : '20px',
+    flexShrink: '0',
+  });
+
+  const textContainerStyle = toInlineStyle({
+    flex: '1',
+  });
+
+  const bulletTextStyle = toInlineStyle({
+    fontSize: compact ? '17px' : '20px',
+    fontWeight: '600',
+    color: theme.colors.text,
+    margin: '0',
+  });
+
+  const descriptionStyle = toInlineStyle({
+    fontSize: compact ? '14px' : '16px',
+    color: theme.colors.textLight,
+    margin: '0',
+    marginTop: '6px',
+    lineHeight: '1.5',
+  });
+
+  const iconClass = bullet.icon
+    ? bullet.icon.startsWith('fa') ? bullet.icon : `fa ${bullet.icon}`
+    : 'fa fa-check';
+
+  return `<div style="${cardStyle}">
+      <div style="${iconContainerStyle}">
+        <i class="${iconClass}"></i>
+      </div>
+      <div style="${textContainerStyle}">
+        <p style="${bulletTextStyle}">${bullet.text}</p>
+        ${bullet.description ? `<p style="${descriptionStyle}">${bullet.description}</p>` : ''}
+      </div>
+    </div>`;
+}
+
+function parseStyle(styleString: string): React.CSSProperties {
+  const styles: Record<string, string> = {};
+  styleString.split(';').forEach((rule) => {
+    const [key, value] = rule.split(':').map((s) => s.trim());
+    if (key && value) {
+      const camelKey = key.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+      styles[camelKey] = value;
+    }
+  });
+  return styles as React.CSSProperties;
+}
+
+export default TitleBulletsLayout;

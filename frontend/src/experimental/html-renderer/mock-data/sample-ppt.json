@@ -1,0 +1,377 @@
+{
+  "project_id": "poc-3d-modeling-001",
+  "ppt_meta": {
+    "title": "3D建模技术基础",
+    "theme_id": "tech_blue",
+    "aspect_ratio": "16:9",
+    "author": "数字媒体教研室"
+  },
+  "pages": [
+    {
+      "page_id": "p01",
+      "order_index": 0,
+      "layout_id": "cover",
+      "model": {
+        "title": "3D建模技术基础",
+        "subtitle": "数字媒体艺术设计专业核心课程",
+        "author": "主讲教师：李明",
+        "department": "数字媒体教研室",
+        "date": "2026年春季学期"
+      }
+    },
+    {
+      "page_id": "p02",
+      "order_index": 1,
+      "layout_id": "toc",
+      "model": {
+        "title": "课程内容",
+        "items": [
+          { "index": 1, "text": "3D建模概述" },
+          { "index": 2, "text": "主流建模软件" },
+          { "index": 3, "text": "基础建模技术" },
+          { "index": 4, "text": "材质与渲染" },
+          { "index": 5, "text": "实训与作业" }
+        ]
+      }
+    },
+    {
+      "page_id": "p03",
+      "order_index": 2,
+      "layout_id": "section_title",
+      "model": {
+        "section_number": 1,
+        "title": "3D建模概述",
+        "subtitle": "了解三维建模的基本概念与应用场景"
+      }
+    },
+    {
+      "page_id": "p04",
+      "order_index": 3,
+      "layout_id": "title_content",
+      "model": {
+        "title": "什么是3D建模？",
+        "content": [
+          "3D建模是指使用计算机软件创建三维物体数学表示的过程。通过定义物体的顶点、边和面，构建出具有长度、宽度和高度的虚拟立体对象。",
+          "在数字媒体领域，3D建模是动画制作、游戏开发、影视特效、工业设计等行业的核心技术。掌握3D建模技能，是成为数字媒体专业人才的必备条件。"
+        ],
+        "highlight": "学习目标：掌握至少一款主流3D建模软件，能够独立完成中等复杂度的模型制作",
+        "image": {
+          "src": "",
+          "alt": "3D建模示意图",
+          "position": "right",
+          "width": "40%"
+        }
+      }
+    },
+    {
+      "page_id": "p05",
+      "order_index": 4,
+      "layout_id": "title_bullets",
+      "model": {
+        "title": "3D建模的应用领域",
+        "subtitle": "三维建模技术在各行业的广泛应用",
+        "bullets": [
+          {
+            "icon": "fa-gamepad",
+            "text": "游戏开发",
+            "description": "角色、场景、道具的模型制作是游戏美术的核心工作"
+          },
+          {
+            "icon": "fa-film",
+            "text": "影视动画",
+            "description": "三维动画电影、特效制作离不开高质量的模型资产"
+          },
+          {
+            "icon": "fa-cube",
+            "text": "工业设计",
+            "description": "产品外观设计、原型验证需要精确的三维模型支持"
+          },
+          {
+            "icon": "fa-home",
+            "text": "建筑可视化",
+            "description": "室内设计、建筑漫游等领域对3D模型有大量需求"
+          }
+        ],
+        "image": {
+          "src": "",
+          "alt": "3D建模应用领域展示",
+          "position": "right",
+          "width": "35%"
+        }
+      }
+    },
+    {
+      "page_id": "p06",
+      "order_index": 5,
+      "layout_id": "section_title",
+      "model": {
+        "section_number": 2,
+        "title": "主流建模软件",
+        "subtitle": "认识行业中常用的3D建模工具"
+      }
+    },
+    {
+      "page_id": "p07",
+      "order_index": 6,
+      "layout_id": "two_column",
+      "model": {
+        "title": "主流3D建模软件对比",
+        "left": {
+          "type": "bullets",
+          "header": "Maya / 3ds Max",
+          "bullets": [
+            { "icon": "fa-star", "text": "行业标准，功能全面" },
+            { "icon": "fa-users", "text": "用户群体庞大" },
+            { "icon": "fa-graduation-cap", "text": "学习资源丰富" },
+            { "icon": "fa-dollar-sign", "text": "商业软件，需付费订阅" }
+          ]
+        },
+        "right": {
+          "type": "bullets",
+          "header": "Blender",
+          "bullets": [
+            { "icon": "fa-gift", "text": "完全免费开源" },
+            { "icon": "fa-rocket", "text": "功能迭代迅速" },
+            { "icon": "fa-paint-brush", "text": "内置雕刻、绘画工具" },
+            { "icon": "fa-thumbs-up", "text": "本课程主要使用软件" }
+          ]
+        }
+      }
+    },
+    {
+      "page_id": "p08",
+      "order_index": 7,
+      "layout_id": "title_bullets",
+      "model": {
+        "title": "为什么选择Blender？",
+        "bullets": [
+          {
+            "icon": "fa-check-circle",
+            "text": "零成本入门",
+            "description": "开源免费，无需购买许可证，降低学习门槛"
+          },
+          {
+            "icon": "fa-check-circle",
+            "text": "功能完整",
+            "description": "建模、雕刻、动画、渲染一体化，满足全流程需求"
+          },
+          {
+            "icon": "fa-check-circle",
+            "text": "社区活跃",
+            "description": "全球开发者持续贡献，每季度发布新版本"
+          },
+          {
+            "icon": "fa-check-circle",
+            "text": "就业认可",
+            "description": "越来越多企业接受Blender作为生产工具"
+          }
+        ]
+      }
+    },
+    {
+      "page_id": "p09",
+      "order_index": 8,
+      "layout_id": "section_title",
+      "model": {
+        "section_number": 3,
+        "title": "基础建模技术",
+        "subtitle": "掌握多边形建模的核心方法"
+      }
+    },
+    {
+      "page_id": "p10",
+      "order_index": 9,
+      "layout_id": "process_steps",
+      "model": {
+        "title": "多边形建模标准流程",
+        "subtitle": "从概念到成品的完整工作流程",
+        "steps": [
+          {
+            "number": 1,
+            "label": "参考收集",
+            "description": "搜集多角度参考图",
+            "icon": "fa-images"
+          },
+          {
+            "number": 2,
+            "label": "基础形体",
+            "description": "用基本几何体搭建大形",
+            "icon": "fa-shapes"
+          },
+          {
+            "number": 3,
+            "label": "细节雕刻",
+            "description": "添加边循环，调整细节",
+            "icon": "fa-pencil-alt"
+          },
+          {
+            "number": 4,
+            "label": "拓扑优化",
+            "description": "检查布线，优化面数",
+            "icon": "fa-project-diagram"
+          },
+          {
+            "number": 5,
+            "label": "UV展开",
+            "description": "展开UV准备贴图",
+            "icon": "fa-expand"
+          }
+        ],
+        "image": {
+          "src": "",
+          "alt": "建模流程示意图",
+          "width": "50%"
+        }
+      }
+    },
+    {
+      "page_id": "p11",
+      "order_index": 10,
+      "layout_id": "title_bullets",
+      "model": {
+        "title": "Blender常用建模工具",
+        "subtitle": "熟练掌握这些工具是高效建模的基础",
+        "bullets": [
+          {
+            "icon": "fa-mouse-pointer",
+            "text": "挤出（Extrude）",
+            "description": "快捷键E，从现有面/边/点向外延伸创建新几何体"
+          },
+          {
+            "icon": "fa-cut",
+            "text": "环切（Loop Cut）",
+            "description": "快捷键Ctrl+R，在网格上添加均匀分布的边循环"
+          },
+          {
+            "icon": "fa-compress-arrows-alt",
+            "text": "内插面（Inset）",
+            "description": "快捷键I，在选中面内部创建新的内嵌面"
+          },
+          {
+            "icon": "fa-bezier-curve",
+            "text": "倒角（Bevel）",
+            "description": "快捷键Ctrl+B，将硬边倒成圆角或斜角"
+          }
+        ]
+      }
+    },
+    {
+      "page_id": "p12",
+      "order_index": 11,
+      "layout_id": "image_full",
+      "model": {
+        "title": "建模案例展示：游戏角色",
+        "image_src": "",
+        "image_alt": "游戏角色3D模型展示",
+        "caption": "图示：低多边形风格角色模型，面数约5000三角面，适用于移动端游戏"
+      }
+    },
+    {
+      "page_id": "p13",
+      "order_index": 12,
+      "layout_id": "section_title",
+      "model": {
+        "section_number": 4,
+        "title": "材质与渲染",
+        "subtitle": "让模型呈现真实的视觉效果"
+      }
+    },
+    {
+      "page_id": "p14",
+      "order_index": 13,
+      "layout_id": "two_column",
+      "model": {
+        "title": "PBR材质基础",
+        "left": {
+          "type": "text",
+          "header": "什么是PBR？",
+          "content": [
+            "PBR（Physically Based Rendering）即基于物理的渲染，是一种模拟真实世界光照与材质交互的技术标准。",
+            "PBR材质通常包含：基础色（Base Color）、金属度（Metallic）、粗糙度（Roughness）、法线（Normal）等贴图通道。"
+          ]
+        },
+        "right": {
+          "type": "image",
+          "header": "PBR材质示例",
+          "image_src": "",
+          "image_alt": "PBR材质球展示"
+        }
+      }
+    },
+    {
+      "page_id": "p15",
+      "order_index": 14,
+      "layout_id": "title_bullets",
+      "model": {
+        "title": "Cycles渲染器设置要点",
+        "subtitle": "Blender内置的光线追踪渲染引擎",
+        "bullets": [
+          {
+            "icon": "fa-sun",
+            "text": "光源设置",
+            "description": "合理布置主光源、补光和环境光，营造层次感"
+          },
+          {
+            "icon": "fa-sliders-h",
+            "text": "采样数量",
+            "description": "采样数越高画质越好，但渲染时间也会增加"
+          },
+          {
+            "icon": "fa-adjust",
+            "text": "降噪处理",
+            "description": "开启AI降噪可在较低采样下获得干净画面"
+          },
+          {
+            "icon": "fa-camera",
+            "text": "相机参数",
+            "description": "焦距、景深等设置影响最终画面的视觉效果"
+          }
+        ]
+      }
+    },
+    {
+      "page_id": "p16",
+      "order_index": 15,
+      "layout_id": "section_title",
+      "model": {
+        "section_number": 5,
+        "title": "实训与作业",
+        "subtitle": "理论结合实践，巩固所学技能"
+      }
+    },
+    {
+      "page_id": "p17",
+      "order_index": 16,
+      "layout_id": "title_content",
+      "model": {
+        "title": "课程实训安排",
+        "content": [
+          "实训一（第3-4周）：卡通风格道具建模。要求制作一个简单的卡通风格物品（如水杯、书本、小摆件），面数控制在500以内，完成基础UV展开。",
+          "实训二（第7-8周）：硬表面模型制作。选择一个科幻或机械主题的物品进行建模，如机器人头部、飞行器、武器装备等，重点练习硬边控制与细节刻画。",
+          "实训三（第11-12周）：角色模型制作。制作一个低多边形风格的游戏角色，包含完整的UV展开和基础材质设置，最终提交包含线框展示的渲染图。"
+        ],
+        "highlight": "期末作品：综合运用所学技能，独立完成一个完整的3D场景或角色作品，包含建模、材质、灯光、渲染全流程"
+      }
+    },
+    {
+      "page_id": "p18",
+      "order_index": 17,
+      "layout_id": "quote",
+      "model": {
+        "quote": "技术只是工具，创意才是灵魂。学好3D建模不仅要掌握软件操作，更要培养对形态、比例、细节的敏感度。",
+        "author": "皮克斯动画工作室",
+        "source": "《创意公司》"
+      }
+    },
+    {
+      "page_id": "p19",
+      "order_index": 18,
+      "layout_id": "ending",
+      "model": {
+        "title": "感谢聆听",
+        "subtitle": "欢迎课后交流讨论",
+        "contact": "教师邮箱：liming@college.edu.cn  |  课程QQ群：123456789"
+      }
+    }
+  ]
+}
