@@ -23,13 +23,37 @@ from services.ai_service_manager import get_ai_service
 logger = logging.getLogger(__name__)
 
 
-SCHEME_STYLE_MAP: Dict[str, str] = {
-    "tech_blue": "科技教学插画，冷蓝与青灰配色，专业克制，细节清晰。",
-    "academic": "学术讲解风，冷灰与深蓝配色，理性严谨，构图干净。",
-    "interactive": "课堂互动插画，明亮但低饱和，亲和活泼，元素清楚。",
-    "visual": "叙事感插画，灰度基调+单一强调色，层次分明。",
-    "practical": "实操训练插画，工业橙与深灰，强调工具与步骤。",
-    "modern": "现代商务视觉，干净留白，几何结构与柔和层次。",
+TEMPLATE_PROMPT_PROFILES: Dict[str, Dict[str, str]] = {
+    "tech_blue": {
+        "content_style": "科技教学插画，冷蓝与青灰配色，专业克制，细节清晰。",
+        "background_style": "科技发布底图，冷蓝/青灰渐层，理性专业。",
+        "background_texture": "边缘可有轻网格、粒子、细线光带，中心保持干净留白。",
+    },
+    "academic": {
+        "content_style": "学术讲解风，冷灰与深蓝配色，理性严谨，构图干净。",
+        "background_style": "学术研究底图，纸感冷灰与深蓝，克制稳定。",
+        "background_texture": "边缘可有细网格、文档纹理、轻线框，中心留白便于阅读。",
+    },
+    "interactive": {
+        "content_style": "课堂互动插画，明亮但低饱和，亲和活泼，元素清楚。",
+        "background_style": "课堂互动底图，明亮但不过饱和，轻松友好。",
+        "background_texture": "边缘可有对话气泡、贴纸、引导箭头，中心区域低干扰。",
+    },
+    "visual": {
+        "content_style": "叙事感插画，灰度基调+单一强调色，层次分明。",
+        "background_style": "视觉叙事底图，高级灰主调+单一强调色，电影感光影。",
+        "background_texture": "边缘可有胶片颗粒与海报感光影，中心保持可读性留白。",
+    },
+    "practical": {
+        "content_style": "实操训练插画，工业橙与深灰，强调工具与步骤。",
+        "background_style": "实操流程底图，工程感橙灰配色，结构清晰。",
+        "background_texture": "边缘可有工具轮廓、检查标记、警示线，中心区域简洁。",
+    },
+    "modern": {
+        "content_style": "现代商务视觉，干净留白，几何结构与柔和层次。",
+        "background_style": "现代先锋底图，非对称几何与柔和渐层，质感高级。",
+        "background_texture": "边缘可有玻璃态几何与斜切层次，中心留出讲解空间。",
+    },
 }
 
 LAYOUT_INTENT_MAP: Dict[str, str] = {
@@ -97,8 +121,18 @@ DIVERSITY_VARIANTS: List[str] = [
     "变化策略：环形或放射结构，强调核心与外延关系。",
 ]
 
-NEGATIVE_CONSTRAINT = (
+BACKGROUND_VARIANTS: List[str] = [
+    "背景变化：中心大留白，边缘轻渐变并叠加细纹理。",
+    "背景变化：上浅下深渐层，四角弱装饰，中心低对比。",
+    "背景变化：左右边缘点缀，中央保持平稳明亮阅读区。",
+    "背景变化：轻几何结构在边缘出现，中心区域无主体干扰。",
+]
+
+NEGATIVE_CONSTRAINT_CONTENT = (
     "禁止：文字、数字、Logo、水印、纯抽象渐变、纯装饰边框、无意义背景纹理。"
+)
+NEGATIVE_CONSTRAINT_BACKGROUND = (
+    "禁止：文字、数字、Logo、水印、人物特写、居中强主体、杂乱高频纹理、强眩光。"
 )
 
 TOKEN_SPLIT_RE = re.compile(r"[，。；、,.!?:：/\\\s\-\(\)\[\]{}]+")
@@ -168,6 +202,9 @@ def _normalize_slot_context(slot: Dict[str, Any], project: Any) -> Dict[str, Any
     raw_context = slot.get("context") if isinstance(slot.get("context"), dict) else {}
     slot_path = _clean_text(slot.get("slot_path", ""))
     slot_role = _clean_text(raw_context.get("slot_role")) or _infer_slot_role(slot_path)
+    asset_type = _clean_text(raw_context.get("asset_type", "")).lower()
+    if asset_type not in {"content", "background"}:
+        asset_type = "background" if slot_role == "background" else "content"
 
     page_facts = raw_context.get("page_facts")
     facts: List[str] = []
@@ -207,6 +244,7 @@ def _normalize_slot_context(slot: Dict[str, Any], project: Any) -> Dict[str, Any
         facts = [page_title]
 
     return {
+        "asset_type": asset_type,
         "layout_id": layout_id,
         "slot_role": slot_role,
         "scheme_id": scheme_id or "tech_blue",
@@ -223,12 +261,20 @@ def _normalize_slot_context(slot: Dict[str, Any], project: Any) -> Dict[str, Any
 
 
 def _build_rule_prompt(raw_prompt: str, context: Dict[str, Any], slot_key: str) -> str:
+    asset_type = context.get("asset_type", "content")
+    if asset_type == "background":
+        return _build_background_rule_prompt(raw_prompt, context, slot_key)
+    return _build_content_rule_prompt(raw_prompt, context, slot_key)
+
+
+def _build_content_rule_prompt(raw_prompt: str, context: Dict[str, Any], slot_key: str) -> str:
     facts = context.get("facts", [])
     topic = context.get("page_title") or context.get("project_topic") or "专业知识讲解场景"
     focus = "；".join(facts[:6]) if facts else topic
     layout_id = context.get("layout_id", "title_content")
     slot_role = context.get("slot_role", "main")
     scheme_id = context.get("scheme_id", "tech_blue")
+    profile = _get_template_profile(scheme_id)
     industry = context.get("industry", "")
     audience = context.get("audience", "")
     visual_goal = context.get("visual_goal", "")
@@ -244,7 +290,7 @@ def _build_rule_prompt(raw_prompt: str, context: Dict[str, Any], slot_key: str) 
         layout_intent = LAYOUT_INTENT_MAP.get(layout_id, LAYOUT_INTENT_MAP["default"])
 
     composition = LAYOUT_COMPOSITION_MAP.get(layout_id, LAYOUT_COMPOSITION_MAP["default"])
-    scheme_style = SCHEME_STYLE_MAP.get(scheme_id, SCHEME_STYLE_MAP["tech_blue"])
+    scheme_style = profile["content_style"]
     diversity = _pick_variant(slot_key)
 
     lines: List[str] = [
@@ -279,7 +325,46 @@ def _build_rule_prompt(raw_prompt: str, context: Dict[str, Any], slot_key: str) 
     if baseline:
         lines.append(f"参考草稿（可重写优化）：{baseline[:240]}")
 
-    lines.append(NEGATIVE_CONSTRAINT)
+    lines.append(NEGATIVE_CONSTRAINT_CONTENT)
+    return _clean_text(" ".join(lines))
+
+
+def _build_background_rule_prompt(raw_prompt: str, context: Dict[str, Any], slot_key: str) -> str:
+    scheme_id = context.get("scheme_id", "tech_blue")
+    profile = _get_template_profile(scheme_id)
+    topic = context.get("project_topic") or context.get("page_title") or "知识讲解主题"
+    facts = context.get("facts", [])
+    key_facts = "；".join(facts[:4]) if facts else topic
+    visual_goal = context.get("visual_goal") or "统一背景图，中心留白，不干扰正文阅读。"
+    industry = context.get("industry", "")
+    audience = context.get("audience", "")
+
+    lines: List[str] = [
+        "任务：生成教学PPT统一背景底图（可复用于整套页面），用于承载正文内容。",
+        f"主题线索：{topic}。",
+        f"内容参考：{key_facts}。",
+        f"模板背景风格：{profile['background_style']}",
+        f"背景纹理建议：{profile['background_texture']}",
+        f"背景意图：{visual_goal}",
+        _pick_background_variant(slot_key),
+        "阅读性要求：中心60%-70%区域保持低对比留白，边缘提供轻量氛围元素。",
+        "结构要求：避免单一主体抢焦点，保证正文叠加后依然清晰。",
+    ]
+
+    if industry and industry in INDUSTRY_HINTS:
+        lines.append(INDUSTRY_HINTS[industry]["hint"])
+    if audience and audience in AUDIENCE_HINTS:
+        lines.append(AUDIENCE_HINTS[audience]["hint"])
+    if context.get("template_style"):
+        lines.append(f"风格补充：{context['template_style']}")
+    if context.get("extra_requirements"):
+        lines.append(f"额外约束：{context['extra_requirements']}")
+
+    baseline = _clean_text(raw_prompt)
+    if baseline:
+        lines.append(f"参考草稿（可重写优化）：{baseline[:220]}")
+
+    lines.append(NEGATIVE_CONSTRAINT_BACKGROUND)
     return _clean_text(" ".join(lines))
 
 
@@ -335,6 +420,7 @@ def _to_rewriter_payload(item: Dict[str, Any]) -> Dict[str, Any]:
     context = item["context"]
     return {
         "id": item["id"],
+        "asset_type": context.get("asset_type", "content"),
         "rule_prompt": item["rule_prompt"],
         "layout_id": context.get("layout_id"),
         "slot_role": context.get("slot_role"),
@@ -356,7 +442,8 @@ def _build_rewriter_instruction(payload: List[Dict[str, Any]]) -> str:
         "2) 强化主题与因果/层次关系；\n"
         "3) 避免同质化，保持每个槽位视觉差异；\n"
         "4) 保留“禁止文字/数字/Logo/水印”等约束；\n"
-        "5) 输出简洁、可执行、中文为主。\n\n"
+        "5) 如果 asset_type=background，必须强调中心留白和正文可读性；\n"
+        "6) 输出简洁、可执行、中文为主。\n\n"
         f"输入 JSON：{payload_json}\n\n"
         "输出要求：\n"
         "- 仅输出 JSON 数组；\n"
@@ -386,6 +473,7 @@ def _quality_gate_prompt(prompt: str, fallback: str, context: Dict[str, Any]) ->
     candidate = _clean_text(prompt)
     if not candidate:
         return fallback
+    asset_type = context.get("asset_type", "content")
 
     # Basic length guard.
     if len(candidate) < 40:
@@ -393,16 +481,21 @@ def _quality_gate_prompt(prompt: str, fallback: str, context: Dict[str, Any]) ->
     if len(candidate) > 900:
         candidate = candidate[:900]
 
-    # Fact coverage guard.
-    keywords = _extract_keywords(context.get("facts", []) or [context.get("page_title", ""), context.get("project_topic", "")])
-    if keywords:
-        coverage = sum(1 for kw in keywords[:4] if kw and kw in candidate)
-        if coverage == 0:
-            return fallback
+    # Fact coverage guard: strict for content slots, looser for backgrounds.
+    if asset_type != "background":
+        keywords = _extract_keywords(context.get("facts", []) or [context.get("page_title", ""), context.get("project_topic", "")])
+        if keywords:
+            coverage = sum(1 for kw in keywords[:4] if kw and kw in candidate)
+            if coverage == 0:
+                return fallback
+    else:
+        if "留白" not in candidate:
+            candidate = f"{candidate} 中心区域保持留白，保证正文可读。"
 
     # Safety/quality constraints should always exist.
     if "禁止" not in candidate and "避免" not in candidate:
-        candidate = f"{candidate} {NEGATIVE_CONSTRAINT}"
+        negative = NEGATIVE_CONSTRAINT_BACKGROUND if asset_type == "background" else NEGATIVE_CONSTRAINT_CONTENT
+        candidate = f"{candidate} {negative}"
     return candidate
 
 
@@ -465,6 +558,17 @@ def _pick_variant(slot_key: str) -> str:
     digest = md5(slot_key.encode("utf-8")).hexdigest()
     index = int(digest[:6], 16) % len(DIVERSITY_VARIANTS)
     return DIVERSITY_VARIANTS[index]
+
+
+def _pick_background_variant(slot_key: str) -> str:
+    digest = md5((slot_key + "-bg").encode("utf-8")).hexdigest()
+    index = int(digest[:6], 16) % len(BACKGROUND_VARIANTS)
+    return BACKGROUND_VARIANTS[index]
+
+
+def _get_template_profile(scheme_id: str) -> Dict[str, str]:
+    key = (scheme_id or "tech_blue").strip().lower()
+    return TEMPLATE_PROMPT_PROFILES.get(key, TEMPLATE_PROMPT_PROFILES["tech_blue"])
 
 
 def _clean_json_block(text: str) -> str:
