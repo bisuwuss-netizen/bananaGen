@@ -490,14 +490,19 @@ export const SlidePreview: React.FC = () => {
       return '生成“概念解释图”，用于辅助理解，不是背景纹理图。';
     };
 
+    const inferSlotRole = (slotPath: string): 'main' | 'left' | 'right' | 'background' => {
+      if (slotPath.startsWith('left')) return 'left';
+      if (slotPath.startsWith('right')) return 'right';
+      if (slotPath.includes('background')) return 'background';
+      return 'main';
+    };
+
     const getPrompt = (
-      page: typeof currentProject.pages[0],
-      model: Record<string, any>,
       layoutId: LayoutId,
       slotPath: string,
-      schemeId: string
+      schemeId: string,
+      facts: string[]
     ): string => {
-      const facts = collectPageFacts(page, model);
       const topicLine = facts.length > 0
         ? `页面主题与信息：${facts.slice(0, 6).join('；')}`
         : '页面主题与信息：专业知识讲解场景';
@@ -508,6 +513,7 @@ export const SlidePreview: React.FC = () => {
         interactive: '视觉风格：课堂互动插画，明亮但低饱和，亲和活泼，元素清楚。',
         visual: '视觉风格：叙事感插画，灰度基调+单一强调色，层次分明。',
         practical: '视觉风格：实操训练插画，工业橙与深灰，强调工具与步骤。',
+        modern: '视觉风格：现代商务视觉，干净留白，几何结构与柔和层次。',
       };
 
       return [
@@ -530,8 +536,26 @@ export const SlidePreview: React.FC = () => {
       const pageId = payload.page_id;
       const schemeId = currentProject?.scheme_id || 'tech_blue';
       const push = (slotPath: string) => {
-        const prompt = getPrompt(page, model, layoutId, slotPath, schemeId);
-        slots.push({ page_id: pageId, slot_path: slotPath, prompt });
+        const facts = collectPageFacts(page, model);
+        const pageTitle = cleanText(model?.title) || cleanText(page?.outline_content?.title) || '';
+        const visualGoal = getLayoutIntent(layoutId, slotPath);
+        const prompt = getPrompt(layoutId, slotPath, schemeId, facts);
+        slots.push({
+          page_id: pageId,
+          slot_path: slotPath,
+          prompt,
+          context: {
+            layout_id: layoutId,
+            scheme_id: schemeId,
+            slot_role: inferSlotRole(slotPath),
+            page_title: pageTitle,
+            page_facts: facts.slice(0, 8),
+            project_topic: cleanText(currentProject?.idea_prompt || ''),
+            extra_requirements: cleanText(currentProject?.extra_requirements || ''),
+            template_style: cleanText(currentProject?.template_style || ''),
+            visual_goal: visualGoal,
+          },
+        });
       };
 
       switch (layoutId) {
@@ -558,11 +582,24 @@ export const SlidePreview: React.FC = () => {
     });
 
     return slots;
-  }, [convertPageToPayload, currentProject?.scheme_id]);
+  }, [
+    convertPageToPayload,
+    currentProject?.scheme_id,
+    currentProject?.idea_prompt,
+    currentProject?.extra_requirements,
+    currentProject?.template_style,
+  ]);
 
   // 生成背景图的插槽（全页底图）
   const buildHtmlBackgroundSlots = useCallback((pages: typeof currentProject.pages): HtmlImageSlot[] => {
     if (!pages || pages.length === 0) return [];
+    const cleanText = (value: unknown): string => {
+      if (typeof value !== 'string') return '';
+      return value
+        .replace(/\s+/g, ' ')
+        .replace(/[<>`]/g, '')
+        .trim();
+    };
     const firstPayload = convertPageToPayload(pages[0], 0);
     const pageId = firstPayload?.page_id || pages[0].id || 'global';
     const titleSeed = currentProject?.idea_prompt
@@ -605,8 +642,29 @@ export const SlidePreview: React.FC = () => {
       '禁止出现任何文字、数字、符号、水印、Logo 或可识别标记。',
     ].filter(Boolean).join('');
 
-    return [{ page_id: pageId, slot_path: 'background_image', prompt }];
-  }, [convertPageToPayload, currentProject?.idea_prompt, currentProject?.scheme_id]);
+    return [{
+      page_id: pageId,
+      slot_path: 'background_image',
+      prompt,
+      context: {
+        layout_id: 'cover',
+        scheme_id: schemeId,
+        slot_role: 'background',
+        page_title: cleanText(titleSeed),
+        page_facts: titleSeed ? [cleanText(titleSeed)] : [],
+        project_topic: cleanText(currentProject?.idea_prompt || ''),
+        extra_requirements: cleanText(currentProject?.extra_requirements || ''),
+        template_style: cleanText(currentProject?.template_style || ''),
+        visual_goal: '生成统一背景图，中心留白，不干扰正文阅读。',
+      },
+    }];
+  }, [
+    convertPageToPayload,
+    currentProject?.idea_prompt,
+    currentProject?.scheme_id,
+    currentProject?.extra_requirements,
+    currentProject?.template_style,
+  ]);
 
   const totalImageSlots = useMemo(() => {
     if (!isHtmlMode || !currentProject?.pages) return 0;

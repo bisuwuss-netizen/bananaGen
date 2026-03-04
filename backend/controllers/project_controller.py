@@ -14,6 +14,7 @@ from werkzeug.exceptions import BadRequest
 from models import db, Project, Page, Task, ReferenceFile
 from services import ProjectContext
 from services.ai_service_manager import get_ai_service
+from services.image_prompt_optimizer import optimize_html_image_slots
 from services.prompts import LAYOUT_SCHEMES
 from services.task_manager import (
     task_manager,
@@ -1328,7 +1329,14 @@ def generate_html_images(project_id: str):
     slots = data['slots']
     if not slots or len(slots) == 0:
         return bad_request('slots 列表不能为空')
-    
+
+    # 规则 + 小模型改写：提升 prompt 语义对齐和可控性
+    try:
+        slots = optimize_html_image_slots(slots, project)
+    except Exception as e:
+        # fail-open：优化失败时回退到前端原始 prompt，不阻断图片生成链路
+        logger.warning(f"HTML 图片 prompt 优化失败，回退原始 prompt: {e}", exc_info=True)
+
     image_model = current_app.config.get('IMAGE_MODEL')
     default_aspect_ratio = current_app.config.get('DEFAULT_ASPECT_RATIO', '16:9')
     default_resolution = current_app.config.get('DEFAULT_RESOLUTION', '2K')
