@@ -31,6 +31,11 @@ from .prompts import (
     SCHEME_ROLE_LAYOUTS,
     LAYOUT_ID_ALIASES
 )
+from .ppt_quality_guard import (
+    apply_outline_quality_guard,
+    apply_structured_outline_quality_guard,
+    apply_page_model_quality_guard,
+)
 from .ai_providers import get_text_provider, get_image_provider, TextProvider, ImageProvider
 from config import get_config
 
@@ -297,7 +302,8 @@ class AIService:
         """
         outline_prompt = get_outline_generation_prompt(project_context, language, render_mode, scheme_id=project_context.scheme_id)
         outline = self.generate_json(outline_prompt, thinking_budget=1000)
-        return self.normalize_outline_layouts(outline, render_mode, project_context.scheme_id)
+        normalized = self.normalize_outline_layouts(outline, render_mode, project_context.scheme_id)
+        return apply_outline_quality_guard(normalized, render_mode=render_mode, scheme_id=project_context.scheme_id)
 
     def parse_outline_text(self, project_context: ProjectContext, language: str = None, render_mode: str = 'image') -> List[Dict]:
         """
@@ -314,7 +320,8 @@ class AIService:
         """
         parse_prompt = get_outline_parsing_prompt(project_context, language, render_mode, scheme_id=project_context.scheme_id)
         outline = self.generate_json(parse_prompt, thinking_budget=1000)
-        return self.normalize_outline_layouts(outline, render_mode, project_context.scheme_id)
+        normalized = self.normalize_outline_layouts(outline, render_mode, project_context.scheme_id)
+        return apply_outline_quality_guard(normalized, render_mode=render_mode, scheme_id=project_context.scheme_id)
     
     def flatten_outline(self, outline: List[Dict]) -> List[Dict]:
         """
@@ -759,7 +766,8 @@ class AIService:
         """
         parse_prompt = get_description_to_outline_prompt(project_context, language, render_mode, scheme_id=project_context.scheme_id)
         outline = self.generate_json(parse_prompt, thinking_budget=1000)
-        return self.normalize_outline_layouts(outline, render_mode, project_context.scheme_id)
+        normalized = self.normalize_outline_layouts(outline, render_mode, project_context.scheme_id)
+        return apply_outline_quality_guard(normalized, render_mode=render_mode, scheme_id=project_context.scheme_id)
 
     @staticmethod
     def normalize_outline_layouts(outline: List[Dict], render_mode: str = 'image', scheme_id: str = 'tech_blue') -> List[Dict]:
@@ -1271,7 +1279,8 @@ class AIService:
     def refine_outline(self, current_outline: List[Dict], user_requirement: str,
                       project_context: ProjectContext,
                       previous_requirements: Optional[List[str]] = None,
-                      language='zh') -> List[Dict]:
+                      language='zh',
+                      render_mode: str = 'image') -> List[Dict]:
         """
         根据用户要求修改已有大纲
         
@@ -1292,7 +1301,8 @@ class AIService:
             language=language
         )
         outline = self.generate_json(refinement_prompt, thinking_budget=1000)
-        return outline
+        normalized = self.normalize_outline_layouts(outline, render_mode, project_context.scheme_id)
+        return apply_outline_quality_guard(normalized, render_mode=render_mode, scheme_id=project_context.scheme_id)
     
     def refine_descriptions(self, current_descriptions: List[Dict], user_requirement: str,
                            project_context: ProjectContext,
@@ -1484,7 +1494,7 @@ class AIService:
             # 修复空章节问题：检测连续的 section_title 并插入内容页
             outline = self._fix_empty_sections(outline, scheme_id)
 
-        return outline
+        return apply_structured_outline_quality_guard(outline, scheme_id=scheme_id)
 
     def generate_structured_page_content(self, page_outline: Dict,
                                          full_outline: Dict = None,
@@ -1673,6 +1683,11 @@ class AIService:
 
         # Post-process: enforce minimum depth/length for teaching pages
         model = ensure_length(resolved_layout_id, model, page_outline.get('title', ''), content_depth)
+        model = apply_page_model_quality_guard(
+            layout_id=layout_id,
+            model=model,
+            page_outline=page_outline
+        )
 
         return model
 

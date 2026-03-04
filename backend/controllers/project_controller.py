@@ -966,7 +966,8 @@ def refine_outline(project_id):
             user_requirement=user_requirement,
             project_context=project_context,
             previous_requirements=previous_requirements,
-            language=language
+            language=language,
+            render_mode=project.render_mode or 'image'
         )
         
         # Flatten outline to pages
