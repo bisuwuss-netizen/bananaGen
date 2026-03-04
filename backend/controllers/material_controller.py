@@ -7,6 +7,7 @@ from utils import success_response, error_response, not_found, bad_request
 from services import FileService
 from services.ai_service_manager import get_ai_service
 from services.task_manager import task_manager, generate_material_image_task
+from sqlalchemy import or_
 from pathlib import Path
 from werkzeug.utils import secure_filename
 from typing import Optional
@@ -22,6 +23,16 @@ material_bp = Blueprint('materials', __name__, url_prefix='/api/projects')
 material_global_bp = Blueprint('materials_global', __name__, url_prefix='/api/materials')
 
 ALLOWED_MATERIAL_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg'}
+
+
+def _resolve_user_id(default: str = '1') -> str:
+    """Resolve user_id from query/cookie with a safe fallback."""
+    user_id = request.args.get('user_id', type=str)
+    if not user_id:
+        user_id = request.cookies.get('user_id')
+    if isinstance(user_id, str):
+        user_id = user_id.strip()
+    return user_id or default
 
 
 def _build_material_query(filter_project_id: str):
@@ -50,9 +61,9 @@ def _get_materials_list(filter_project_id: str, user_id: str = None):
     if error:
         return None, error
     
-    # 如果提供了user_id，添加user_id过滤
+    # 如果提供了user_id，添加user_id过滤，并兼容 legacy NULL user_id 数据
     if user_id:
-        query = query.filter(Material.user_id == user_id)
+        query = query.filter(or_(Material.user_id == user_id, Material.user_id.is_(None)))
     
     materials = query.order_by(Material.created_at.desc()).all()
     
@@ -318,17 +329,9 @@ def list_materials(project_id):
         List of material images with filename, url, and metadata for the specified project
     """
     try:
-        # 从cookie获取user_id
-        user_id = request.cookies.get('user_id') or request.args.get('user_id', type=str)
+        user_id = _resolve_user_id(default='1')
         logger.info(f"list_materials - user_id: {user_id}")
-        
-        # 如果user_id为空，返回空数组
-        if not user_id or user_id.strip() == '':
-            return success_response({
-                "materials": [],
-                "count": 0
-            })
-        
+
         materials_list, error = _get_materials_list(project_id, user_id)
         if error:
             return error
@@ -373,21 +376,9 @@ def list_all_materials():
         List of material images with filename, url, and metadata
     """
     try:
-        # 优先从查询参数获取user_id，如果没有则从cookie获取
-        user_id = request.args.get('user_id', type=str)
-        if not user_id:
-            user_id = request.cookies.get('user_id')
-        
+        user_id = _resolve_user_id(default='1')
         logger.info(f"list_all_materials - user_id from args: {request.args.get('user_id')}, user_id from cookie: {request.cookies.get('user_id')}, final user_id: {user_id}")
-        
-        # 如果user_id为空，返回空数组
-        if not user_id or (isinstance(user_id, str) and user_id.strip() == ''):
-            logger.warning("list_all_materials - user_id is empty, returning empty array")
-            return success_response({
-                "materials": [],
-                "count": 0
-            })
-        
+
         filter_project_id = request.args.get('project_id', 'all')
         materials_list, error = _get_materials_list(filter_project_id, user_id)
         if error:
@@ -501,4 +492,3 @@ def associate_materials_to_project():
     except Exception as e:
         db.session.rollback()
         return error_response('SERVER_ERROR', str(e), 500)
-

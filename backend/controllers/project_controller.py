@@ -7,7 +7,7 @@ import traceback
 from datetime import datetime
 
 from flask import Blueprint, request, jsonify, current_app
-from sqlalchemy import desc
+from sqlalchemy import desc, or_
 from sqlalchemy.orm import joinedload
 from werkzeug.exceptions import BadRequest
 
@@ -30,6 +30,16 @@ from utils import (
 logger = logging.getLogger(__name__)
 
 project_bp = Blueprint('projects', __name__, url_prefix='/api/projects')
+
+
+def _resolve_user_id(default: str = '1') -> str:
+    """Resolve user_id from query/cookie with a safe fallback."""
+    user_id = request.args.get('user_id', type=str)
+    if not user_id:
+        user_id = request.cookies.get('user_id')
+    if isinstance(user_id, str):
+        user_id = user_id.strip()
+    return user_id or default
 
 
 def _get_project_reference_files_content(project_id: str) -> list:
@@ -135,7 +145,7 @@ def list_projects():
         # Parameter validation
         limit = request.args.get('limit', 50, type=int)
         offset = request.args.get('offset', 0, type=int)
-        user_id = request.args.get('user_id', type=str)
+        user_id = _resolve_user_id(default='1')
         
         logger.info(f"list_projects - user_id: {user_id}")
         
@@ -143,19 +153,11 @@ def list_projects():
         limit = min(max(1, limit), 100)  # Between 1-100
         offset = max(0, offset)  # Non-negative
         
-        # 如果user_id为空或None，返回空数据
-        if not user_id or user_id.strip() == '':
-            return success_response({
-                'projects': [],
-                'has_more': False,
-                'limit': limit,
-                'offset': offset
-            })
-        
-        # Build query with user_id filter
+        # Build query with user_id filter.
+        # Include legacy rows whose user_id is NULL for backward compatibility.
         query = Project.query\
             .options(joinedload(Project.pages))\
-            .filter(Project.user_id == user_id)
+            .filter(or_(Project.user_id == user_id, Project.user_id.is_(None)))
         
         # Fetch limit + 1 items to check for more pages efficiently
         # This avoids a second database query
