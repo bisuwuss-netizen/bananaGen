@@ -98,6 +98,13 @@ class Config:
     # 图片生成配置
     DEFAULT_ASPECT_RATIO = "16:9"
     DEFAULT_RESOLUTION = "2K"
+
+    # HTML 图片 prompt 优化配置（规则 + 小模型改写）
+    IMAGE_PROMPT_REWRITE_ENABLED = os.getenv('IMAGE_PROMPT_REWRITE_ENABLED', 'true').lower() in ('1', 'true', 'yes', 'on')
+    IMAGE_PROMPT_REWRITE_MODEL = os.getenv('IMAGE_PROMPT_REWRITE_MODEL', '')  # 为空则复用 TEXT_MODEL
+    IMAGE_PROMPT_REWRITE_MAX_SLOTS = int(os.getenv('IMAGE_PROMPT_REWRITE_MAX_SLOTS', '24'))
+    IMAGE_PROMPT_REWRITE_BATCH_SIZE = int(os.getenv('IMAGE_PROMPT_REWRITE_BATCH_SIZE', '8'))
+    IMAGE_PROMPT_REWRITE_THINKING_BUDGET = int(os.getenv('IMAGE_PROMPT_REWRITE_THINKING_BUDGET', '400'))
     
     # 日志配置
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()

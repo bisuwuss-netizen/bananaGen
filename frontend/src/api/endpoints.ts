@@ -916,6 +916,19 @@ export interface HtmlImageSlot {
   page_id: string;
   slot_path: string;
   prompt: string;
+  context?: {
+    layout_id?: string;
+    scheme_id?: string;
+    slot_role?: 'main' | 'left' | 'right' | 'background';
+    page_title?: string;
+    page_facts?: string[];
+    project_topic?: string;
+    extra_requirements?: string;
+    template_style?: string;
+    visual_goal?: string;
+    industry?: string;
+    audience?: string;
+  };
 }
 
 /**
