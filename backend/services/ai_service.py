@@ -334,18 +334,35 @@ class AIService:
         - ending page at the very end
         - quote pages near the end (before ending)
         """
-        pages = []
-        for item in outline:
-            if "part" in item and "pages" in item:
-                # This is a part, expand its pages
+        pages: List[Dict] = []
+
+        def append_page_candidate(candidate, part: str = None):
+            """
+            Normalize outline/page candidates to dict pages.
+            LLM output may occasionally contain nested lists; flatten them safely.
+            """
+            if isinstance(candidate, dict):
+                page = candidate.copy()
+                if part:
+                    page["part"] = part
+                pages.append(page)
+                return
+
+            if isinstance(candidate, list):
+                for sub in candidate:
+                    append_page_candidate(sub, part=part)
+                return
+
+            logger.warning(f"Skip invalid outline page candidate type: {type(candidate).__name__}")
+
+        for item in outline or []:
+            if isinstance(item, dict) and "part" in item and isinstance(item.get("pages"), list):
+                # Part block: expand its pages with part info.
                 for page in item["pages"]:
-                    page_with_part = page.copy()
-                    page_with_part["part"] = item["part"]
-                    pages.append(page_with_part)
+                    append_page_candidate(page, part=item.get("part"))
             else:
-                # This is a direct page
-                pages.append(item)
-        
+                append_page_candidate(item)
+
         # Post-process: ensure proper page ordering
         pages = self._ensure_page_ordering(pages)
         
@@ -366,6 +383,8 @@ class AIService:
         # Find TOC page
         toc_idx = -1
         for i, page in enumerate(pages):
+            if not isinstance(page, dict):
+                continue
             layout_id = page.get('layout_id', '').lower()
             if 'toc' in layout_id:
                 toc_idx = i
@@ -379,6 +398,8 @@ class AIService:
         for i, page in enumerate(pages):
             if i == toc_idx:
                 continue
+            if not isinstance(page, dict):
+                continue
             layout_id = page.get('layout_id', '').lower()
             if 'section' in layout_id:
                 title = page.get('title', '')
@@ -389,6 +410,8 @@ class AIService:
         if not section_titles:
             for i, page in enumerate(pages):
                 if i == toc_idx:
+                    continue
+                if not isinstance(page, dict):
                     continue
                 layout_id = page.get('layout_id', '').lower()
                 if 'cover' in layout_id or 'ending' in layout_id:
@@ -481,6 +504,8 @@ class AIService:
         ending_indices = []
         
         for i, page in enumerate(pages):
+            if not isinstance(page, dict):
+                continue
             layout_id = page.get('layout_id', '').lower()
             if 'ending' in layout_id:
                 ending_pages.append(page)
@@ -504,7 +529,10 @@ class AIService:
             exclude_indices.add(toc_idx)
         
         # Get middle pages (everything except cover, toc, ending)
-        middle_pages = [page for i, page in enumerate(pages) if i not in exclude_indices]
+        middle_pages = [
+            page for i, page in enumerate(pages)
+            if i not in exclude_indices and isinstance(page, dict)
+        ]
         
         # Try to sort middle pages by part number
         # Extract part number from part name (e.g., "第一部分", "Part 1", "第二部分: xxx")

@@ -25,6 +25,15 @@ def _env_positive_int(name: str, default: int) -> int:
         return default
 
 
+def _safe_positive_int(value: Any, default: int) -> int:
+    """Parse positive int from config values with safe fallback."""
+    try:
+        parsed = int(str(value).strip())
+        return parsed if parsed > 0 else default
+    except (TypeError, ValueError, AttributeError):
+        return default
+
+
 def _chunked(items: List[Any], chunk_size: int) -> List[List[Any]]:
     """Split list into chunks."""
     if chunk_size <= 0:
@@ -308,7 +317,10 @@ def generate_descriptions_task(task_id: str, project_id: str, ai_service,
             # Generate descriptions in parallel
             completed = 0
             failed = 0
-            description_batch_size = max(1, int(app.config.get('DESCRIPTION_BATCH_SIZE', 3)))
+            description_batch_size = _safe_positive_int(
+                app.config.get('DESCRIPTION_BATCH_SIZE', 1),
+                1
+            )
 
             def generate_single_desc(page_id, page_outline, page_index, page_layout_id=None):
                 """

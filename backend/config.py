@@ -5,6 +5,16 @@ import os
 import sys
 from datetime import timedelta
 
+# Safe env int parser to avoid startup/runtime crashes from malformed values.
+def _env_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return int(str(raw).strip())
+    except (TypeError, ValueError):
+        return default
+
 # 基础配置 - 使用更可靠的路径计算方式
 # 在模块加载时立即计算并固定路径
 _current_file = os.path.realpath(__file__)  # 使用realpath解析所有符号链接
@@ -93,8 +103,9 @@ class Config:
     
     # 并发配置
     MAX_DESCRIPTION_WORKERS = int(os.getenv('MAX_DESCRIPTION_WORKERS', '5'))
-    # 描述生成批次大小（image 模式下每次请求生成多少页，>1 可显著减少请求数）
-    DESCRIPTION_BATCH_SIZE = int(os.getenv('DESCRIPTION_BATCH_SIZE', '3'))
+    # 描述生成批次大小（image 模式下每次请求生成多少页）
+    # 默认关闭批量（=1）以优先保证稳定性；需要提速时可手动调到 2-4。
+    DESCRIPTION_BATCH_SIZE = _env_int('DESCRIPTION_BATCH_SIZE', 1)
     MAX_IMAGE_WORKERS = int(os.getenv('MAX_IMAGE_WORKERS', '8'))
     
     # 图片生成配置
