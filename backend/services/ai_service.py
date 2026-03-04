@@ -8,7 +8,7 @@ import json
 import re
 import logging
 import requests
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Any
 from textwrap import dedent
 from PIL import Image
 from tenacity import retry, stop_after_attempt, retry_if_exception_type
@@ -112,6 +112,97 @@ class AIService:
         # Use provided providers or create from factory based on AI_PROVIDER_FORMAT (from Flask config or env var)
         self.text_provider = text_provider or get_text_provider(model=self.text_model)
         self.image_provider = image_provider or get_image_provider(model=self.image_model)
+
+    @staticmethod
+    def _strip_markdown_json_fence(text: str) -> str:
+        """Remove optional ```json ... ``` wrappers."""
+        if not text:
+            return ""
+        value = text.strip()
+        fenced = re.match(r"^```(?:json)?\s*([\s\S]*?)\s*```$", value, flags=re.IGNORECASE)
+        if fenced:
+            return fenced.group(1).strip()
+        return value
+
+    @staticmethod
+    def _extract_json_segment(text: str) -> str:
+        """
+        Extract the most likely JSON segment from model output.
+        Keeps content between first '{'/'[' and last '}'/']' when possible.
+        """
+        if not text:
+            return ""
+        value = text.strip()
+        first_obj = value.find('{')
+        first_arr = value.find('[')
+        starts = [idx for idx in (first_obj, first_arr) if idx >= 0]
+        if not starts:
+            return value
+        start = min(starts)
+        end_obj = value.rfind('}')
+        end_arr = value.rfind(']')
+        end = max(end_obj, end_arr)
+        if end >= start:
+            return value[start:end + 1].strip()
+        return value[start:].strip()
+
+    @staticmethod
+    def _escape_json_control_chars_in_string(raw_json: str) -> str:
+        """
+        Escape raw control chars (newline/tab/cr) that appear inside JSON strings.
+        This fixes common LLM formatting glitches without re-calling the model.
+        """
+        if not raw_json:
+            return raw_json
+        result = []
+        in_string = False
+        escaped = False
+        for ch in raw_json:
+            if escaped:
+                result.append(ch)
+                escaped = False
+                continue
+            if ch == '\\':
+                result.append(ch)
+                escaped = True
+                continue
+            if ch == '"':
+                result.append(ch)
+                in_string = not in_string
+                continue
+            if in_string and ch == '\n':
+                result.append('\\n')
+                continue
+            if in_string and ch == '\r':
+                result.append('\\r')
+                continue
+            if in_string and ch == '\t':
+                result.append('\\t')
+                continue
+            result.append(ch)
+        return ''.join(result)
+
+    @classmethod
+    def _normalize_json_text_for_parse(cls, text: str) -> str:
+        """Normalize model output to maximize one-shot JSON parse success."""
+        value = cls._strip_markdown_json_fence(text)
+        value = cls._extract_json_segment(value)
+        value = cls._escape_json_control_chars_in_string(value)
+        # Remove trailing commas before } or ] (another common LLM issue)
+        value = re.sub(r',(\s*[}\]])', r'\1', value)
+        return value.strip()
+
+    @staticmethod
+    def _build_json_parse_candidates(normalized_text: str) -> List[str]:
+        """
+        Build a short candidate list for tolerant JSON parsing.
+        """
+        candidates = [normalized_text]
+        # Common LLM glitch: template-like doubled braces.
+        brace_fixed = normalized_text.replace('{{', '{').replace('}}', '}')
+        if brace_fixed != normalized_text:
+            candidates.append(brace_fixed)
+        return candidates
     
     @staticmethod
     def extract_image_urls_from_markdown(text: str) -> List[str]:
@@ -191,14 +282,18 @@ class AIService:
         # 调用AI生成文本
         response_text = self.text_provider.generate_text(prompt, thinking_budget=thinking_budget)
         
-        # 清理响应文本：移除markdown代码块标记和多余空白
-        cleaned_text = response_text.strip().strip("```json").strip("```").strip()
-        
-        try:
-            return json.loads(cleaned_text)
-        except json.JSONDecodeError as e:
-            logger.warning(f"JSON解析失败，将重新生成。原始文本: {cleaned_text[:200]}... 错误: {str(e)}")
-            raise
+        # 清理与修复响应文本，尽量避免因小格式问题触发整轮重试
+        cleaned_text = self._normalize_json_text_for_parse(response_text)
+
+        last_err = None
+        for candidate in self._build_json_parse_candidates(cleaned_text):
+            try:
+                return json.loads(candidate)
+            except json.JSONDecodeError as e:
+                last_err = e
+
+        logger.warning(f"JSON解析失败，将重新生成。原始文本: {cleaned_text[:200]}... 错误: {str(last_err)}")
+        raise last_err
     
     @retry(
         stop=stop_after_attempt(3),
@@ -237,14 +332,18 @@ class AIService:
         else:
             raise ValueError("text_provider 不支持图片输入")
         
-        # 清理响应文本：移除markdown代码块标记和多余空白
-        cleaned_text = response_text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-        
-        try:
-            return json.loads(cleaned_text)
-        except json.JSONDecodeError as e:
-            logger.warning(f"JSON解析失败（带图片），将重新生成。原始文本: {cleaned_text[:200]}... 错误: {str(e)}")
-            raise
+        # 清理与修复响应文本，尽量避免因小格式问题触发整轮重试
+        cleaned_text = self._normalize_json_text_for_parse(response_text)
+
+        last_err = None
+        for candidate in self._build_json_parse_candidates(cleaned_text):
+            try:
+                return json.loads(candidate)
+            except json.JSONDecodeError as e:
+                last_err = e
+
+        logger.warning(f"JSON解析失败（带图片），将重新生成。原始文本: {cleaned_text[:200]}... 错误: {str(last_err)}")
+        raise last_err
     
     @staticmethod
     def _convert_mineru_path_to_local(mineru_path: str) -> Optional[str]:
