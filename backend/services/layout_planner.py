@@ -34,6 +34,10 @@ VARIANT_POOLS_BY_BASE_LAYOUT: Dict[str, List[str]] = {
     "title_bullets": ["a", "b"],
     "process_steps": ["a", "b"],
     "ending": ["a", "b"],
+    # edu_dark 方案专属布局
+    "edu_tri_compare": ["a", "b"],
+    "edu_timeline_steps": ["a", "b"],
+    "edu_summary": ["a", "b"],
 }
 
 
@@ -82,12 +86,21 @@ def assign_layout_variants(
     if not pages:
         return outline
 
+    def _variant_key(page: Dict, aliases: Optional[Dict[str, str]]) -> str:
+        """Return the effective key for variant pool lookup.
+        Check original layout_id first (e.g. edu_tri_compare),
+        then fall back to the aliased layout_id (e.g. two_column)."""
+        original = (str(page.get("layout_id", "")) or "").strip()
+        if original in VARIANT_POOLS_BY_BASE_LAYOUT:
+            return original
+        return _resolve_base_layout(original, aliases)
+
     # Pre-count pages per variant-enabled base layout to compute feasible caps.
     counts_per_base: Dict[str, int] = {}
     for page in pages:
-        base_layout = _resolve_base_layout(str(page.get("layout_id", "")), layout_aliases)
-        if base_layout in VARIANT_POOLS_BY_BASE_LAYOUT:
-            counts_per_base[base_layout] = counts_per_base.get(base_layout, 0) + 1
+        vk = _variant_key(page, layout_aliases)
+        if vk in VARIANT_POOLS_BY_BASE_LAYOUT:
+            counts_per_base[vk] = counts_per_base.get(vk, 0) + 1
 
     usage: Dict[str, Dict[str, int]] = {}
     run_state: Dict[str, Dict[str, int]] = {}
@@ -97,14 +110,16 @@ def assign_layout_variants(
         archetype = ARCHETYPE_BY_BASE_LAYOUT.get(base_layout, "generic_content")
         page["layout_archetype"] = archetype
 
-        pool = VARIANT_POOLS_BY_BASE_LAYOUT.get(base_layout)
+        # Use variant key (original layout_id if it has its own pool, otherwise aliased)
+        vk = _variant_key(page, layout_aliases)
+        pool = VARIANT_POOLS_BY_BASE_LAYOUT.get(vk)
         if not pool:
             page["layout_variant"] = "a"
             continue
 
-        base_usage = usage.setdefault(base_layout, {variant: 0 for variant in pool})
-        base_state = run_state.setdefault(base_layout, {"variant": "", "run": 0, "last_index": -2})
-        total_for_base = max(1, counts_per_base.get(base_layout, 1))
+        base_usage = usage.setdefault(vk, {variant: 0 for variant in pool})
+        base_state = run_state.setdefault(vk, {"variant": "", "run": 0, "last_index": -2})
+        total_for_base = max(1, counts_per_base.get(vk, 1))
         pool_size = max(1, len(pool))
 
         # Relax cap when strict limit is mathematically impossible.

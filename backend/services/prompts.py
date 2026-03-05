@@ -2000,6 +2000,24 @@ def get_structured_page_content_prompt(page_outline: dict,
 **变体约束（title_bullets, variant=b）**：
 - bullets 优先输出 3-5 条，便于右侧纵向卡片堆叠
 - 每条 description 用完整句，不少于 15 字"""
+    elif layout_id == 'edu_tri_compare' and layout_variant == 'b':
+        variant_instruction = """
+**变体约束（edu_tri_compare, variant=b）**：
+- 采用左右4:6分割布局，左侧为标题区，右侧为3行横向卡片堆叠
+- columns 必须恰好 3 个，每列 points 恰好 3 条，每条不超过 6 个字
+- 三列语义必须分别对应"痛点/行动/目标"或类似递进关系"""
+    elif layout_id == 'edu_timeline_steps' and layout_variant == 'b':
+        variant_instruction = """
+**变体约束（edu_timeline_steps, variant=b）**：
+- 采用水平横向步骤条布局，适配3-4步并排展示
+- steps 保持 3 步（推荐），每步 title 不超过 10 字
+- 第一步 description 用分条（highlights），其余步骤用段落式描述"""
+    elif layout_id == 'edu_summary' and layout_variant == 'b':
+        variant_instruction = """
+**变体约束（edu_summary, variant=b）**：
+- 采用左右3:7不对称分割，左侧放总结金句，右侧堆叠反思卡片
+- columns 必须恰好 3 个，每列 points 恰好 3 条
+- closing 必须输出，作为左侧核心金句，不超过 30 字"""
     else:
         variant_instruction = ""
 

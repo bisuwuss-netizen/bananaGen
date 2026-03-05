@@ -2553,17 +2553,24 @@ class AIService:
             if unresolved_count > 0:
                 logger.warning(f"承诺收束兜底后仍有 {unresolved_count} 个未闭环承诺")
 
-        # 6. 输出结果
-        ppt_document['pages'] = [
-            {
-                'page_id': item.get('page_id'),
+        # 6. 输出结果 - 注入 layout_variant 到 model 中供前端组件使用
+        ppt_document['pages'] = []
+        for item in generated_pages:
+            if not isinstance(item, dict):
+                continue
+            model = item.get('model', {})
+            page_id = item.get('page_id')
+            # 从大纲中获取 layout_variant 并注入到 model.variant
+            source_outline = page_outline_by_id.get(page_id, {})
+            layout_variant = str(source_outline.get('layout_variant') or 'a').strip().lower()
+            if isinstance(model, dict) and layout_variant:
+                model['variant'] = layout_variant
+            ppt_document['pages'].append({
+                'page_id': page_id,
                 'order_index': item.get('order_index', 0),
                 'layout_id': item.get('layout_id', 'title_content'),
-                'model': item.get('model', {}),
+                'model': model,
                 'closed_promise_ids': item.get('closed_promise_ids', [])
-            }
-            for item in generated_pages
-            if isinstance(item, dict)
-        ]
+            })
 
         return ppt_document
