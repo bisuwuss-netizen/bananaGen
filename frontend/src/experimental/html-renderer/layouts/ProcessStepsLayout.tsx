@@ -21,6 +21,11 @@ interface ProcessStepsLayoutProps {
 export const ProcessStepsLayout: React.FC<ProcessStepsLayoutProps> = ({ model, theme, onImageUpload }) => {
   const { title, subtitle, steps, image, background_image } = model;
   const hasImage = image && (image.src || image.src === '');
+  const variant = String(model.variant || 'a').toLowerCase();
+
+  if (variant === 'b') {
+    return renderProcessStepsVariantB(model, theme, onImageUpload);
+  }
 
   const slideStyle: React.CSSProperties = {
     ...getBaseSlideStyle(theme),
@@ -223,6 +228,11 @@ const StepCard: React.FC<{
 export function renderProcessStepsLayoutHTML(model: ProcessStepsModel, theme: ThemeConfig): string {
   const { title, subtitle, steps, image, background_image } = model;
   const hasImage = image && (image.src !== undefined);
+  const variant = String(model.variant || 'a').toLowerCase();
+
+  if (variant === 'b') {
+    return renderProcessStepsVariantBHTML(model, theme);
+  }
 
   const slideStyle = toInlineStyle({
     width: `${theme.sizes.slideWidth}px`,
@@ -442,3 +452,188 @@ function parseStyle(styleString: string): React.CSSProperties {
 }
 
 export default ProcessStepsLayout;
+
+function renderProcessStepsVariantB(
+  model: ProcessStepsModel,
+  theme: ThemeConfig,
+  onImageUpload?: () => void
+): React.ReactElement {
+  const steps = (model.steps || []).slice(0, 4);
+  const palette = ['#06b6d4', '#3b82f6', '#10b981', '#f59e0b'];
+  const fallbackSteps = steps.length > 0 ? steps : [{ number: 1, label: model.title || '步骤', description: '围绕目标设计并推进执行。' }];
+
+  return (
+    <section
+      style={{
+        width: theme.sizes.slideWidth,
+        height: theme.sizes.slideHeight,
+        background: model.background_image
+          ? `linear-gradient(rgba(8,15,34,0.86), rgba(8,15,34,0.92)), url(${model.background_image}) center/cover no-repeat`
+          : '#0b1120',
+        padding: '60px 80px',
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        fontFamily: theme.fonts.body,
+        position: 'relative',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-end',
+          borderBottom: '2px solid rgba(6,182,212,0.3)',
+          paddingBottom: 20,
+          marginBottom: 56,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div style={{ width: 8, height: 40, borderRadius: 4, background: '#06b6d4', marginRight: 18 }} />
+          <h2 style={{ margin: 0, color: '#ffffff', fontSize: 42, fontWeight: 800, lineHeight: 1.2 }}>{model.title}</h2>
+        </div>
+        {model.subtitle && (
+          <div style={{ color: '#93c5fd', fontSize: 22, lineHeight: 1.4, maxWidth: 420, textAlign: 'right' }}>
+            {model.subtitle}
+          </div>
+        )}
+      </div>
+
+      <div style={{ position: 'relative', flex: 1 }}>
+        <div
+          style={{
+            position: 'absolute',
+            top: 30,
+            left: '12%',
+            right: '12%',
+            height: 4,
+            background: 'linear-gradient(to right, rgba(6,182,212,0.95), rgba(59,130,246,0.55), rgba(16,185,129,0.45))',
+            zIndex: 1,
+          }}
+        />
+
+        <div style={{ position: 'relative', zIndex: 2, display: 'flex', gap: 20, height: '100%' }}>
+          {fallbackSteps.map((step, index) => {
+            const color = palette[index % palette.length];
+            const stepNo = String(step.number ?? index + 1).padStart(2, '0');
+            const description = step.description || '明确阶段目标、执行动作和交付结果。';
+            return (
+              <div key={`${step.label}-${index}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: '50%',
+                    border: `4px solid ${color}`,
+                    background: '#0b1120',
+                    color,
+                    fontSize: 28,
+                    fontWeight: 800,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: 26,
+                    boxSizing: 'border-box',
+                    boxShadow: `0 0 18px ${color}55`,
+                  }}
+                >
+                  {step.icon ? <i className={step.icon.startsWith('fa') ? step.icon : `fa ${step.icon}`} /> : stepNo}
+                </div>
+
+                <div
+                  style={{
+                    width: '100%',
+                    flex: 1,
+                    borderRadius: 16,
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderTop: `4px solid ${color}`,
+                    background: index === 0
+                      ? 'linear-gradient(180deg, rgba(6,182,212,0.14), rgba(0,0,0,0.05))'
+                      : 'rgba(255,255,255,0.03)',
+                    padding: '28px 24px',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <h3 style={{ margin: '0 0 16px 0', color, fontSize: 24, textAlign: 'center', lineHeight: 1.3 }}>
+                    {step.label}
+                  </h3>
+                  <p style={{ margin: 0, color: '#cbd5e1', fontSize: 16, lineHeight: 1.7 }}>
+                    {description}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {model.image?.src && (
+        <div
+          style={{
+            position: 'absolute',
+            right: 84,
+            bottom: 24,
+            width: 140,
+            height: 100,
+            borderRadius: 10,
+            overflow: 'hidden',
+            border: '1px solid rgba(255,255,255,0.2)',
+            cursor: onImageUpload ? 'pointer' : 'default',
+          }}
+          onClick={onImageUpload}
+        >
+          <img src={model.image.src} alt={model.image.alt || ''} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </div>
+      )}
+    </section>
+  );
+}
+
+function renderProcessStepsVariantBHTML(model: ProcessStepsModel, theme: ThemeConfig): string {
+  const steps = (model.steps || []).slice(0, 4);
+  const palette = ['#06b6d4', '#3b82f6', '#10b981', '#f59e0b'];
+  const fallbackSteps = steps.length > 0 ? steps : [{ number: 1, label: model.title || '步骤', description: '围绕目标设计并推进执行。' }];
+  const background = model.background_image
+    ? `linear-gradient(rgba(8,15,34,0.86), rgba(8,15,34,0.92)), url(${model.background_image}) center/cover no-repeat`
+    : '#0b1120';
+
+  const stepHTML = fallbackSteps.map((step, index) => {
+    const color = palette[index % palette.length];
+    const stepNo = String(step.number ?? index + 1).padStart(2, '0');
+    const iconClass = step.icon ? (step.icon.startsWith('fa') ? step.icon : `fa ${step.icon}`) : '';
+    const head = iconClass ? `<i class="${iconClass}"></i>` : stepNo;
+    const description = step.description || '明确阶段目标、执行动作和交付结果。';
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;">
+      <div style="width:64px;height:64px;border-radius:50%;border:4px solid ${color};background:#0b1120;color:${color};font-size:28px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:26px;box-sizing:border-box;box-shadow:0 0 18px ${color}55;">${head}</div>
+      <div style="width:100%;flex:1;border-radius:16px;border:1px solid rgba(255,255,255,0.1);border-top:4px solid ${color};background:${index === 0 ? 'linear-gradient(180deg, rgba(6,182,212,0.14), rgba(0,0,0,0.05))' : 'rgba(255,255,255,0.03)'};padding:28px 24px;box-sizing:border-box;">
+        <h3 style="margin:0 0 16px 0;color:${color};font-size:24px;text-align:center;line-height:1.3;">${step.label}</h3>
+        <p style="margin:0;color:#cbd5e1;font-size:16px;line-height:1.7;">${description}</p>
+      </div>
+    </div>`;
+  }).join('\n');
+
+  const subtitleHTML = model.subtitle
+    ? `<div style="color:#93c5fd;font-size:22px;line-height:1.4;max-width:420px;text-align:right;">${model.subtitle}</div>`
+    : '';
+  const imageDockHTML = model.image?.src
+    ? `<div style="position:absolute;right:84px;bottom:24px;width:140px;height:100px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.2);"><img src="${model.image.src}" alt="${model.image.alt || ''}" style="width:100%;height:100%;object-fit:cover;" /></div>`
+    : '';
+
+  return `<section style="width:${theme.sizes.slideWidth}px;height:${theme.sizes.slideHeight}px;background:${background};padding:60px 80px;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;font-family:${theme.fonts.body};position:relative;">
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid rgba(6,182,212,0.3);padding-bottom:20px;margin-bottom:56px;">
+    <div style="display:flex;align-items:center;">
+      <div style="width:8px;height:40px;border-radius:4px;background:#06b6d4;margin-right:18px;"></div>
+      <h2 style="margin:0;color:#ffffff;font-size:42px;font-weight:800;line-height:1.2;">${model.title}</h2>
+    </div>
+    ${subtitleHTML}
+  </div>
+  <div style="position:relative;flex:1;">
+    <div style="position:absolute;top:30px;left:12%;right:12%;height:4px;background:linear-gradient(to right, rgba(6,182,212,0.95), rgba(59,130,246,0.55), rgba(16,185,129,0.45));z-index:1;"></div>
+    <div style="position:relative;z-index:2;display:flex;gap:20px;height:100%;">
+      ${stepHTML}
+    </div>
+  </div>
+  ${imageDockHTML}
+</section>`;
+}

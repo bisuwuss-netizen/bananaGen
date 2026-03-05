@@ -3,6 +3,7 @@ Template Controller - handles template-related endpoints
 """
 import logging
 from flask import Blueprint, request, current_app
+from sqlalchemy import inspect, text
 from models import db, Project, UserTemplate, Template
 from utils import success_response, error_response, not_found, bad_request, allowed_file
 from services import FileService
@@ -12,6 +13,29 @@ logger = logging.getLogger(__name__)
 
 template_bp = Blueprint('templates', __name__, url_prefix='/api/projects')
 user_template_bp = Blueprint('user_templates', __name__, url_prefix='/api/user-templates')
+
+
+def _resolve_user_id(default: int | None = 1) -> int | None:
+    """
+    Resolve user_id from request context.
+    Priority: query -> cookie -> header -> default.
+    """
+    candidates = [
+        request.args.get('user_id'),
+        request.cookies.get('user_id'),
+        request.headers.get('X-User-Id'),
+    ]
+    for value in candidates:
+        if value is None:
+            continue
+        normalized = str(value).strip()
+        if not normalized:
+            continue
+        try:
+            return int(normalized)
+        except (TypeError, ValueError):
+            continue
+    return default
 
 
 @template_bp.route('/<project_id>/template', methods=['POST'])
@@ -153,7 +177,6 @@ def get_system_templates():
         # 如果查询结果为空，添加详细的调试信息
         if len(templates_data) == 0:
             try:
-                from sqlalchemy import inspect, text
                 inspector = inspect(db.engine)
                 tables = inspector.get_table_names()
                 
@@ -314,38 +337,12 @@ def upload_user_template():
         import uuid
         template_id = str(uuid.uuid4())
         
-        # 从cookie获取user_id
-        user_id_str = request.cookies.get('user_id')
-        logger.info(f"upload_user_template - user_id from cookie: {user_id_str}")
-        
-        # 如果user_id为空，返回错误
-        if not user_id_str or (isinstance(user_id_str, str) and user_id_str.strip() == ''):
-            logger.warning("upload_user_template - user_id is empty, returning error")
-            return bad_request("user_id is required. Please ensure user_id is set in cookie.")
-        
-        # 将字符串转换为整数
-        try:
-            user_id = int(user_id_str)
-        except (ValueError, TypeError):
-            logger.warning(f"upload_user_template - invalid user_id format: {user_id_str}")
-            return bad_request(f"Invalid user_id format: {user_id_str}")
+        user_id = _resolve_user_id(default=1)
+        logger.info(f"upload_user_template - resolved user_id: {user_id}")
         
         # Save template file first (using the generated ID)
         file_service = FileService(current_app.config['UPLOAD_FOLDER'])
         file_path = file_service.save_user_template(file, template_id)
-        
-        # 从 Cookie 获取 user_id
-        user_id = request.cookies.get('user_id')
-        if user_id:
-            try:
-                user_id = int(user_id)
-            except (ValueError, TypeError):
-                logger.warning(f"Invalid user_id in cookie: {user_id}, using default 1")
-                user_id = 1
-        else:
-            # 如果 Cookie 中没有 user_id，使用默认值 1
-            user_id = 1
-            logger.info("No user_id found in cookie, using default 1")
         
         # Create template record with file_path already set
         # 显式设置时间字段，确保时间准确
@@ -384,62 +381,44 @@ def list_user_templates():
     Query parameters:
         page: 页码（从1开始，默认1）
         page_size: 每页数量（默认8，即2行x4列）
-    Note: user_id 从 cookie 中获取，如果为空则返回空数组
+    Note: user_id 支持 query/cookie/header，若缺失则降级查询全部模板
     """
     try:
-        # 从cookie获取user_id
-        user_id_str = request.cookies.get('user_id')
-        logger.info(f"list_user_templates - user_id from cookie: {user_id_str}")
-        
-        # 如果user_id为空，返回空数组
-        if not user_id_str or (isinstance(user_id_str, str) and user_id_str.strip() == ''):
-            logger.warning("list_user_templates - user_id is empty, returning empty array")
-            return success_response({
-                'templates': [],
-                'pagination': {
-                    'page': 1,
-                    'page_size': 8,
-                    'total': 0,
-                    'total_pages': 0,
-                    'has_next': False,
-                    'has_prev': False
-                }
-            })
-        
-        # 将字符串转换为整数
-        try:
-            user_id = int(user_id_str)
-        except (ValueError, TypeError):
-            logger.warning(f"list_user_templates - invalid user_id format: {user_id_str}, returning empty array")
-            return success_response({
-                'templates': [],
-                'pagination': {
-                    'page': 1,
-                    'page_size': 8,
-                    'total': 0,
-                    'total_pages': 0,
-                    'has_next': False,
-                    'has_prev': False
-                }
-            })
+        user_id = _resolve_user_id(default=None)
+        logger.info(f"list_user_templates - resolved user_id: {user_id}")
         
         # 获取分页参数
         page = request.args.get('page', 1, type=int)
         page_size = request.args.get('page_size', 8, type=int)  # 默认8个，即2行x4列
         
-        logger.info(f"Fetching user templates for user_id={user_id} - page: {page}, page_size: {page_size}")
-        
-        # 根据 user_id 查询该用户上传的模版，按创建时间倒序排列
-        query = UserTemplate.query.filter(
-            UserTemplate.user_id == user_id
-        ).order_by(UserTemplate.created_at.desc())
+        logger.info(f"Fetching user templates - user_id={user_id}, page={page}, page_size={page_size}")
+
+        # 首选 user_id 过滤；若缺失 user_id 则直接查全部
+        if user_id is None:
+            query = UserTemplate.query.order_by(UserTemplate.created_at.desc())
+        else:
+            query = UserTemplate.query.filter(
+                UserTemplate.user_id == user_id
+            ).order_by(UserTemplate.created_at.desc())
         
         # 获取总数
         total = query.count()
         
         # 分页查询
         templates = query.offset((page - 1) * page_size).limit(page_size).all()
-        logger.info(f"Found {len(templates)} templates for user_id={user_id} (page {page}/{((total - 1) // page_size) + 1}, total: {total})")
+
+        # 兜底：若按 user_id 查不到，则回退全量查询
+        if user_id is not None and total == 0:
+            logger.warning(
+                f"list_user_templates - no records for user_id={user_id}, fallback to unfiltered query"
+            )
+            query = UserTemplate.query.order_by(UserTemplate.created_at.desc())
+            total = query.count()
+            templates = query.offset((page - 1) * page_size).limit(page_size).all()
+
+        logger.info(
+            f"Found {len(templates)} templates (user_id={user_id}, page {page}/{((total - 1) // page_size) + 1}, total: {total})"
+        )
         
         templates_data = [template.to_dict() for template in templates]
         
@@ -492,4 +471,3 @@ def delete_user_template(template_id):
     except Exception as e:
         db.session.rollback()
         return error_response('SERVER_ERROR', str(e), 500)
-

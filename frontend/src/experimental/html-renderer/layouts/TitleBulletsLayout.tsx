@@ -22,6 +22,7 @@ interface TitleBulletsLayoutProps {
 export const TitleBulletsLayout: React.FC<TitleBulletsLayoutProps> = ({ model, theme, onImageUpload }) => {
   const { title, subtitle, bullets, image, background_image } = model;
   const hasImage = image && (image.src || image.src === '');
+  const variant = String(model.variant || 'a').toLowerCase();
 
   const slideStyle: React.CSSProperties = {
     ...getBaseSlideStyle(theme),
@@ -36,6 +37,10 @@ export const TitleBulletsLayout: React.FC<TitleBulletsLayoutProps> = ({ model, t
   };
   const titleStyle = toInlineStyle({ ...getTitleStyle(theme), textShadow: '0 1px 2px rgba(0,0,0,0.1)' });
   const subtitleStyle = toInlineStyle(getSubtitleStyle(theme));
+
+  if (variant === 'b') {
+    return renderTitleBulletsVariantB(model, theme, onImageUpload);
+  }
 
   // 有图模式：左侧要点列表 + 右侧图片
   if (hasImage) {
@@ -314,6 +319,11 @@ const BulletCard: React.FC<{
 export function renderTitleBulletsLayoutHTML(model: TitleBulletsModel, theme: ThemeConfig): string {
   const { title, subtitle, bullets, image, background_image } = model;
   const hasImage = image && (image.src !== undefined);
+  const variant = String(model.variant || 'a').toLowerCase();
+
+  if (variant === 'b') {
+    return renderTitleBulletsVariantBHTML(model, theme);
+  }
 
   const slideStyle = toInlineStyle({
     width: `${theme.sizes.slideWidth}px`,
@@ -527,3 +537,119 @@ function parseStyle(styleString: string): React.CSSProperties {
 }
 
 export default TitleBulletsLayout;
+
+function renderTitleBulletsVariantB(
+  model: TitleBulletsModel,
+  theme: ThemeConfig,
+  onImageUpload?: () => void
+): React.ReactElement {
+  const cards = (model.bullets || []).slice(0, 4);
+  const accentColors = ['#f43f5e', '#06b6d4', '#10b981', '#f59e0b'];
+
+  const sectionStyle: React.CSSProperties = {
+    width: theme.sizes.slideWidth,
+    height: theme.sizes.slideHeight,
+    padding: '56px 72px',
+    boxSizing: 'border-box',
+    display: 'flex',
+    gap: '44px',
+    overflow: 'hidden',
+    fontFamily: theme.fonts.body,
+    background: model.background_image
+      ? `linear-gradient(rgba(8,15,34,0.86), rgba(8,15,34,0.9)), url(${model.background_image}) center/cover no-repeat`
+      : 'linear-gradient(135deg, #0b1120 0%, #0f172a 100%)',
+  };
+
+  return (
+    <section style={sectionStyle}>
+      <div style={{ width: '35%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div style={{ width: 8, height: 60, borderRadius: 4, backgroundColor: '#06b6d4', boxShadow: '0 0 14px #06b6d4', marginBottom: 18 }} />
+        <h2 style={{ fontSize: 46, lineHeight: 1.25, color: '#ffffff', margin: '0 0 12px 0', fontWeight: 800, letterSpacing: 1 }}>{model.title}</h2>
+        {model.subtitle && <p style={{ margin: '0 0 26px 0', color: '#93c5fd', fontSize: 22, lineHeight: 1.45 }}>{model.subtitle}</p>}
+        <div
+          style={{
+            width: '100%',
+            height: 190,
+            borderRadius: 18,
+            border: '1px dashed rgba(6,182,212,0.35)',
+            background: 'radial-gradient(circle at top left, rgba(6,182,212,0.2), rgba(0,0,0,0.1))',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#7dd3fc',
+            fontSize: 42,
+            cursor: onImageUpload ? 'pointer' : 'default',
+          }}
+          onClick={onImageUpload}
+          title={onImageUpload ? '点击上传图片' : undefined}
+        >
+          {model.image?.src ? (
+            <img src={model.image.src} alt={model.image.alt || ''} style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 18 }} />
+          ) : '📊'}
+        </div>
+      </div>
+
+      <div style={{ width: '65%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 16 }}>
+        {cards.map((bullet, index) => (
+          <div
+            key={`${bullet.text}-${index}`}
+            style={{
+              borderRadius: 12,
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderLeft: `6px solid ${accentColors[index % accentColors.length]}`,
+              background: index === 1 ? 'rgba(6,182,212,0.08)' : 'rgba(255,255,255,0.03)',
+              padding: '18px 22px',
+              display: 'flex',
+              gap: 18,
+              alignItems: 'flex-start',
+              boxShadow: index === 1 ? '0 0 18px rgba(6,182,212,0.12)' : 'none',
+            }}
+          >
+            <div style={{ width: 160, flexShrink: 0, color: accentColors[index % accentColors.length], fontSize: 22, fontWeight: 700, lineHeight: 1.35 }}>
+              {bullet.text}
+            </div>
+            <div style={{ flex: 1, color: '#cbd5e1', fontSize: 17, lineHeight: 1.6 }}>
+              {bullet.description || bullet.example || bullet.note || '该要点用于承接上文并展开关键结论。'}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function renderTitleBulletsVariantBHTML(model: TitleBulletsModel, theme: ThemeConfig): string {
+  const cards = (model.bullets || []).slice(0, 4);
+  const accentColors = ['#f43f5e', '#06b6d4', '#10b981', '#f59e0b'];
+  const bg = model.background_image
+    ? `linear-gradient(rgba(8,15,34,0.86), rgba(8,15,34,0.9)), url(${model.background_image}) center/cover no-repeat`
+    : 'linear-gradient(135deg, #0b1120 0%, #0f172a 100%)';
+
+  const cardHTML = cards.map((bullet, index) => {
+    const content = bullet.description || bullet.example || bullet.note || '该要点用于承接上文并展开关键结论。';
+    const accent = accentColors[index % accentColors.length];
+    const glowing = index === 1;
+    return `<div style="border-radius:12px;border:1px solid rgba(255,255,255,0.1);border-left:6px solid ${accent};background:${glowing ? 'rgba(6,182,212,0.08)' : 'rgba(255,255,255,0.03)'};padding:18px 22px;display:flex;gap:18px;align-items:flex-start;box-shadow:${glowing ? '0 0 18px rgba(6,182,212,0.12)' : 'none'};">
+      <div style="width:160px;flex-shrink:0;color:${accent};font-size:22px;font-weight:700;line-height:1.35;">${bullet.text}</div>
+      <div style="flex:1;color:#cbd5e1;font-size:17px;line-height:1.6;">${content}</div>
+    </div>`;
+  }).join('\n');
+
+  const imageHTML = model.image?.src
+    ? `<img src="${model.image.src}" alt="${model.image.alt || ''}" style="width:100%;height:100%;object-fit:contain;border-radius:18px;" />`
+    : '📊';
+
+  return `<section style="width:${theme.sizes.slideWidth}px;height:${theme.sizes.slideHeight}px;padding:56px 72px;box-sizing:border-box;display:flex;gap:44px;overflow:hidden;font-family:${theme.fonts.body};background:${bg};">
+  <div style="width:35%;display:flex;flex-direction:column;justify-content:center;">
+    <div style="width:8px;height:60px;border-radius:4px;background:#06b6d4;box-shadow:0 0 14px #06b6d4;margin-bottom:18px;"></div>
+    <h2 style="font-size:46px;line-height:1.25;color:#ffffff;margin:0 0 12px 0;font-weight:800;letter-spacing:1px;">${model.title}</h2>
+    ${model.subtitle ? `<p style="margin:0 0 26px 0;color:#93c5fd;font-size:22px;line-height:1.45;">${model.subtitle}</p>` : ''}
+    <div style="width:100%;height:190px;border-radius:18px;border:1px dashed rgba(6,182,212,0.35);background:radial-gradient(circle at top left, rgba(6,182,212,0.2), rgba(0,0,0,0.1));display:flex;align-items:center;justify-content:center;color:#7dd3fc;font-size:42px;">
+      ${imageHTML}
+    </div>
+  </div>
+  <div style="width:65%;display:flex;flex-direction:column;justify-content:space-between;gap:16px;">
+    ${cardHTML}
+  </div>
+</section>`;
+}
