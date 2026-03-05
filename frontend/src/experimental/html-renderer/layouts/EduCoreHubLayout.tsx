@@ -56,7 +56,7 @@ function deepSpaceBg(theme: ThemeConfig, backgroundImage?: string): string {
   const base = theme.colors.background || '#020617';
   // 叠加深空纹理和微光渐变
   const gradient = `radial-gradient(circle at 50% 0%, ${theme.colors.secondary} 0%, transparent 70%), linear-gradient(180deg, ${base} 0%, ${theme.colors.backgroundAlt} 100%)`;
-  
+
   if (!backgroundImage) return gradient;
   // 如果有背景图，叠加一层深色蒙版以保证文字可读性
   return `linear-gradient(rgba(2,6,23,0.85), rgba(2,6,23,0.9)), url(${backgroundImage}) center/cover no-repeat`;
@@ -109,18 +109,18 @@ export const EduCoreHubLayout: React.FC<EduCoreHubLayoutProps> = ({ model, theme
   const nodes = data.nodes;
   const total = nodes.length;
   const centerFont = getCenterFontSize(data.center_label);
-  
+
   // 动态调整卡片大小
   const cardWidth = total <= 4 ? 240 : total <= 6 ? 200 : 160;
   const cardPad = total <= 4 ? '16px 24px' : '12px 16px';
   const cardFont = total <= 4 ? 20 : 16;
-  
+
   const sphereSize = total <= 4 ? 220 : 180;
   const orbitSize = total <= 4 ? 460 : 420;
 
   const slideStyle: React.CSSProperties = {
     width: 1280, height: 720,
-    padding: theme.spacing.padding, 
+    padding: theme.spacing.padding,
     boxSizing: 'border-box',
     position: 'relative', overflow: 'hidden',
     fontFamily: theme.fonts.body,
@@ -133,18 +133,18 @@ export const EduCoreHubLayout: React.FC<EduCoreHubLayoutProps> = ({ model, theme
   return (
     <section style={slideStyle}>
       {/* 头部区域 */}
-      <div style={{ 
-        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', 
-        borderBottom: `1px solid rgba(255,255,255,0.1)`, 
-        paddingBottom: 24, marginBottom: 24 
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
+        borderBottom: `1px solid rgba(255,255,255,0.1)`,
+        paddingBottom: 24, marginBottom: 24
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ 
-            width: 6, height: 42, borderRadius: 3, 
-            background: `linear-gradient(180deg, ${theme.colors.accent}, transparent)` 
+          <div style={{
+            width: 6, height: 42, borderRadius: 3,
+            background: `linear-gradient(180deg, ${theme.colors.accent}, transparent)`
           }} />
-          <h2 style={{ 
-            margin: 0, color: theme.colors.primary, 
+          <h2 style={{
+            margin: 0, color: theme.colors.primary,
             fontSize: 42, fontFamily: theme.fonts.title,
             textShadow: '0 0 20px rgba(6,182,212,0.5)' // 标题微光
           }}>
@@ -152,9 +152,9 @@ export const EduCoreHubLayout: React.FC<EduCoreHubLayoutProps> = ({ model, theme
           </h2>
         </div>
         {data.subtitle && (
-          <div style={{ 
+          <div style={{
             color: theme.colors.textLight, fontSize: 20, fontWeight: 300,
-            letterSpacing: '1px' 
+            letterSpacing: '1px'
           }}>
             {data.subtitle}
           </div>
@@ -163,7 +163,7 @@ export const EduCoreHubLayout: React.FC<EduCoreHubLayoutProps> = ({ model, theme
 
       {/* 核心内容区 */}
       <div style={{ position: 'relative', height: 'calc(100% - 110px)' }}>
-        
+
         {/* 核心球体 (Glowing Core) */}
         <div style={{
           width: sphereSize, height: sphereSize, borderRadius: '50%',
@@ -174,8 +174,8 @@ export const EduCoreHubLayout: React.FC<EduCoreHubLayoutProps> = ({ model, theme
           zIndex: 4, padding: 20, textAlign: 'center',
           border: '1px solid rgba(255,255,255,0.2)'
         }}>
-          <span style={{ 
-            color: '#ffffff', fontSize: centerFont, fontWeight: 800, 
+          <span style={{
+            color: '#ffffff', fontSize: centerFont, fontWeight: 800,
             fontFamily: theme.fonts.title, lineHeight: 1.2,
             textShadow: '0 2px 10px rgba(0,0,0,0.5)'
           }}>
@@ -185,15 +185,15 @@ export const EduCoreHubLayout: React.FC<EduCoreHubLayoutProps> = ({ model, theme
 
         {/* 轨道圈 (Orbit Rings) */}
         <div style={{
-          width: orbitSize, height: orbitSize, borderRadius: '50%', 
+          width: orbitSize, height: orbitSize, borderRadius: '50%',
           border: '1px dashed rgba(255,255,255,0.15)',
-          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', 
+          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
           zIndex: 1,
         }} />
         <div style={{
-          width: orbitSize * 1.4, height: orbitSize * 1.4, borderRadius: '50%', 
+          width: orbitSize * 1.4, height: orbitSize * 1.4, borderRadius: '50%',
           border: '1px solid rgba(255,255,255,0.05)',
-          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', 
+          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
           zIndex: 0,
         }} />
 
@@ -203,13 +203,13 @@ export const EduCoreHubLayout: React.FC<EduCoreHubLayoutProps> = ({ model, theme
             ...getDynamicNodePosition(index, total),
             ...glassCard,
             borderRadius: 16,
-            padding: cardPad, 
+            padding: cardPad,
             zIndex: 3,
             width: cardWidth,
             textAlign: 'center',
             transition: 'all 0.3s ease',
           }}>
-            <span style={{ 
+            <span style={{
               color: theme.colors.primary, fontSize: cardFont, fontWeight: 600,
               textShadow: '0 0 10px rgba(0,0,0,0.5)'
             }}>
@@ -217,10 +217,10 @@ export const EduCoreHubLayout: React.FC<EduCoreHubLayoutProps> = ({ model, theme
             </span>
             {/* 连接线示意 (装饰) */}
             <div style={{
-              position: 'absolute', 
-              top: '50%', 
-              left: '50%', 
-              width: 2, 
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              width: 2,
               height: 0, // 实际连接线比较复杂，这里简化
               background: 'transparent'
             }} />
@@ -243,26 +243,42 @@ const EduCoreHubVariantB: React.FC<{ data: EduCoreHubModel; theme: ThemeConfig }
     { label: 'BOTTOM LAYER', color: '#2dd4bf' }  // Teal
   ];
 
-  // 简单的分层算法
-  if (allNodes.length <= 3) {
-    allNodes.forEach((n, i) => tiers.push({ 
-      title: tierColors[i]?.label || 'LAYER', 
-      nodes: [n.title], 
-      color: tierColors[i]?.color || '#fff' 
-    }));
+  // 改进的分层算法：强制保证 3 层金字塔结构
+  // 如果节点非常少（例如 2 个），将 center_label 作为塔尖 (TOP LAYER)，将 nodes 分配给下两层
+  if (allNodes.length === 0) {
+    tiers.push({ title: tierColors[0].label, nodes: [data.center_label], color: tierColors[0].color });
+    tiers.push({ title: tierColors[1].label, nodes: ['核心要点剖析'], color: tierColors[1].color });
+    tiers.push({ title: tierColors[2].label, nodes: ['基础概念支撑', '理论模型框架'], color: tierColors[2].color });
+  } else if (allNodes.length === 1) {
+    tiers.push({ title: tierColors[0].label, nodes: [data.center_label], color: tierColors[0].color });
+    tiers.push({ title: tierColors[1].label, nodes: [allNodes[0].title], color: tierColors[1].color });
+    tiers.push({ title: tierColors[2].label, nodes: ['基础数据支撑'], color: tierColors[2].color });
+  } else if (allNodes.length === 2) {
+    tiers.push({ title: tierColors[0].label, nodes: [data.center_label], color: tierColors[0].color });
+    tiers.push({ title: tierColors[1].label, nodes: [allNodes[0].title], color: tierColors[1].color });
+    tiers.push({ title: tierColors[2].label, nodes: [allNodes[1].title], color: tierColors[2].color });
   } else {
-    // 均分
+    // 均分到 3 层
     const perTier = Math.ceil(allNodes.length / 3);
     let current = 0;
     for (let i = 0; i < 3; i++) {
-      if (current >= allNodes.length) break;
-      const chunk = allNodes.slice(current, current + perTier);
-      tiers.push({
-        title: tierColors[i].label,
-        nodes: chunk.map(n => n.title),
-        color: tierColors[i].color
-      });
-      current += perTier;
+      if (current >= allNodes.length) {
+        // 如果上面被分空了，拿前一层的一个垫底
+        if (tiers[i - 1] && tiers[i - 1].nodes.length > 1) {
+          const popped = tiers[i - 1].nodes.pop();
+          tiers.push({ title: tierColors[i].label, nodes: [popped!], color: tierColors[i].color });
+        } else {
+          tiers.push({ title: tierColors[i].label, nodes: ['拓展层'], color: tierColors[i].color });
+        }
+      } else {
+        const chunk = allNodes.slice(current, current + perTier);
+        tiers.push({
+          title: tierColors[i].label,
+          nodes: chunk.map(n => n.title),
+          color: tierColors[i].color
+        });
+        current += perTier;
+      }
     }
   }
 
@@ -273,14 +289,14 @@ const EduCoreHubVariantB: React.FC<{ data: EduCoreHubModel; theme: ThemeConfig }
       width: 1280, height: 720, flexShrink: 0,
       background: deepSpaceBg(theme, data.background_image),
       padding: theme.spacing.padding, boxSizing: 'border-box',
-      display: 'flex', flexDirection: 'column', overflow: 'hidden', 
+      display: 'flex', flexDirection: 'column', overflow: 'hidden',
       fontFamily: theme.fonts.body,
       color: theme.colors.text
     }}>
-      <div style={{ 
-        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', 
-        borderBottom: `1px solid rgba(255,255,255,0.1)`, 
-        paddingBottom: 24, marginBottom: 32, flexShrink: 0 
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
+        borderBottom: `1px solid rgba(255,255,255,0.1)`,
+        paddingBottom: 24, marginBottom: 32, flexShrink: 0
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ width: 6, height: 42, borderRadius: 3, background: theme.colors.accent }} />
@@ -291,14 +307,14 @@ const EduCoreHubVariantB: React.FC<{ data: EduCoreHubModel; theme: ThemeConfig }
         {data.subtitle && <div style={{ fontSize: 20, color: theme.colors.textLight }}>{data.subtitle}</div>}
       </div>
 
-      <div style={{ 
-        flexGrow: 1, display: 'flex', flexDirection: 'column', 
-        justifyContent: 'center', alignItems: 'center', gap: 16 
+      <div style={{
+        flexGrow: 1, display: 'flex', flexDirection: 'column',
+        justifyContent: 'center', alignItems: 'center', gap: 16
       }}>
         {tiers.map((tier, i) => {
           // 金字塔宽度逻辑
-          const width = 60 + (i * 20) + '%'; 
-          
+          const width = 60 + (i * 20) + '%';
+
           return (
             <div key={i} style={{
               width: width,
@@ -310,19 +326,29 @@ const EduCoreHubVariantB: React.FC<{ data: EduCoreHubModel; theme: ThemeConfig }
               transition: 'transform 0.3s ease',
               borderLeft: `4px solid ${tier.color}` // 侧边高亮
             }}>
-              <div style={{ 
-                position: 'absolute', top: 12, left: 16, 
-                fontSize: 12, color: tier.color, letterSpacing: 2, fontWeight: 800, opacity: 0.8 
+              {/* 梯形切角顶部装饰 */}
+              {i > 0 && (
+                <div style={{
+                  position: 'absolute', top: -20, left: '50%', transform: 'translateX(-50%)',
+                  width: '60%', height: 20,
+                  background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.02))',
+                  clipPath: 'polygon(10% 0, 90% 0, 100% 100%, 0% 100%)',
+                }} />
+              )}
+
+              <div style={{
+                position: 'absolute', top: 12, left: 24,
+                fontSize: 13, color: tier.color, letterSpacing: 2, fontWeight: 800, opacity: 0.8
               }}>
                 {tier.title}
               </div>
-              
-              <div style={{ 
-                display: 'flex', gap: 32, marginTop: 16, 
-                justifyContent: 'center', width: '100%', flexWrap: 'wrap' 
+
+              <div style={{
+                display: 'flex', gap: 32, marginTop: 16,
+                justifyContent: 'center', width: '100%', flexWrap: 'wrap'
               }}>
                 {tier.nodes.map((node, ni) => (
-                  <div key={ni} style={{ 
+                  <div key={ni} style={{
                     fontSize: 22, fontWeight: 600, color: '#fff',
                     textShadow: '0 2px 4px rgba(0,0,0,0.5)'
                   }}>
@@ -351,12 +377,12 @@ export function renderEduCoreHubLayoutHTML(model: EduCoreHubModel, theme: ThemeC
   const nodes = data.nodes;
   const total = nodes.length;
   const centerFont = getCenterFontSize(data.center_label);
-  
+
   // 动态调整卡片大小
   const cardWidth = total <= 4 ? 240 : total <= 6 ? 200 : 160;
   const cardPad = total <= 4 ? '16px 24px' : '12px 16px';
   const cardFont = total <= 4 ? 20 : 16;
-  
+
   const sphereSize = total <= 4 ? 220 : 180;
   const orbitSize = total <= 4 ? 460 : 420;
 
@@ -369,7 +395,7 @@ export function renderEduCoreHubLayoutHTML(model: EduCoreHubModel, theme: ThemeC
     const radiusY = 36;
     const left = 50 + radiusX * Math.cos(angle);
     const top = 50 + radiusY * Math.sin(angle);
-    
+
     return `<div style="position:absolute;left:${left.toFixed(1)}%;top:${top.toFixed(1)}%;transform:translate(-50%, -50%);border-radius:16px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 8px 32px 0 rgba(0,0,0,0.36);padding:${cardPad};z-index:3;width:${cardWidth}px;text-align:center;"><span style="color:${theme.colors.primary};font-size:${cardFont}px;font-weight:600;text-shadow:0 0 10px rgba(0,0,0,0.5);">${node.title}</span></div>`;
   }).join('');
 
@@ -395,24 +421,42 @@ export function renderEduCoreHubLayoutHTML(model: EduCoreHubModel, theme: ThemeC
 function renderEduCoreHubVariantBHTML(data: EduCoreHubModel, theme: ThemeConfig): string {
   const allNodes = data.nodes;
   const tierColors = [
-    { label: 'TOP LAYER', color: '#f472b6' }, 
-    { label: 'MIDDLE LAYER', color: '#60a5fa' }, 
+    { label: 'TOP LAYER', color: '#f472b6' },
+    { label: 'MIDDLE LAYER', color: '#60a5fa' },
     { label: 'BOTTOM LAYER', color: '#2dd4bf' }
   ];
-  
+
   const tiers: { title: string; nodes: string[]; color: string }[] = [];
-  
-  // Same logic as React component
-  if (allNodes.length <= 3) {
-    allNodes.forEach((n, i) => tiers.push({ title: tierColors[i]?.label || 'LAYER', nodes: [n.title], color: tierColors[i]?.color || '#fff' }));
+
+  // Same logic as React component to forcefully create 3 tiers
+  if (allNodes.length === 0) {
+    tiers.push({ title: tierColors[0].label, nodes: [data.center_label], color: tierColors[0].color });
+    tiers.push({ title: tierColors[1].label, nodes: ['核心要点剖析'], color: tierColors[1].color });
+    tiers.push({ title: tierColors[2].label, nodes: ['基础概念支撑', '理论模型框架'], color: tierColors[2].color });
+  } else if (allNodes.length === 1) {
+    tiers.push({ title: tierColors[0].label, nodes: [data.center_label], color: tierColors[0].color });
+    tiers.push({ title: tierColors[1].label, nodes: [allNodes[0].title], color: tierColors[1].color });
+    tiers.push({ title: tierColors[2].label, nodes: ['基础数据支撑'], color: tierColors[2].color });
+  } else if (allNodes.length === 2) {
+    tiers.push({ title: tierColors[0].label, nodes: [data.center_label], color: tierColors[0].color });
+    tiers.push({ title: tierColors[1].label, nodes: [allNodes[0].title], color: tierColors[1].color });
+    tiers.push({ title: tierColors[2].label, nodes: [allNodes[1].title], color: tierColors[2].color });
   } else {
     const perTier = Math.ceil(allNodes.length / 3);
     let current = 0;
     for (let i = 0; i < 3; i++) {
-      if (current >= allNodes.length) break;
-      const chunk = allNodes.slice(current, current + perTier);
-      tiers.push({ title: tierColors[i].label, nodes: chunk.map(n => n.title), color: tierColors[i].color });
-      current += perTier;
+      if (current >= allNodes.length) {
+        if (tiers[i - 1] && tiers[i - 1].nodes.length > 1) {
+          const popped = tiers[i - 1].nodes.pop();
+          tiers.push({ title: tierColors[i].label, nodes: [popped!], color: tierColors[i].color });
+        } else {
+          tiers.push({ title: tierColors[i].label, nodes: ['拓展层'], color: tierColors[i].color });
+        }
+      } else {
+        const chunk = allNodes.slice(current, current + perTier);
+        tiers.push({ title: tierColors[i].label, nodes: chunk.map(n => n.title), color: tierColors[i].color });
+        current += perTier;
+      }
     }
   }
 
@@ -422,12 +466,13 @@ function renderEduCoreHubVariantBHTML(data: EduCoreHubModel, theme: ThemeConfig)
 
   const tiersHTML = tiers.map((tier, i) => {
     const width = 60 + (i * 20) + '%';
-    const nodesHTML = tier.nodes.map(node => 
+    const nodesHTML = tier.nodes.map(node =>
       `<div style="font-size:22px;font-weight:600;color:#fff;text-shadow:0 2px 4px rgba(0,0,0,0.5);">${node}</div>`
     ).join('');
-    
+
     return `<div style="width:${width};background:rgba(255,255,255,0.03);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 32px 0 rgba(0,0,0,0.36);border-radius:20px;padding:24px 32px;display:flex;flex-direction:column;align-items:center;position:relative;border-left:4px solid ${tier.color};">
-      <div style="position:absolute;top:12px;left:16px;font-size:12px;color:${tier.color};letter-spacing:2px;font-weight:800;opacity:0.8;">${tier.title}</div>
+      ${i > 0 ? `<div style="position:absolute;top:-20px;left:50%;transform:translateX(-50%);width:60%;height:20px;background:linear-gradient(to bottom, transparent, rgba(255,255,255,0.02));clip-path:polygon(10% 0, 90% 0, 100% 100%, 0% 100%);"></div>` : ''}
+      <div style="position:absolute;top:12px;left:24px;font-size:13px;color:${tier.color};letter-spacing:2px;font-weight:800;opacity:0.8;">${tier.title}</div>
       <div style="display:flex;gap:32px;margin-top:16px;justify-content:center;width:100%;flex-wrap:wrap;">${nodesHTML}</div>
     </div>`;
   }).join('');
