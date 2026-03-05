@@ -109,7 +109,15 @@ class TaskManager:
 
 
 # Global task manager instance
-task_manager = TaskManager(max_workers=4)
+def _env_positive_int(name: str, default: int) -> int:
+    import os
+    try:
+        v = int(os.getenv(name, str(default)))
+        return v if v > 0 else default
+    except (TypeError, ValueError):
+        return default
+
+task_manager = TaskManager(max_workers=_env_positive_int('MAX_GLOBAL_TASK_WORKERS', 12))
 
 
 def _get_stale_timeout_seconds(task_type: str) -> int:
@@ -683,7 +691,13 @@ def generate_descriptions_task(task_id: str, project_id: str, ai_service,
 
                     task = Task.query.get(task_id)
                     if task:
-                        task.update_progress(completed=completed, failed=failed)
+                        page_title = str(job.get('page_outline', {}).get('title', ''))
+                        prog = task.get_progress()
+                        prog['completed'] = completed
+                        prog['failed'] = failed
+                        prog['current_page'] = page_title
+                        prog['stage'] = 'generating'
+                        task.set_progress(prog)
                         db.session.commit()
                         logger.info(
                             f"Description Progress: {completed}/{len(pages)} pages completed "
@@ -732,12 +746,13 @@ def generate_descriptions_task(task_id: str, project_id: str, ai_service,
 
                     if rewrite_tasks:
                         logger.info(f"HTML continuity review requested targeted rewrites: {len(rewrite_tasks)}")
+
+                        rewrite_items = []
                         for rewrite_task in rewrite_tasks:
                             logical_page_id = rewrite_task.get('page_id')
                             job = html_job_by_logical_id.get(logical_page_id)
                             if not job:
                                 continue
-
                             continuity_context = narrative_tracker.build_context_for_page(logical_page_id)
                             rewrite_instruction = (
                                 f"{str(rewrite_task.get('reason') or '').strip()}。"
@@ -745,43 +760,39 @@ def generate_descriptions_task(task_id: str, project_id: str, ai_service,
                             ).strip('。')
                             if rewrite_instruction:
                                 rewrite_instruction += "。"
+                            rewrite_items.append((job, continuity_context, rewrite_instruction))
 
-                            rewrite_executor = ThreadPoolExecutor(max_workers=1)
-                            rewrite_future = rewrite_executor.submit(
-                                generate_single_desc,
-                                page_id=job['db_page_id'],
-                                page_outline=job['page_outline'],
-                                page_index=job['page_index'],
-                                page_layout_id=job['layout_id'],
-                                logical_page_id=job['logical_page_id'],
-                                continuity_context=continuity_context,
-                                rewrite_instruction=rewrite_instruction,
-                                thinking_budget=rewrite_budget
-                            )
-                            try:
-                                page_id, rewrite_data, rewrite_error = rewrite_future.result(
-                                    timeout=rewrite_timeout_seconds
+                        # Parallel rewrite (was sequential before)
+                        rewrite_worker_count = max(1, min(len(rewrite_items), chapter_parallelism))
+                        with ThreadPoolExecutor(max_workers=rewrite_worker_count) as rewrite_pool:
+                            rewrite_futures = {}
+                            for job, ctx, instr in rewrite_items:
+                                fut = rewrite_pool.submit(
+                                    generate_single_desc,
+                                    page_id=job['db_page_id'],
+                                    page_outline=job['page_outline'],
+                                    page_index=job['page_index'],
+                                    page_layout_id=job['layout_id'],
+                                    logical_page_id=job['logical_page_id'],
+                                    continuity_context=ctx,
+                                    rewrite_instruction=instr,
+                                    thinking_budget=rewrite_budget
                                 )
-                            except FutureTimeoutError:
-                                rewrite_future.cancel()
-                                page_id = job['db_page_id']
-                                rewrite_data = None
-                                rewrite_error = f"页面重写超时({rewrite_timeout_seconds}s)"
-                                logger.warning(
-                                    "页面 %s 重写超时(%ss)，跳过重写并保留首轮结果",
-                                    logical_page_id,
-                                    rewrite_timeout_seconds
-                                )
-                            finally:
-                                rewrite_executor.shutdown(wait=False, cancel_futures=True)
+                                rewrite_futures[fut] = job['logical_page_id']
 
-                            if rewrite_error or not rewrite_data:
-                                logger.warning(f"页面 {logical_page_id} 重写失败，保留首轮结果: {rewrite_error}")
-                                continue
-
-                            db.session.expire_all()
-                            update_page_result(page_id, rewrite_data, None, count_stats=False)
-                            db.session.commit()
+                            for fut in as_completed(rewrite_futures, timeout=rewrite_timeout_seconds):
+                                logical_pid = rewrite_futures[fut]
+                                try:
+                                    page_id, rewrite_data, rewrite_error = fut.result(timeout=10)
+                                except (FutureTimeoutError, Exception) as e:
+                                    logger.warning("页面 %s 重写失败: %s", logical_pid, e)
+                                    continue
+                                if rewrite_error or not rewrite_data:
+                                    logger.warning(f"页面 {logical_pid} 重写失败，保留首轮结果: {rewrite_error}")
+                                    continue
+                                db.session.expire_all()
+                                update_page_result(page_id, rewrite_data, None, count_stats=False)
+                                db.session.commit()
 
                             try:
                                 narrative_tracker.apply_generated_page(

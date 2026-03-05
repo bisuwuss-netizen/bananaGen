@@ -427,6 +427,28 @@ export const getTaskStatus = async (projectId: string, taskId: string): Promise<
   return response.data;
 };
 
+// ===== 版式规划 =====
+
+export interface LayoutPlanItem {
+  page_id: string;
+  layout_id: string;
+  variant: string;
+}
+
+/**
+ * 生成版式规划（在导出前调用，为每页分配 variant）
+ */
+export const generateLayoutPlan = async (
+  projectId: string,
+  seed?: string
+): Promise<ApiResponse<{ layout_plan: LayoutPlanItem[] }>> => {
+  const response = await apiClient.post<ApiResponse<{ layout_plan: LayoutPlanItem[] }>>(
+    `/api/projects/${projectId}/generate/layout-plan`,
+    seed ? { seed } : {}
+  );
+  return response.data;
+};
+
 // ===== 导出 =====
 
 /**

@@ -51,7 +51,7 @@ export const DarkMathLayout: React.FC<DarkMathLayoutProps> = ({ model, theme }) 
     fontFamily: theme.fonts.body,
     ...(background_image
       ? {
-        backgroundImage: `linear-gradient(rgba(26,26,46,0.95), rgba(26,26,46,0.95)), url(${background_image})`,
+        backgroundImage: `url(${background_image})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }
@@ -216,7 +216,7 @@ export function renderDarkMathLayoutHTML(model: DarkMathModel, theme: ThemeConfi
   const { title, subtitle, description, note, formulas, background_image } = normalizedModel;
 
   const slideBg = background_image
-    ? `linear-gradient(rgba(26,26,46,0.95), rgba(26,26,46,0.95)), url(${background_image})`
+    ? `url(${background_image})`
     : '#1a1a2e';
 
   const formattedTitle = title

@@ -47,7 +47,7 @@ export const OverlapLayout: React.FC<OverlapLayoutProps> = ({ model, theme }) =>
     fontFamily: theme.fonts.body,
     ...(background_image
       ? {
-        backgroundImage: `linear-gradient(rgba(240,242,245,0.95), rgba(240,242,245,0.95)), url(${background_image})`,
+        backgroundImage: `url(${background_image})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }
@@ -155,7 +155,7 @@ export function renderOverlapLayoutHTML(model: OverlapModel, theme: ThemeConfig)
   const { background_text, label, title, description, key_point, accent_color = '#e74c3c', background_image } = normalizedModel;
 
   const slideBg = background_image
-    ? `linear-gradient(rgba(240,242,245,0.95), rgba(240,242,245,0.95)), url(${background_image})`
+    ? `url(${background_image})`
     : '#f0f2f5';
 
   const titleWithBreaks = title.replace(/\n/g, '<br/>');

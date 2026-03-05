@@ -179,8 +179,8 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
 
         if (task.status === 'COMPLETED') {
           // 任务完成，从progress中获取结果
-          const progress = task.progress || {};
-          const imageUrl = progress.image_url;
+          const progress = task.progress || {} as Record<string, any>;
+          const imageUrl = (progress as Record<string, any>).image_url;
           
           if (imageUrl) {
             setPreviewUrl(getImageUrl(imageUrl));
@@ -208,7 +208,7 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
             clearInterval(pollingIntervalRef.current);
             pollingIntervalRef.current = null;
           }
-        } else if (task.status === 'PENDING' || task.status === 'PROCESSING') {
+        } else if (task.status === 'PENDING' || task.status === 'RUNNING') {
           // 继续轮询
           if (attempts >= maxAttempts) {
             show({ message: '素材生成超时，请稍后查看素材库', type: 'warning' });
@@ -517,7 +517,7 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
       </div>
       {/* 素材选择器 */}
       <MaterialSelector
-        projectId={projectId}
+        projectId={projectId ?? undefined}
         isOpen={isMaterialSelectorOpen}
         onClose={() => setIsMaterialSelectorOpen(false)}
         onSelect={handleSelectMaterials}

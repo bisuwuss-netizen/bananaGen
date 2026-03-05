@@ -3,11 +3,22 @@
  * 用于生成内联样式，确保符合HTML转PPT规范
  */
 
+import React from 'react';
 import { ThemeConfig } from '../types/schema';
 
 /**
  * 将样式对象转换为内联样式字符串
  */
+export function toCSS(styles: Record<string, string | number | undefined>): React.CSSProperties {
+  const result: Record<string, any> = {};
+  for (const [key, value] of Object.entries(styles)) {
+    if (value !== undefined && value !== null && value !== '') {
+      result[key] = value;
+    }
+  }
+  return result as React.CSSProperties;
+}
+
 export function toInlineStyle(styles: Record<string, string | number | undefined>): string {
   return Object.entries(styles)
     .filter(([, value]) => value !== undefined && value !== null && value !== '')

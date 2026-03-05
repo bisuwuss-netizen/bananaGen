@@ -6,7 +6,6 @@
 import React from 'react';
 import { LearningObjectivesModel, ThemeConfig } from '../types/schema';
 import {
-  toInlineStyle,
   getBaseSlideStyle,
   getTitleStyle,
   getCardStyle,
@@ -43,7 +42,7 @@ export const LearningObjectivesLayout: React.FC<LearningObjectivesLayoutProps> =
     ...getBaseSlideStyle(theme),
     ...(background_image
       ? {
-        backgroundImage: `linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)), url(${background_image})`,
+        backgroundImage: `url(${background_image})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }

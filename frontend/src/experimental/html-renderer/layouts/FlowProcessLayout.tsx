@@ -69,7 +69,7 @@ export const FlowProcessLayout: React.FC<FlowProcessLayoutProps> = ({ model, the
     fontFamily: theme.fonts.body,
     ...(background_image
       ? {
-        backgroundImage: `linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.95)), url(${background_image})`,
+        backgroundImage: `url(${background_image})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }
@@ -120,7 +120,6 @@ export const FlowProcessLayout: React.FC<FlowProcessLayoutProps> = ({ model, the
         <div style={lineStyle} />
 
         {steps.map((step, index) => {
-          const isFirst = index === 0;
           const isActive = index === 0;
 
           return (
@@ -184,7 +183,7 @@ export function renderFlowProcessLayoutHTML(model: FlowProcessModel, theme: Them
   const { title, steps, background_image } = normalizedModel;
 
   const slideBg = background_image
-    ? `linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.95)), url(${background_image})`
+    ? `url(${background_image})`
     : '#ffffff';
 
   const stepsHTML = steps

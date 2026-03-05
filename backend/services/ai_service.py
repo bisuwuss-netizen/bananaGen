@@ -48,6 +48,7 @@ from .narrative_continuity import (
     inject_unresolved_promise_closure_blocks,
 )
 from .ai_providers import get_text_provider, get_image_provider, TextProvider, ImageProvider
+from .layout_planner import assign_layout_variants
 from config import get_config
 
 logger = logging.getLogger(__name__)
@@ -2393,6 +2394,15 @@ class AIService:
         outline = enrich_outline_with_narrative_contract(outline)
         tracker = NarrativeRuntimeTracker(outline)
         outline_pages = outline.get('pages', []) if isinstance(outline.get('pages'), list) else []
+
+        # 1.5 分配布局变体 (variant a/b) 到每个页面
+        try:
+            outline_pages = assign_layout_variants(outline_pages, scheme_id=scheme_id)
+            outline['pages'] = outline_pages
+            logger.info(f"布局变体分配完成: {[(p.get('page_id'), p.get('layout_id'), p.get('layout_variant')) for p in outline_pages]}")
+        except Exception as e:
+            logger.warning(f"布局变体分配失败，使用默认 variant=a: {e}")
+
         page_outline_by_id = {
             str(page.get('page_id')): page
             for page in outline_pages

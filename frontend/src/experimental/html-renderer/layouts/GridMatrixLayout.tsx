@@ -60,7 +60,7 @@ export const GridMatrixLayout: React.FC<GridMatrixLayoutProps> = ({ model, theme
     fontFamily: theme.fonts.body,
     ...(background_image
       ? {
-        backgroundImage: `linear-gradient(rgba(248,249,250,0.95), rgba(248,249,250,0.95)), url(${background_image})`,
+        backgroundImage: `url(${background_image})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }
@@ -164,7 +164,7 @@ export function renderGridMatrixLayoutHTML(model: GridMatrixModel, theme: ThemeC
   const { title, subtitle, items, background_image } = normalizedModel;
 
   const slideBg = background_image
-    ? `linear-gradient(rgba(248,249,250,0.95), rgba(248,249,250,0.95)), url(${background_image})`
+    ? `url(${background_image})`
     : '#f8f9fa';
 
   const itemsHTML = items

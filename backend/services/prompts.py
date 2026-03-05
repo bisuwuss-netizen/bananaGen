@@ -1666,6 +1666,8 @@ def get_scheme_style_prompt(scheme_id: str = None) -> str:
 
 
 def resolve_layout_id(layout_id: str) -> str:
+    if layout_id in LAYOUT_SCHEMAS:
+        return layout_id
     return LAYOUT_ID_ALIASES.get(layout_id, layout_id)
 
 

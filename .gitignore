@@ -49,6 +49,7 @@ generate-example.py
 *.pdf
 .cursor/worktrees.json
 uploads/
+backend/instance/*.db*
 !assets/*
 
 # 镜像源配置脚本的备份文件

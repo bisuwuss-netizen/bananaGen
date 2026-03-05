@@ -5,24 +5,16 @@ import {
   Home,
   ArrowLeft,
   Download,
-  RefreshCw,
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  ChevronDown,
-  ChevronUp,
-  X,
   Upload,
   Image as ImageIcon,
-  ImagePlus,
-  Settings,
-  CheckSquare,
-  Square,
   Check,
   FileText,
   Loader2,
 } from 'lucide-react';
-import { Button, Loading, Modal, Textarea, useToast, useConfirm, MaterialSelector, Markdown, ProjectSettingsModal, ExportTasksPanel } from '@/components/shared';
+import { Button, Loading, Modal, useToast, useConfirm, MaterialSelector, ProjectSettingsModal, ExportTasksPanel } from '@/components/shared';
 import { MaterialGeneratorModal } from '@/components/shared/MaterialGeneratorModal';
 import { TemplateSelector, getTemplateFile } from '@/components/shared/TemplateSelector';
 import { listUserTemplates, listMaterials, type UserTemplate } from '@/api/endpoints';
@@ -32,7 +24,7 @@ import { SlideCard } from '@/components/preview/SlideCard';
 import { useProjectStore } from '@/store/useProjectStore';
 import { useExportTasksStore, type ExportTaskType } from '@/store/useExportTasksStore';
 import { getImageUrl } from '@/api/client';
-import { getPageImageVersions, setCurrentImageVersion, updateProject, uploadTemplate, exportPPTX as apiExportPPTX, exportPDF as apiExportPDF, exportEditablePPTX as apiExportEditablePPTX, generateHtmlImagesStreaming, type HtmlImageSlot, type HtmlImageSSEEvent } from '@/api/endpoints';
+import { getPageImageVersions, setCurrentImageVersion, updateProject, updatePage, uploadTemplate, exportPPTX as apiExportPPTX, exportPDF as apiExportPDF, exportEditablePPTX as apiExportEditablePPTX, generateHtmlImagesStreaming, generateLayoutPlan, type HtmlImageSlot, type HtmlImageSSEEvent } from '@/api/endpoints';
 import { fileToBase64 } from '@/experimental/html-renderer/utils/htmlExporter';
 import type { ImageVersion, DescriptionContent, ExportExtractorMethod, ExportInpaintMethod, LayoutId } from '@/types';
 import { normalizeErrorMessage } from '@/utils';
@@ -45,6 +37,20 @@ import {
   downloadHTML,
 } from '@/experimental/html-renderer/utils/htmlExporter';
 import { renderLayoutHTML, normalizeLayoutId } from '@/experimental/html-renderer/layouts';
+
+const VARIANT_POOLS: Record<string, { id: string; label: string }[]> = {
+  title_bullets: [{ id: 'a', label: '要点列表' }, { id: 'b', label: '编号列表' }],
+  process_steps: [{ id: 'a', label: '横向流程' }, { id: 'b', label: '纵向流程' }],
+  ending: [{ id: 'a', label: '标准结束' }, { id: 'b', label: '深色总结' }],
+  edu_cover: [{ id: 'a', label: '经典封面' }, { id: 'b', label: '极简封面' }],
+  edu_toc: [{ id: 'a', label: '垂直列表' }, { id: 'b', label: '矩阵卡片' }],
+  edu_tri_compare: [{ id: 'a', label: '三栏对比' }, { id: 'b', label: '卡片对比' }],
+  edu_core_hub: [{ id: 'a', label: '同心辐射' }, { id: 'b', label: '金字塔' }],
+  edu_timeline_steps: [{ id: 'a', label: '时间轴' }, { id: 'b', label: '卡片步骤' }],
+  edu_logic_flow: [{ id: 'a', label: '逻辑流程' }, { id: 'b', label: '分支流程' }],
+  edu_data_board: [{ id: 'a', label: '数据面板' }, { id: 'b', label: '数据卡片' }],
+  edu_summary: [{ id: 'a', label: '总结回顾' }, { id: 'b', label: '关键收获' }],
+};
 
 export const SlidePreview: React.FC = () => {
   const navigate = useNavigate();
@@ -81,9 +87,9 @@ export const SlidePreview: React.FC = () => {
   const thumbnailContainerRef = useRef<HTMLDivElement | null>(null);
   const [thumbnailScale, setThumbnailScale] = useState(0.15); // 缩略图缩放，由 JS 测量容器宽度后更新
   // 多选导出相关状态（已移除多选功能）
-  const [isOutlineExpanded, setIsOutlineExpanded] = useState(false);
-  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [_isOutlineExpanded, setIsOutlineExpanded] = useState(false);
+  const [_isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [_isRefreshing, setIsRefreshing] = useState(false);
   const [isBackgroundPickerOpen, setIsBackgroundPickerOpen] = useState(false);
   const [backgroundPickerMode, setBackgroundPickerMode] = useState<'menu' | 'material'>('menu');
   const [backgroundMaterials, setBackgroundMaterials] = useState<Material[]>([]);
@@ -137,10 +143,14 @@ export const SlidePreview: React.FC = () => {
   const [htmlPageImages, setHtmlPageImages] = useState<Record<string, Record<string, string>>>({});
   const [isGeneratingHtmlImages, setIsGeneratingHtmlImages] = useState(false);
   const [htmlImageGenerationProgress, setHtmlImageGenerationProgress] = useState({ current: 0, total: 0 });
+
+  // Layout Planner 状态
+  const [layoutPlanStep, setLayoutPlanStep] = useState<number>(0); // 0=idle, 1-4=steps
+  const [isLayoutPlanning, setIsLayoutPlanning] = useState(false);
+  const layoutPlanAppliedRef = useRef(false);
   const [isGeneratingHtmlBackgrounds, setIsGeneratingHtmlBackgrounds] = useState(false);
   const [htmlBackgroundGenerationProgress, setHtmlBackgroundGenerationProgress] = useState({ current: 0, total: 0 });
   const [htmlGlobalBackground, setHtmlGlobalBackground] = useState<string>('');
-  const htmlAutoBackgroundTriggeredRef = useRef<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const backgroundFileInputRef = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<{ pageId: string; slotPath: string } | null>(null);
@@ -154,13 +164,13 @@ export const SlidePreview: React.FC = () => {
   const { show, ToastContainer } = useToast();
 
   // HTML 上传相关状态
-  const [isUploadingHtml, setIsUploadingHtml] = useState(false);
+  const [_isUploadingHtml, setIsUploadingHtml] = useState(false);
   const [uploadedHtmlUrl, setUploadedHtmlUrl] = useState<string | null>(null);
   const [showHtmlUrlModal, setShowHtmlUrlModal] = useState(false);
   const { confirm, ConfirmDialog } = useConfirm();
 
   // Memoize pages with generated images to avoid re-computing in multiple places
-  const pagesWithImages = useMemo(() => {
+  const _pagesWithImages = useMemo(() => {
     return currentProject?.pages.filter(p => p.id && p.generated_image_path) || [];
   }, [currentProject?.pages]);
 
@@ -169,6 +179,42 @@ export const SlidePreview: React.FC = () => {
   const htmlTheme = useMemo<ThemeConfig>(() => {
     return getThemeByScheme(currentProject?.scheme_id);
   }, [currentProject?.scheme_id]);
+
+  // Layout Planner：进入预览页后自动运行版式规划
+  const LAYOUT_PLAN_STEPS = ['分析内容', '版式调度', '容量校验', '渲染准备'];
+
+  const runLayoutPlan = useCallback(async (seed?: string) => {
+    if (!currentProject?.id || !isHtmlMode || layoutPlanAppliedRef.current) return;
+    setIsLayoutPlanning(true);
+    try {
+      setLayoutPlanStep(1);
+      await new Promise(r => setTimeout(r, 400));
+      setLayoutPlanStep(2);
+      const result = await generateLayoutPlan(currentProject.id, seed);
+      setLayoutPlanStep(3);
+      await new Promise(r => setTimeout(r, 300));
+      if (result.success) {
+        setLayoutPlanStep(4);
+        await syncProject(currentProject.id);
+        layoutPlanAppliedRef.current = true;
+        await new Promise(r => setTimeout(r, 300));
+      }
+    } catch (err) {
+      console.error('[LayoutPlan] failed:', err);
+    } finally {
+      setIsLayoutPlanning(false);
+      setLayoutPlanStep(0);
+    }
+  }, [currentProject?.id, isHtmlMode, syncProject]);
+
+  useEffect(() => {
+    if (isHtmlMode && currentProject?.id && !layoutPlanAppliedRef.current && currentProject.pages?.length > 0) {
+      const hasHtmlModels = currentProject.pages.some(p => p.html_model);
+      if (hasHtmlModels) {
+        runLayoutPlan();
+      }
+    }
+  }, [isHtmlMode, currentProject?.id, currentProject?.pages?.length, runLayoutPlan]);
 
   // 计算章节编号映射：使章节编号按实际出现顺序递增
   const sectionNumberMap = useMemo(() => {
@@ -230,16 +276,16 @@ export const SlidePreview: React.FC = () => {
   }, [inferTwoColumnPartType]);
 
   const shouldUseOptionalImageSlot = useCallback((
-    page: typeof currentProject.pages[0],
+    page: NonNullable<typeof currentProject>["pages"][0],
     normalizedModel?: Record<string, unknown>
   ): boolean => {
-    const outline = page?.outline_content as Record<string, unknown> | undefined;
+    const outline = page?.outline_content as unknown as Record<string, unknown> | undefined;
     if (typeof outline?.has_image === 'boolean') {
       return outline.has_image;
     }
 
-    const modelCandidate = normalizedModel ?? (page?.html_model as Record<string, unknown> | undefined);
-    const image = modelCandidate?.image as Record<string, unknown> | undefined;
+    const modelCandidate = normalizedModel ?? (page?.html_model as unknown as Record<string, unknown> | undefined);
+    const image = modelCandidate?.image as unknown as Record<string, unknown> | undefined;
     return !!(image && typeof image === 'object');
   }, []);
 
@@ -258,19 +304,28 @@ export const SlidePreview: React.FC = () => {
    * 不支持图片插槽的布局：
    * - toc, section_title, quote, ending
    */
-  const getPageImageSlotCount = useCallback((page: typeof currentProject.pages[0]): number => {
+  const getPageImageSlotCount = useCallback((page: NonNullable<typeof currentProject>["pages"][0]): number => {
     if (!page) return 0;
 
     // 非HTML模式：所有页面都需要生成图片（每页1张）
     if (!isHtmlMode) return 1;
 
     const layoutId = page.layout_id ? normalizeLayoutId(page.layout_id as LayoutId) : undefined;
-    const htmlModel = page.html_model as Record<string, unknown> | undefined;
+    const htmlModel = page.html_model as unknown as Record<string, unknown> | undefined;
 
     // 这些布局类型没有图片插槽
     const noImageLayouts = ['toc', 'section_title', 'quote', 'ending'];
     if (layoutId && noImageLayouts.includes(layoutId)) {
       return 0;
+    }
+
+    // edu_cover：hero_image 插槽
+    if (layoutId === 'edu_cover') {
+      const variant = String((htmlModel as any)?.variant || 'a').toLowerCase();
+      // #region agent log
+      fetch('http://127.0.0.1:7249/ingest/f63d39ca-6fcd-4fcb-87bf-224f2267b8e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b939cf'},body:JSON.stringify({sessionId:'b939cf',location:'SlidePreview.tsx:getPageImageSlotCount',message:'edu_cover slot count',data:{layoutId,variant,result:variant==='a'?1:0},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      return variant === 'a' ? 1 : 0;
     }
 
     // image_full 布局：必定有1个图片插槽
@@ -281,8 +336,8 @@ export const SlidePreview: React.FC = () => {
     // two_column 布局：检查左右栏是否有图片类型
     if (layoutId === 'two_column' && htmlModel) {
       let count = 0;
-      const left = htmlModel.left as Record<string, unknown> | undefined;
-      const right = htmlModel.right as Record<string, unknown> | undefined;
+      const left = htmlModel.left as unknown as Record<string, unknown> | undefined;
+      const right = htmlModel.right as unknown as Record<string, unknown> | undefined;
       if (inferTwoColumnPartType(left) === 'image') count++;
       if (inferTwoColumnPartType(right) === 'image') count++;
       return count;
@@ -304,12 +359,12 @@ export const SlidePreview: React.FC = () => {
   }, [inferTwoColumnPartType, isHtmlMode, shouldUseOptionalImageSlot]);
 
   // 辅助函数：判断页面是否有图片插槽
-  const pageHasImageSlot = useCallback((page: typeof currentProject.pages[0]): boolean => {
+  const pageHasImageSlot = useCallback((page: NonNullable<typeof currentProject>["pages"][0]): boolean => {
     return getPageImageSlotCount(page) > 0;
   }, [getPageImageSlotCount]);
 
   // 计算有图片插槽的页面
-  const pagesNeedingImages = useMemo(() => {
+  const _pagesNeedingImages = useMemo(() => {
     if (!currentProject?.pages) return [];
     return currentProject.pages.filter(p => pageHasImageSlot(p));
   }, [currentProject?.pages, pageHasImageSlot]);
@@ -347,7 +402,7 @@ export const SlidePreview: React.FC = () => {
 
   // 将Page转换为PagePayload（用于HTML渲染）
   // 会自动为支持图片的布局添加默认的image字段，以显示占位符
-  const convertPageToPayload = useCallback((page: typeof currentProject.pages[0], index: number): PagePayload | null => {
+  const convertPageToPayload = useCallback((page: NonNullable<typeof currentProject>["pages"][0], index: number): PagePayload | null => {
     if (!page) return null;
     const pageId = page.id || page.page_id || `page-${index}`;
 
@@ -366,7 +421,7 @@ export const SlidePreview: React.FC = () => {
         }
       }
 
-      const outlineContent = page.outline_content as Record<string, unknown> | undefined;
+      const outlineContent = page.outline_content as unknown as Record<string, unknown> | undefined;
       const outlineHasImage = typeof outlineContent?.has_image === 'boolean'
         ? outlineContent.has_image
         : undefined;
@@ -385,7 +440,7 @@ export const SlidePreview: React.FC = () => {
         };
       }
       if (layoutsWithOptionalImage.includes(layoutId) && outlineHasImage === false && 'image' in model) {
-        const imageField = model.image as Record<string, unknown> | undefined;
+        const imageField = model.image as unknown as Record<string, unknown> | undefined;
         const imageSrc = typeof imageField?.src === 'string' ? imageField.src.trim() : '';
         // has_image=false 时移除空占位 image，保留已存在真实图片
         if (!imageSrc) {
@@ -401,8 +456,8 @@ export const SlidePreview: React.FC = () => {
 
       // two_column 布局：补齐左右栏 type 并标准化 bullets 字段
       if (layoutId === 'two_column') {
-        const left = model.left as Record<string, unknown> | undefined;
-        const right = model.right as Record<string, unknown> | undefined;
+        const left = model.left as unknown as Record<string, unknown> | undefined;
+        const right = model.right as unknown as Record<string, unknown> | undefined;
         model.left = normalizeTwoColumnPart(left);
         model.right = normalizeTwoColumnPart(right);
       }
@@ -414,7 +469,7 @@ export const SlidePreview: React.FC = () => {
         page_id: pageId,
         order_index: index,
         layout_id: layoutId,
-        model: model,
+        model: model as any,
       };
     }
 
@@ -422,7 +477,7 @@ export const SlidePreview: React.FC = () => {
     const outline = page.outline_content;
     if (!outline) return null;
 
-    const outlineRecord = outline as Record<string, unknown>;
+    const outlineRecord = outline as unknown as Record<string, unknown>;
     const outlineTitle = typeof outlineRecord.title === 'string' ? outlineRecord.title : '未命名';
     const outlinePoints = Array.isArray(outlineRecord.points)
       ? outlineRecord.points.map((point) => String(point || '').trim()).filter(Boolean)
@@ -436,7 +491,7 @@ export const SlidePreview: React.FC = () => {
     if (index === 0) {
       layoutId = 'cover';
     } else if (outlineLayout) {
-      layoutId = outlineLayout;
+      layoutId = outlineLayout as LayoutId;
     } else if (outlinePoints.length > 4) {
       layoutId = 'title_bullets';
     }
@@ -552,12 +607,12 @@ export const SlidePreview: React.FC = () => {
       page_id: pageId,
       order_index: index,
       layout_id: layoutId,
-      model: model,
+      model: model as any,
     };
   }, [applyUploadedImagesToModel, normalizeTwoColumnPart, sectionNumberMap]);
 
   // 根据页面与布局生成 HTML 模式图片插槽
-  const buildHtmlImageSlots = useCallback((pages: typeof currentProject.pages, onlyIndex?: number): HtmlImageSlot[] => {
+  const buildHtmlImageSlots = useCallback((pages: NonNullable<typeof currentProject>["pages"], onlyIndex?: number): HtmlImageSlot[] => {
     const slots: HtmlImageSlot[] = [];
     if (!pages) return slots;
 
@@ -569,7 +624,7 @@ export const SlidePreview: React.FC = () => {
         .trim();
     };
 
-    const collectPageFacts = (page: typeof currentProject.pages[0], model: Record<string, any>): string[] => {
+    const collectPageFacts = (page: NonNullable<typeof currentProject>["pages"][0], model: Record<string, any>): string[] => {
       const facts: string[] = [];
 
       const outline = page?.outline_content as any;
@@ -628,6 +683,12 @@ export const SlidePreview: React.FC = () => {
     };
 
     const getLayoutIntent = (layoutId: LayoutId, slotPath: string): string => {
+      if (layoutId === 'edu_cover') {
+        return '生成"封面主视觉图"，高端质感，适用于PPT封面右侧展示区域，主题鲜明、构图饱满。';
+      }
+      if (slotPath === 'background_image') {
+        return '生成"页面氛围背景图"，低调不干扰文字，边缘渐暗，中心留白。';
+      }
       if (layoutId === 'process_steps') {
         return '生成“流程步骤图”，必须体现先后顺序与动作结果，含1个主体和3-4个流程节点。';
       }
@@ -681,7 +742,7 @@ export const SlidePreview: React.FC = () => {
       if (!payload) return;
 
       const model = payload.model as any;
-      const layoutId = normalizeLayoutId(payload.layout_id as LayoutId);
+      const layoutId = normalizeLayoutId(payload.layout_id as LayoutId) as any;
       const pageId = payload.page_id;
       const schemeId = currentProject?.scheme_id || 'edu_dark';
       const push = (slotPath: string) => {
@@ -710,14 +771,21 @@ export const SlidePreview: React.FC = () => {
 
       switch (layoutId) {
         case 'cover':
-          // 默认不自动生成封面背景，避免覆盖原模板
           break;
+        case 'edu_cover': {
+          const variant = String(model?.variant || 'a').toLowerCase();
+          // #region agent log
+          fetch('http://127.0.0.1:7249/ingest/f63d39ca-6fcd-4fcb-87bf-224f2267b8e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b939cf'},body:JSON.stringify({sessionId:'b939cf',location:'SlidePreview.tsx:buildHtmlImageSlots:edu_cover',message:'edu_cover slot build',data:{variant,hasHeroImage:!!model.hero_image,willPush:variant==='a'&&!model.hero_image},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
+          if (variant === 'a' && !model.hero_image) push('hero_image');
+          break;
+        }
         case 'image_full':
           if (!model.image_src) push('image_src');
           break;
         case 'two_column': {
-          const left = model.left as Record<string, unknown> | undefined;
-          const right = model.right as Record<string, unknown> | undefined;
+          const left = model.left as unknown as Record<string, unknown> | undefined;
+          const right = model.right as unknown as Record<string, unknown> | undefined;
           if (inferTwoColumnPartType(left) === 'image' && !left?.image_src) push('left.image_src');
           if (inferTwoColumnPartType(right) === 'image' && !right?.image_src) push('right.image_src');
           break;
@@ -749,7 +817,7 @@ export const SlidePreview: React.FC = () => {
   ]);
 
   // 生成背景图的插槽（全页底图）
-  const buildHtmlBackgroundSlots = useCallback((pages: typeof currentProject.pages): HtmlImageSlot[] => {
+  const buildHtmlBackgroundSlots = useCallback((pages: NonNullable<typeof currentProject>["pages"]): HtmlImageSlot[] => {
     if (!pages || pages.length === 0) return [];
     const cleanText = (value: unknown): string => {
       if (typeof value !== 'string') return '';
@@ -805,28 +873,8 @@ export const SlidePreview: React.FC = () => {
 
   const totalImageSlots = useMemo(() => {
     if (!isHtmlMode || !currentProject?.pages) return 0;
-    return currentProject.pages.reduce((sum, page, index) => {
-      const payload = convertPageToPayload(page, index);
-      if (!payload) return sum;
-      const model = payload.model as any;
-      switch (normalizeLayoutId(payload.layout_id as LayoutId)) {
-        case 'title_content':
-        case 'title_bullets':
-        case 'process_steps':
-          return sum + (shouldUseOptionalImageSlot(page, model) ? 1 : 0);
-        case 'image_full':
-          return sum + 1;
-        case 'two_column': {
-          let count = 0;
-          if (inferTwoColumnPartType(model.left as Record<string, unknown> | undefined) === 'image') count += 1;
-          if (inferTwoColumnPartType(model.right as Record<string, unknown> | undefined) === 'image') count += 1;
-          return sum + count;
-        }
-        default:
-          return sum;
-      }
-    }, 0);
-  }, [isHtmlMode, currentProject?.pages, convertPageToPayload, inferTwoColumnPartType, shouldUseOptionalImageSlot]);
+    return currentProject.pages.reduce((sum, page) => sum + getPageImageSlotCount(page), 0);
+  }, [isHtmlMode, currentProject?.pages, getPageImageSlotCount]);
 
   // 当前选中页面的PagePayload（用于HTML渲染）
   const selectedPagePayload = useMemo(() => {
@@ -1167,6 +1215,10 @@ export const SlidePreview: React.FC = () => {
   const handleGenerateCurrentHtmlImages = useCallback(async () => {
     if (!currentProject || !isHtmlMode) return;
     const slots = buildHtmlImageSlots(currentProject.pages, selectedIndex);
+    // #region agent log
+    const curPage = currentProject.pages[selectedIndex];
+    fetch('http://127.0.0.1:7249/ingest/f63d39ca-6fcd-4fcb-87bf-224f2267b8e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b939cf'},body:JSON.stringify({sessionId:'b939cf',location:'SlidePreview.tsx:handleGenerateCurrentHtmlImages',message:'generate current page slots',data:{selectedIndex,layoutId:curPage?.layout_id,slotCount:slots.length,slotPaths:slots.map(s=>s.slot_path)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
 
     if (slots.length === 0) {
       show({ message: '当前页没有需要生成图片的插槽', type: 'info' });
@@ -1293,25 +1345,7 @@ export const SlidePreview: React.FC = () => {
     }
   }, [currentProject, isHtmlMode, show, buildHtmlBackgroundSlots]);
 
-  // HTML 模式进入预览后自动生成一次统一背景图，避免用户手动点击。
-  useEffect(() => {
-    if (!isHtmlMode || !currentProject?.id) return;
-    if (!Array.isArray(currentProject.pages) || currentProject.pages.length === 0) return;
-    if (htmlGlobalBackground || isGeneratingHtmlBackgrounds) return;
-
-    const projectKey = currentProject.id;
-    if (htmlAutoBackgroundTriggeredRef.current[projectKey]) return;
-    htmlAutoBackgroundTriggeredRef.current[projectKey] = true;
-
-    void handleGenerateHtmlBackgrounds();
-  }, [
-    isHtmlMode,
-    currentProject?.id,
-    currentProject?.pages,
-    htmlGlobalBackground,
-    isGeneratingHtmlBackgrounds,
-    handleGenerateHtmlBackgrounds,
-  ]);
+  
 
   const handleUploadBackground = useCallback(() => {
     setBackgroundPickerMode('menu');
@@ -1365,6 +1399,20 @@ export const SlidePreview: React.FC = () => {
     setHtmlGlobalBackground('');
     show({ message: '背景图已清除', type: 'success' });
   }, [show]);
+
+  const handleChangeVariant = useCallback(async (variantId: string) => {
+    if (!currentProject?.id) return;
+    const page = currentProject.pages[selectedIndex];
+    if (!page?.id || !page.html_model) return;
+    const newModel = { ...(page.html_model as Record<string, unknown>), variant: variantId };
+    try {
+      await updatePage(currentProject.id, page.id, { html_model: newModel } as any);
+      await syncProject(currentProject.id);
+    } catch (err) {
+      console.error('切换变体失败:', err);
+      show({ message: '切换变体失败', type: 'error' });
+    }
+  }, [currentProject?.id, currentProject?.pages, selectedIndex, syncProject, show]);
 
   // 处理图片上传触发（支持指定页面）
   const triggerImageUpload = useCallback((slotPath: string, pageIdOverride?: string) => {
@@ -1467,7 +1515,7 @@ export const SlidePreview: React.FC = () => {
   };
 
   // 从描述内容中提取图片URL
-  const extractImageUrlsFromDescription = (descriptionContent: DescriptionContent | undefined): string[] => {
+  const _extractImageUrlsFromDescription = (descriptionContent: DescriptionContent | undefined): string[] => {
     if (!descriptionContent) return [];
 
     // 处理两种格式
@@ -1532,7 +1580,7 @@ export const SlidePreview: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleSubmitEdit = useCallback(async () => {
+  const _handleSubmitEdit = useCallback(async () => {
     if (!currentProject || !editPrompt.trim()) return;
 
     const page = currentProject.pages[selectedIndex];
@@ -1567,7 +1615,7 @@ export const SlidePreview: React.FC = () => {
     setIsEditModalOpen(false);
   }, [currentProject, selectedIndex, editPrompt, selectedContextImages, editPageImage]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const _handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     setSelectedContextImages((prev) => ({
       ...prev,
@@ -1575,7 +1623,7 @@ export const SlidePreview: React.FC = () => {
     }));
   };
 
-  const removeUploadedFile = (index: number) => {
+  const _removeUploadedFile = (index: number) => {
     setSelectedContextImages((prev) => ({
       ...prev,
       uploadedFiles: prev.uploadedFiles.filter((_, i) => i !== index),
@@ -1623,7 +1671,7 @@ export const SlidePreview: React.FC = () => {
   }, [isEditModalOpen, currentProject, selectedIndex, editPrompt, selectedContextImages]);
 
   // ========== 预览图矩形选择相关逻辑（编辑弹窗内） ==========
-  const handleSelectionMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+  const _handleSelectionMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isRegionSelectionMode || !imageRef.current) return;
     const rect = imageRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -1634,7 +1682,7 @@ export const SlidePreview: React.FC = () => {
     setSelectionRect(null);
   };
 
-  const handleSelectionMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const _handleSelectionMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isRegionSelectionMode || !isSelectingRegion || !selectionStart || !imageRef.current) return;
     const rect = imageRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -1651,7 +1699,7 @@ export const SlidePreview: React.FC = () => {
     setSelectionRect({ left, top, width, height });
   };
 
-  const handleSelectionMouseUp = async () => {
+  const _handleSelectionMouseUp = async () => {
     if (!isRegionSelectionMode || !isSelectingRegion || !selectionRect || !imageRef.current) {
       setIsSelectingRegion(false);
       setSelectionStart(null);
@@ -1777,9 +1825,7 @@ export const SlidePreview: React.FC = () => {
       }
       if (type === 'pdf') {
         // Synchronous export - direct download, create completed task directly
-        const response = type === 'pptx'
-          ? await apiExportPPTX(projectId, pageIds)
-          : await apiExportPDF(projectId, pageIds);
+        const response = await apiExportPDF(projectId, pageIds);
         const downloadUrl = response.data?.download_url || response.data?.download_url_absolute;
         if (downloadUrl) {
           addTask({
@@ -1840,7 +1886,7 @@ export const SlidePreview: React.FC = () => {
     }
   };
 
-  const handleRefresh = useCallback(async () => {
+  const _handleRefresh = useCallback(async () => {
     const targetProjectId = projectId || currentProject?.id;
     if (!targetProjectId) {
       show({ message: '无法刷新：缺少项目ID', type: 'error' });
@@ -1965,13 +2011,13 @@ export const SlidePreview: React.FC = () => {
   };
 
   const redirectHomepage = () => {
-    window.redirect_homepage({
+    window.redirect_homepage?.({
       request: '',
       persistent: false,
-      onSuccess: function(response) {
+      onSuccess: function(response: any) {
         console.log('返回成功:', response);
       },
-      onFailure: function(error_code, error_message) {
+      onFailure: function(_error_code: any, error_message: any) {
         console.error("window.redirect_homepage 请求失败:", error_message);
         alert('返回失败: ' + error_message);
       }
@@ -2015,12 +2061,51 @@ export const SlidePreview: React.FC = () => {
     ? getImageUrl(selectedPage.generated_image_path, selectedPage.updated_at)
     : '';
 
-  const hasAllImages = currentProject.pages.every(
+  const _hasAllImages = currentProject.pages.every(
     (p) => p.generated_image_path
   );
 
   return (
     <div className="app-shell h-screen flex flex-col overflow-hidden">
+      {/* 版式规划加载遮罩 */}
+      {isLayoutPlanning && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          color: '#fff', fontFamily: 'system-ui, sans-serif',
+        }}>
+          <Loader2 size={40} className="animate-spin" style={{ color: '#06b6d4', marginBottom: 24 }} />
+          <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 32 }}>正在优化版式布局...</div>
+          <div style={{ display: 'flex', gap: 16 }}>
+            {LAYOUT_PLAN_STEPS.map((label, i) => {
+              const stepNum = i + 1;
+              const isActive = layoutPlanStep === stepNum;
+              const isDone = layoutPlanStep > stepNum;
+              return (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px',
+                  borderRadius: 8,
+                  background: isActive ? 'rgba(6,182,212,0.2)' : isDone ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${isActive ? '#06b6d4' : isDone ? '#10b981' : 'rgba(255,255,255,0.1)'}`,
+                  transition: 'all 0.3s',
+                }}>
+                  <div style={{
+                    width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 12, fontWeight: 700,
+                    background: isDone ? '#10b981' : isActive ? '#06b6d4' : '#334155',
+                    color: '#fff',
+                  }}>
+                    {isDone ? <Check size={14} /> : stepNum}
+                  </div>
+                  <span style={{ fontSize: 14, color: isActive ? '#67e8f9' : isDone ? '#6ee7b7' : '#94a3b8' }}>{label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      
       {/* 顶栏 */}
       <header className="app-navbar relative z-40 h-14 md:h-16 flex items-center justify-between px-3 md:px-6 flex-shrink-0 overflow-visible">
         <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
@@ -2149,6 +2234,17 @@ export const SlidePreview: React.FC = () => {
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors text-sm text-banana-600 font-medium"
                     >
                       下载 HTML 幻灯片
+                    </button>
+                    <div className="border-t border-gray-100 my-1" />
+                    <button
+                      onClick={() => {
+                        setShowExportMenu(false);
+                        layoutPlanAppliedRef.current = false;
+                        runLayoutPlan(String(Date.now()));
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors text-sm text-gray-600"
+                    >
+                      重新规划版式
                     </button>
                   </>
                 )}
@@ -2455,6 +2551,30 @@ export const SlidePreview: React.FC = () => {
                     <span className="px-2 md:px-4 text-xs md:text-sm text-gray-600 whitespace-nowrap">
                       {selectedIndex + 1} / {currentProject.pages.length}
                     </span>
+                    {/* 变体选择 */}
+                    {isHtmlMode && (() => {
+                      const page = currentProject.pages[selectedIndex];
+                      const layoutId = page?.layout_id ? normalizeLayoutId(page.layout_id as LayoutId) : '';
+                      const rawLayoutId = page?.layout_id || '';
+                      const variants = VARIANT_POOLS[rawLayoutId] || VARIANT_POOLS[layoutId];
+                      const currentVariant = String((page?.html_model as any)?.variant || 'a').toLowerCase();
+                      if (!variants || variants.length < 2) return null;
+                      return (
+                        <div className="flex items-center gap-1 mx-1 md:mx-2 px-1 border-l border-r border-gray-200">
+                          <span className="text-xs text-gray-400 hidden md:inline mr-1">样式</span>
+                          {variants.map((v) => (
+                            <button
+                              key={v.id}
+                              onClick={() => handleChangeVariant(v.id)}
+                              className={`px-2 py-0.5 text-xs rounded transition-colors ${currentVariant === v.id ? 'bg-banana-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                              title={v.label}
+                            >
+                              {v.label}
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
                     <Button
                       variant="ghost"
                       size="sm"

@@ -25,7 +25,7 @@ export const QuoteLayout: React.FC<QuoteLayoutProps> = ({ model, theme }) => {
     backgroundColor: theme.colors.backgroundAlt,
     ...(background_image
       ? {
-        backgroundImage: `linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)), url(${background_image})`,
+        backgroundImage: `url(${background_image})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
@@ -98,7 +98,7 @@ export function renderQuoteLayoutHTML(model: QuoteModel, theme: ThemeConfig): st
     backgroundColor: theme.colors.backgroundAlt,
     ...(background_image
       ? {
-        backgroundImage: `linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)), url(${background_image})`,
+        backgroundImage: `url(${background_image})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',

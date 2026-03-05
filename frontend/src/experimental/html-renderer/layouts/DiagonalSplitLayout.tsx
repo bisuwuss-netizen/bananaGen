@@ -25,12 +25,14 @@ function normalizeDiagonalSplitModel(model: Partial<DiagonalSplitModel>): Diagon
     left: {
       title: '左侧标题',
       subtitle: '左侧描述',
+      description: '',
       accent_color: '#e74c3c',
       points: ['要点一', '要点二'],
     },
     right: {
       title: '右侧标题',
       subtitle: '右侧描述',
+      description: '',
       accent_color: '#3498db',
       points: ['要点一', '要点二'],
     },

@@ -596,6 +596,7 @@ export interface CinematicOverlayModel {
 export interface EduCoverModel {
   title: string;
   subtitle?: string;
+  variant?: string;
   author?: string;
   department?: string;
   date?: string;
@@ -606,6 +607,7 @@ export interface EduCoverModel {
 export interface EduTocModel {
   title: string;
   subtitle?: string;
+  variant?: string;
   items: {
     index: number;
     text: string;
@@ -627,6 +629,7 @@ export interface EduTriCompareModel {
 export interface EduCoreHubModel {
   title: string;
   subtitle?: string;
+  variant?: string;
   center_label: string;
   nodes: {
     title: string;
@@ -648,6 +651,7 @@ export interface EduTimelineStepsModel {
 
 export interface EduLogicFlowModel {
   title: string;
+  variant?: string;
   stages: {
     title: string;
     description: string;
@@ -658,6 +662,7 @@ export interface EduLogicFlowModel {
 export interface EduDataBoardModel {
   title: string;
   subtitle?: string;
+  variant?: string;
   metrics: {
     value: string;
     label: string;
@@ -667,6 +672,11 @@ export interface EduDataBoardModel {
     label: string;
     baseline: number;
     current: number;
+  }[];
+  bullets?: {
+    text: string;
+    description?: string;
+    icon?: string;
   }[];
   insight?: string;
   background_image?: string;

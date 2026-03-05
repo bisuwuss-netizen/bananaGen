@@ -57,7 +57,7 @@ export const VerticalTimelineLayout: React.FC<VerticalTimelineLayoutProps> = ({ 
     fontFamily: theme.fonts.body,
     ...(background_image
       ? {
-        backgroundImage: `linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.95)), url(${background_image})`,
+        backgroundImage: `url(${background_image})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }
@@ -140,7 +140,7 @@ export function renderVerticalTimelineLayoutHTML(model: VerticalTimelineModel, t
   const { title, events, accent_color = '#27ae60', background_image } = normalizedModel;
 
   const slideBg = background_image
-    ? `linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.95)), url(${background_image})`
+    ? `url(${background_image})`
     : '#ffffff';
 
   const eventsHTML = events

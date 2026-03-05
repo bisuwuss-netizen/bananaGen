@@ -22,6 +22,11 @@ dependencies = [
     "flask-migrate>=4.0.0",
     "img2pdf>=0.5.1",
     "pymysql>=1.1.2",
+    "fastapi>=0.135.1",
+    "uvicorn>=0.41.0",
+    "pydantic-settings>=2.13.1",
+    "aiomysql>=0.3.2",
+    "greenlet>=3.2.4",
 ]
 
 [project.optional-dependencies]

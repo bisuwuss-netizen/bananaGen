@@ -23,7 +23,7 @@ export const SectionTitleLayout: React.FC<SectionTitleLayoutProps> = ({ model, t
     backgroundColor: theme.colors.backgroundAlt,
     ...(background_image
       ? {
-        backgroundImage: `linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)), url(${background_image})`,
+        backgroundImage: `url(${background_image})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
@@ -121,7 +121,7 @@ export function renderSectionTitleLayoutHTML(model: SectionTitleModel, theme: Th
     backgroundColor: theme.colors.backgroundAlt,
     ...(background_image
       ? {
-        backgroundImage: `linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)), url(${background_image})`,
+        backgroundImage: `url(${background_image})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',

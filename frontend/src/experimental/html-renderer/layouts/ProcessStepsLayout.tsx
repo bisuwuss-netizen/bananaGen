@@ -31,7 +31,7 @@ export const ProcessStepsLayout: React.FC<ProcessStepsLayoutProps> = ({ model, t
     ...getBaseSlideStyle(theme),
     ...(background_image
       ? {
-        backgroundImage: `linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)), url(${background_image})`,
+        backgroundImage: `url(${background_image})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
@@ -468,7 +468,7 @@ function renderProcessStepsVariantB(
         width: theme.sizes.slideWidth,
         height: theme.sizes.slideHeight,
         background: model.background_image
-          ? `linear-gradient(rgba(8,15,34,0.86), rgba(8,15,34,0.92)), url(${model.background_image}) center/cover no-repeat`
+          ? `url(${model.background_image}) center/cover no-repeat`
           : '#0b1120',
         padding: '60px 80px',
         boxSizing: 'border-box',
@@ -595,7 +595,7 @@ function renderProcessStepsVariantBHTML(model: ProcessStepsModel, theme: ThemeCo
   const palette = ['#06b6d4', '#3b82f6', '#10b981', '#f59e0b'];
   const fallbackSteps = steps.length > 0 ? steps : [{ number: 1, label: model.title || '步骤', description: '围绕目标设计并推进执行。' }];
   const background = model.background_image
-    ? `linear-gradient(rgba(8,15,34,0.86), rgba(8,15,34,0.92)), url(${model.background_image}) center/cover no-repeat`
+    ? `url(${model.background_image}) center/cover no-repeat`
     : '#0b1120';
 
   const stepHTML = fallbackSteps.map((step, index) => {

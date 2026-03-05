@@ -42,12 +42,17 @@ export const TitleBulletsLayout: React.FC<TitleBulletsLayoutProps> = ({ model, t
   const { title, subtitle, bullets, image, background_image } = model;
   const hasImage = image && (image.src || image.src === '');
   const useSimpleBullets = shouldUseSimpleBullets(bullets as BulletItem[]);
+  const variant = String((model as any).variant || 'a').toLowerCase();
+
+  if (variant === 'b') {
+    return renderTitleBulletsVariantB(model, theme, onImageUpload);
+  }
 
   const slideStyle: React.CSSProperties = {
     ...getBaseSlideStyle(theme),
     ...(background_image
       ? {
-        backgroundImage: `linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)), url(${background_image})`,
+        backgroundImage: `url(${background_image})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
@@ -390,6 +395,11 @@ export function renderTitleBulletsLayoutHTML(model: TitleBulletsModel, theme: Th
   const { title, subtitle, bullets, image, keyTakeaway, background_image } = model;
   const hasImage = image && (image.src !== undefined);
   const useSimpleBullets = shouldUseSimpleBullets(bullets as BulletItem[]);
+  const variant = String((model as any).variant || 'a').toLowerCase();
+
+  if (variant === 'b') {
+    return renderTitleBulletsVariantBHTML(model, theme);
+  }
 
   const slideStyle = toInlineStyle({
     width: `${theme.sizes.slideWidth}px`,
@@ -540,6 +550,84 @@ export function renderTitleBulletsLayoutHTML(model: TitleBulletsModel, theme: Th
     ${bulletsHTML}
   </div>
   ${keyTakeaway ? `<div style="${keyTakeawayStyle}"><strong>🎯 核心要点：</strong>${keyTakeaway}</div>` : ''}
+</section>`;
+}
+
+function renderTitleBulletsVariantBHTML(model: TitleBulletsModel, theme: ThemeConfig): string {
+  const { title, subtitle, bullets, image, keyTakeaway, background_image } = model;
+  const hasImage = image && (image.src !== undefined);
+  const palette = ['#06b6d4', '#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444'];
+
+  const slideStyle = toInlineStyle({
+    width: `${theme.sizes.slideWidth}px`,
+    height: `${theme.sizes.slideHeight}px`,
+    position: 'relative',
+    overflow: 'hidden',
+    fontFamily: theme.fonts.body,
+    color: theme.colors.text,
+    backgroundColor: theme.colors.background,
+    ...(background_image ? {
+      backgroundImage: `url(${background_image})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    } : {}),
+    boxSizing: 'border-box',
+    padding: theme.spacing.padding,
+    display: 'flex',
+    flexDirection: 'column',
+  });
+
+  const titleStyle = toInlineStyle({
+    fontSize: theme.sizes.titleSize,
+    fontWeight: 'bold',
+    color: theme.colors.primary,
+    margin: '0',
+    lineHeight: '1.3',
+    fontFamily: theme.fonts.title,
+  });
+
+  const subtitleStyle = toInlineStyle({
+    fontSize: theme.sizes.subtitleSize,
+    color: theme.colors.textLight,
+    margin: '0',
+    marginTop: '12px',
+    lineHeight: '1.4',
+  });
+
+  const bulletsHTML = bullets.map((bullet, index) => {
+    const color = palette[index % palette.length];
+    const b = bullet as BulletItem;
+    return `<div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:${index < bullets.length - 1 ? '20px' : '0'};position:relative;">
+      <div style="position:absolute;left:-32px;top:2px;width:24px;height:24px;border-radius:50%;background-color:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:bold;z-index:1;">${index + 1}</div>
+      <div style="flex:1;">
+        <p style="font-size:18px;font-weight:600;color:${theme.colors.text};margin:0 0 4px 0;line-height:1.4;">${b.text}</p>
+        ${b.description ? `<p style="font-size:14px;color:${theme.colors.textLight};margin:0;line-height:1.5;">${b.description}</p>` : ''}
+      </div>
+    </div>`;
+  }).join('\n');
+
+  let imageHTML = '';
+  if (hasImage) {
+    if (image!.src) {
+      imageHTML = `<div style="width:40%;flex-shrink:0;display:flex;align-items:stretch;"><div style="width:100%;border-radius:12px;overflow:hidden;"><img src="${image!.src}" alt="${image!.alt || ''}" style="width:100%;height:100%;object-fit:contain;" /></div></div>`;
+    } else {
+      imageHTML = `<div style="width:40%;flex-shrink:0;display:flex;align-items:stretch;"><div style="width:100%;background-color:${theme.colors.backgroundAlt};border-radius:12px;display:flex;align-items:center;justify-content:center;color:${theme.colors.textLight};font-size:14px;border:2px dashed ${theme.colors.secondary};"><span>点击上传图片</span></div></div>`;
+    }
+  }
+
+  const keyTakeawayHTML = keyTakeaway ? `<div style="margin-top:20px;padding:14px 18px;background-color:${theme.colors.backgroundAlt};border-radius:${theme.decorations?.borderRadius || '12px'};border-left:4px solid ${theme.colors.primary};font-size:${theme.sizes.bodySize};color:${theme.colors.text};line-height:1.5;"><strong>🎯 核心要点：</strong>${keyTakeaway}</div>` : '';
+
+  return `<section style="${slideStyle}">
+  <h2 style="${titleStyle}">${title}</h2>
+  ${subtitle ? `<p style="${subtitleStyle}">${subtitle}</p>` : ''}
+  <div style="margin-top:30px;flex:1;display:flex;flex-direction:${hasImage ? 'row' : 'column'};gap:${hasImage ? '30px' : '0'};">
+    <div style="flex:1;position:relative;padding-left:32px;">
+      <div style="position:absolute;left:11px;top:12px;bottom:12px;width:2px;background:linear-gradient(to bottom,${theme.colors.primary},${theme.colors.secondary});opacity:0.3;"></div>
+      ${bulletsHTML}
+    </div>
+    ${imageHTML}
+  </div>
+  ${keyTakeawayHTML}
 </section>`;
 }
 
@@ -707,6 +795,139 @@ function renderSimpleBulletLineHTML(bullet: BulletItem, theme: ThemeConfig): str
         ${bullet.description ? `<p style="${descriptionStyle}">${bullet.description}</p>` : ''}
       </div>
     </div>`;
+}
+
+function renderTitleBulletsVariantB(
+  model: TitleBulletsModel,
+  theme: ThemeConfig,
+  onImageUpload?: () => void
+): React.ReactElement {
+  const { title, subtitle, bullets, image, background_image } = model;
+  const hasImage = image && (image.src || image.src === '');
+  const palette = ['#06b6d4', '#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444'];
+
+  return (
+    <section style={{
+      ...getBaseSlideStyle(theme),
+      ...(background_image ? {
+        backgroundImage: `url(${background_image})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      } : {}),
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      <h2 style={parseStyle(toInlineStyle({ ...getTitleStyle(theme), textShadow: '0 1px 2px rgba(0,0,0,0.1)' }))}>{title}</h2>
+      {subtitle && <p style={parseStyle(toInlineStyle(getSubtitleStyle(theme)))}>{subtitle}</p>}
+      <div style={{
+        marginTop: '30px',
+        flex: '1',
+        display: 'flex',
+        flexDirection: hasImage ? 'row' : 'column',
+        gap: hasImage ? '30px' : '0',
+      }}>
+        <div style={{ flex: '1', position: 'relative', paddingLeft: '32px' }}>
+          <div style={{
+            position: 'absolute',
+            left: '11px',
+            top: '12px',
+            bottom: '12px',
+            width: '2px',
+            background: `linear-gradient(to bottom, ${theme.colors.primary}, ${theme.colors.secondary})`,
+            opacity: 0.3,
+          }} />
+          {bullets.map((bullet, index) => {
+            const color = palette[index % palette.length];
+            return (
+              <div key={index} style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '16px',
+                marginBottom: index < bullets.length - 1 ? '20px' : '0',
+                position: 'relative',
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  left: '-32px',
+                  top: '2px',
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  backgroundColor: color,
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  flexShrink: 0,
+                  zIndex: 1,
+                }}>{index + 1}</div>
+                <div style={{ flex: '1' }}>
+                  <p style={{
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    color: theme.colors.text,
+                    margin: '0 0 4px 0',
+                    lineHeight: '1.4',
+                  }}>{(bullet as BulletItem).text}</p>
+                  {(bullet as BulletItem).description && (
+                    <p style={{
+                      fontSize: '14px',
+                      color: theme.colors.textLight,
+                      margin: '0',
+                      lineHeight: '1.5',
+                    }}>{(bullet as BulletItem).description}</p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {hasImage && (
+          <div style={{ width: '40%', flexShrink: 0, display: 'flex', alignItems: 'stretch' }}>
+            {image.src ? (
+              <div style={{ width: '100%', borderRadius: '12px', overflow: 'hidden' }}>
+                <img src={image.src} alt={image.alt || ''} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              </div>
+            ) : (
+              <div
+                style={{
+                  width: '100%',
+                  backgroundColor: theme.colors.backgroundAlt,
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: theme.colors.textLight,
+                  fontSize: '14px',
+                  border: `2px dashed ${theme.colors.secondary}`,
+                }}
+                onClick={onImageUpload}
+                title="点击上传图片"
+              >
+                <span>点击上传图片</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      {model.keyTakeaway && (
+        <div style={{
+          marginTop: '20px',
+          padding: '14px 18px',
+          backgroundColor: theme.colors.backgroundAlt,
+          borderRadius: theme.decorations?.borderRadius || '12px',
+          borderLeft: `4px solid ${theme.colors.primary}`,
+          fontSize: theme.sizes.bodySize,
+          color: theme.colors.text,
+          lineHeight: '1.5',
+        }}>
+          <strong>🎯 核心要点：</strong>{model.keyTakeaway}
+        </div>
+      )}
+    </section>
+  );
 }
 
 function parseStyle(styleString: string): React.CSSProperties {

@@ -28,13 +28,13 @@ export const History: React.FC = () => {
   }, []);
 
   const redirectHomepage = () => {
-    window.redirect_homepage({
+    window.redirect_homepage?.({
       request: '',
       persistent: false,
-      onSuccess: function(response) {
+      onSuccess: function(response: any) {
         console.log('返回成功:', response);
       },
-      onFailure: function(error_code, error_message) {
+      onFailure: function(_error_code: any, error_message: any) {
         console.error("window.redirect_homepage 请求失败:", error_message);
         alert('返回失败: ' + error_message);
       }

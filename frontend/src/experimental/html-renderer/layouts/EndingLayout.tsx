@@ -28,7 +28,7 @@ export const EndingLayout: React.FC<EndingLayoutProps> = ({ model, theme }) => {
     ...getBaseSlideStyle(theme),
     padding: '0',
     ...(background_image
-      ? { background: `url(${background_image}) center/cover no-repeat` }
+      ? { background: `linear-gradient(rgba(11,17,32,0.72), rgba(17,24,39,0.72)), url(${background_image}) center/cover no-repeat, ${generateGradient(theme.colors.primary, theme.colors.secondary, 135)}` }
       : { background: generateGradient(theme.colors.primary, theme.colors.secondary, 135) }),
   };
 
@@ -98,7 +98,7 @@ export function renderEndingLayoutHTML(model: EndingModel, theme: ThemeConfig): 
     position: 'relative',
     overflow: 'hidden',
     background: background_image
-      ? `url(${background_image}) center/cover no-repeat`
+      ? `linear-gradient(rgba(11,17,32,0.72), rgba(17,24,39,0.72)), url(${background_image}) center/cover no-repeat, ${generateGradient(theme.colors.primary, theme.colors.secondary, 135)}`
       : generateGradient(theme.colors.primary, theme.colors.secondary, 135),
   });
 
@@ -175,6 +175,7 @@ function renderEndingVariantB(model: EndingModel, theme: ThemeConfig): React.Rea
       { title: '数据反馈闭环', items: ['缩短预警到干预链路，形成持续迭代。'] },
     ];
   const headline = model.closing || model.subtitle || '构建可信赖、可持续优化的智慧教育新生态。';
+  const contact = model.contact;
   const titlePalette = ['#67e8f9', '#93c5fd', '#6ee7b7', '#fbbf24'];
 
   return (
@@ -183,7 +184,7 @@ function renderEndingVariantB(model: EndingModel, theme: ThemeConfig): React.Rea
         width: theme.sizes.slideWidth,
         height: theme.sizes.slideHeight,
         background: model.background_image
-          ? `linear-gradient(rgba(8,15,34,0.84), rgba(8,15,34,0.9)), url(${model.background_image}) center/cover no-repeat`
+          ? `linear-gradient(rgba(11,17,32,0.72), rgba(17,24,39,0.72)), url(${model.background_image}) center/cover no-repeat, linear-gradient(180deg, #0b1120 0%, #172554 100%)`
           : 'linear-gradient(180deg, #0b1120 0%, #172554 100%)',
         padding: '56px 72px',
         boxSizing: 'border-box',
@@ -281,7 +282,7 @@ function renderEndingVariantBHTML(model: EndingModel, theme: ThemeConfig): strin
   const headline = model.closing || model.subtitle || '构建可信赖、可持续优化的智慧教育新生态。';
   const titlePalette = ['#67e8f9', '#93c5fd', '#6ee7b7', '#fbbf24'];
   const background = model.background_image
-    ? `linear-gradient(rgba(8,15,34,0.84), rgba(8,15,34,0.9)), url(${model.background_image}) center/cover no-repeat`
+    ? `linear-gradient(rgba(11,17,32,0.72), rgba(17,24,39,0.72)), url(${model.background_image}) center/cover no-repeat, linear-gradient(180deg, #0b1120 0%, #172554 100%)`
     : 'linear-gradient(180deg, #0b1120 0%, #172554 100%)';
 
   const blockHTML = fallbackBlocks.map((block, index) => {

@@ -50,7 +50,7 @@ export const CinematicOverlayLayout: React.FC<CinematicOverlayLayoutProps> = ({ 
     height: 720,
     backgroundColor: '#333333',
     backgroundImage: background_image
-      ? `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url(${background_image})`
+      ? `url(${background_image})`
       : 'linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4))',
     backgroundSize: 'cover',
     backgroundPosition: 'center',
@@ -130,7 +130,7 @@ export function renderCinematicOverlayLayoutHTML(model: CinematicOverlayModel, t
   const { label, title, description, metric, background_image } = normalizedModel;
 
   const slideBg = background_image
-    ? `linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.2)), url(${background_image})`
+    ? `url(${background_image})`
     : 'linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4))';
 
   const overlayHeight = metric ? '240px' : '200px';

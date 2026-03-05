@@ -26,7 +26,7 @@ export const ImageFullLayout: React.FC<ImageFullLayoutProps> = ({ model, theme, 
     flexDirection: 'column',
     ...(background_image
       ? {
-        backgroundImage: `linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)), url(${background_image})`,
+        backgroundImage: `url(${background_image})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
@@ -124,7 +124,7 @@ export function renderImageFullLayoutHTML(model: ImageFullModel, theme: ThemeCon
     backgroundColor: theme.colors.background,
     ...(background_image
       ? {
-        backgroundImage: `linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)), url(${background_image})`,
+        backgroundImage: `url(${background_image})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',

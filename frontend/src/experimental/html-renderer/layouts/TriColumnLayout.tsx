@@ -59,7 +59,7 @@ export const TriColumnLayout: React.FC<TriColumnLayoutProps> = ({ model, theme }
     fontFamily: theme.fonts.body,
     ...(background_image
       ? {
-        backgroundImage: `linear-gradient(rgba(244,246,249,0.95), rgba(244,246,249,0.95)), url(${background_image})`,
+        backgroundImage: `url(${background_image})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }
@@ -140,7 +140,7 @@ export function renderTriColumnLayoutHTML(model: TriColumnModel, theme: ThemeCon
   const { title, columns, background_image } = normalizedModel;
 
   const slideBg = background_image
-    ? `linear-gradient(rgba(244,246,249,0.95), rgba(244,246,249,0.95)), url(${background_image})`
+    ? `url(${background_image})`
     : '#f4f6f9';
 
   const columnsHTML = columns

@@ -70,11 +70,30 @@ function normalizeModel(input: LooseEduSummaryModel): EduSummaryModel {
   };
 }
 
+function glassStyle(theme: ThemeConfig): React.CSSProperties {
+  return {
+    background: 'rgba(255, 255, 255, 0.03)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.36)',
+  };
+}
+
+function deepSpaceBg(theme: ThemeConfig, backgroundImage?: string): string {
+  const base = theme.colors.background || '#020617';
+  const gradient = `radial-gradient(circle at 50% 0%, ${theme.colors.secondary} 0%, transparent 70%), linear-gradient(180deg, ${base} 0%, ${theme.colors.backgroundAlt} 100%)`;
+  
+  if (!backgroundImage) return gradient;
+  return `linear-gradient(rgba(2,6,23,0.85), rgba(2,6,23,0.9)), url(${backgroundImage}) center/cover no-repeat`;
+}
+
 // ===================== Variant A (原版: 上方3列网格 + 底部通栏) =====================
 
 export const EduSummaryLayout: React.FC<EduSummaryLayoutProps> = ({ model, theme }) => {
   const data = normalizeModel(model);
   const variant = String(data.variant || 'a').toLowerCase();
+  const glass = glassStyle(theme);
 
   if (variant === 'b') {
     return <EduSummaryVariantB data={data} theme={theme} />;
@@ -88,9 +107,8 @@ export const EduSummaryLayout: React.FC<EduSummaryLayoutProps> = ({ model, theme
     position: 'relative',
     overflow: 'hidden',
     fontFamily: theme.fonts.body,
-    background: data.background_image
-      ? `linear-gradient(rgba(8,14,32,0.82), rgba(8,14,32,0.88)), url(${data.background_image}) center/cover no-repeat`
-      : 'linear-gradient(180deg, #0b1120 0%, #172554 100%)',
+    background: deepSpaceBg(theme, data.background_image),
+    color: '#ffffff',
   };
 
   return (
@@ -98,39 +116,42 @@ export const EduSummaryLayout: React.FC<EduSummaryLayoutProps> = ({ model, theme
       <div style={{
         display: 'flex',
         alignItems: 'flex-end',
-        borderBottom: '2px solid rgba(6,182,212,0.32)',
-        paddingBottom: 18,
-        marginBottom: 28,
+        borderBottom: '1px solid rgba(6,182,212,0.3)',
+        paddingBottom: 20,
+        marginBottom: 32,
       }}>
-        <div style={{ width: 8, height: 40, borderRadius: 4, marginRight: 18, background: '#06b6d4' }} />
-        <h2 style={{ margin: 0, color: '#ffffff', fontSize: 40, fontFamily: theme.fonts.title }}>{data.title}</h2>
+        <div style={{ width: 6, height: 40, borderRadius: 3, marginRight: 20, background: 'linear-gradient(to bottom, #06b6d4, #3b82f6)' }} />
+        <h2 style={{ margin: 0, color: '#f8fafc', fontSize: 40, fontFamily: theme.fonts.title, letterSpacing: '-0.02em', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>{data.title}</h2>
       </div>
 
-      <div style={{ display: 'flex', gap: 16, height: 'calc(100% - 178px)' }}>
+      <div style={{ display: 'flex', gap: 20, height: 'calc(100% - 190px)' }}>
         {data.columns.slice(0, 3).map((column, index) => (
           <div key={index} style={{
+            ...glass,
             flex: 1,
-            borderRadius: 12,
-            border: '1px solid rgba(255,255,255,0.12)',
-            background: 'rgba(255,255,255,0.06)',
-            padding: '24px 20px',
+            borderRadius: 20,
+            padding: '28px 24px',
             boxSizing: 'border-box',
+            borderTop: `4px solid ${BORDER_COLORS[index % BORDER_COLORS.length]}`,
+            transition: 'transform 0.3s ease',
+            display: 'flex',
+            flexDirection: 'column',
           }}>
             <div style={{
               color: TITLE_COLORS[index % TITLE_COLORS.length],
               fontSize: 24,
               fontWeight: 700,
-              paddingBottom: 10,
-              marginBottom: 16,
-              borderBottom: `1px solid ${BORDER_COLORS[index % BORDER_COLORS.length]}`,
+              paddingBottom: 12,
+              marginBottom: 20,
+              borderBottom: '1px solid rgba(255,255,255,0.1)',
               fontFamily: theme.fonts.title,
             }}>
               {column.title}
             </div>
 
-            <ul style={{ margin: 0, paddingLeft: 20, color: '#cbd5e1', fontSize: 18, lineHeight: 1.75 }}>
+            <ul style={{ margin: 0, paddingLeft: 20, color: '#cbd5e1', fontSize: 18, lineHeight: 1.75, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 10 }}>
               {column.points.slice(0, 4).map((point, rowIdx) => (
-                <li key={rowIdx}>{point}</li>
+                <li key={rowIdx} style={{ listStyleType: 'disc', paddingLeft: 8 }}>{point}</li>
               ))}
             </ul>
           </div>
@@ -139,18 +160,20 @@ export const EduSummaryLayout: React.FC<EduSummaryLayoutProps> = ({ model, theme
 
       {data.closing && (
         <div style={{
-          marginTop: 18,
-          borderRadius: 12,
-          border: '1px solid rgba(6,182,212,0.55)',
-          background: 'linear-gradient(to right, rgba(6,182,212,0.22), rgba(59,130,246,0.45), rgba(6,182,212,0.22))',
-          boxShadow: '0 0 20px rgba(59,130,246,0.22)',
+          marginTop: 24,
+          borderRadius: 16,
+          border: '1px solid rgba(6,182,212,0.3)',
+          background: 'linear-gradient(to right, rgba(6,182,212,0.15), rgba(59,130,246,0.15))',
+          boxShadow: '0 0 30px rgba(6,182,212,0.1)',
           color: '#ffffff',
-          fontSize: 28,
+          fontSize: 26,
           fontWeight: 700,
           letterSpacing: 1,
           textAlign: 'center',
           lineHeight: 1.45,
-          padding: '22px 28px',
+          padding: '24px 32px',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
         }}>
           {data.closing}
         </div>
@@ -162,21 +185,19 @@ export const EduSummaryLayout: React.FC<EduSummaryLayoutProps> = ({ model, theme
 // ===================== Variant B (左右3:7不对称分割) =====================
 
 const EduSummaryVariantB: React.FC<{ data: EduSummaryModel; theme: ThemeConfig }> = ({ data, theme }) => {
+  const glass = glassStyle(theme);
   const slideStyle: React.CSSProperties = {
     width: 1280,
     height: 720,
     flexShrink: 0,
-    backgroundImage: data.background_image
-      ? `linear-gradient(rgba(8,14,32,0.82), rgba(8,14,32,0.88)), url(${data.background_image})`
-      : 'linear-gradient(180deg, #0b1120 0%, #172554 100%)',
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
+    background: deepSpaceBg(theme, data.background_image),
     padding: '60px 80px',
     boxSizing: 'border-box',
     display: 'flex',
     gap: 40,
     overflow: 'hidden',
     fontFamily: theme.fonts.body,
+    color: '#fff',
   };
 
   return (
@@ -184,43 +205,50 @@ const EduSummaryVariantB: React.FC<{ data: EduSummaryModel; theme: ThemeConfig }
       {/* 左侧：重点总结与标题 */}
       <div style={{
         width: '35%',
-        backgroundImage: 'linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(59, 130, 246, 0.4) 100%)',
-        border: '1px solid #06b6d4',
+        background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(59, 130, 246, 0.25) 100%)',
+        border: '1px solid rgba(6, 182, 212, 0.4)',
         borderRadius: 24,
         padding: '50px 40px',
         boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
-        boxShadow: '0 0 40px rgba(6, 182, 212, 0.2)',
+        boxShadow: '0 0 40px rgba(6, 182, 212, 0.15)',
         position: 'relative',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
       }}>
-        <div style={{ position: 'absolute', top: 30, left: 30, fontSize: 60, color: 'rgba(255,255,255,0.2)' }}>💡</div>
-        <h2 style={{ fontSize: 46, color: '#ffffff', margin: '0 0 30px 0', fontWeight: 'bold', lineHeight: 1.2, fontFamily: theme.fonts.title }}>{data.title}</h2>
-        <div style={{ width: 60, height: 4, backgroundColor: '#ffffff', marginBottom: 40 }} />
+        <div style={{ position: 'absolute', top: 30, left: 30, fontSize: 60, opacity: 0.3, filter: 'grayscale(100%) brightness(200%)' }}>💡</div>
+        <h2 style={{ fontSize: 46, color: '#ffffff', margin: '0 0 30px 0', fontWeight: 'bold', lineHeight: 1.2, fontFamily: theme.fonts.title, textShadow: '0 0 30px rgba(6,182,212,0.4)' }}>{data.title}</h2>
+        <div style={{ width: 60, height: 4, background: 'linear-gradient(to right, #06b6d4, #3b82f6)', marginBottom: 40, borderRadius: 2 }} />
         {data.closing && (
-          <p style={{ fontSize: 26, color: '#e2e8f0', lineHeight: 1.6, fontWeight: 'bold', margin: 0 }}>{data.closing}</p>
+          <p style={{ fontSize: 24, color: '#e2e8f0', lineHeight: 1.6, fontWeight: 'bold', margin: 0 }}>{data.closing}</p>
         )}
       </div>
 
       {/* 右侧：3个具体层面的反思卡片 */}
-      <div style={{ width: '65%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+      <div style={{ width: '65%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 20 }}>
         {data.columns.slice(0, 3).map((column, index) => (
           <div key={index} style={{
-            backgroundColor: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 16,
-            padding: '25px 30px',
+            ...glass,
+            flex: 1,
+            borderRadius: 20,
+            padding: '0 30px',
             boxSizing: 'border-box',
             display: 'flex',
             alignItems: 'center',
             gap: 30,
+            borderLeft: `4px solid ${BORDER_COLORS[index % BORDER_COLORS.length]}`,
           }}>
             <div style={{
-              width: 200,
+              width: 180,
               borderRight: '1px solid rgba(255,255,255,0.1)',
               paddingRight: 20,
               flexShrink: 0,
+              height: '60%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
             }}>
               <div style={{
                 fontSize: 24,
@@ -231,8 +259,8 @@ const EduSummaryVariantB: React.FC<{ data: EduSummaryModel; theme: ThemeConfig }
               }}>{column.title}</div>
             </div>
             <div style={{ flexGrow: 1 }}>
-              <ul style={{ color: '#cbd5e1', fontSize: 18, lineHeight: 1.6, paddingLeft: 20, margin: 0 }}>
-                {column.points.slice(0, 4).map((point, pIdx) => (
+              <ul style={{ color: '#cbd5e1', fontSize: 18, lineHeight: 1.6, paddingLeft: 20, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {column.points.slice(0, 3).map((point, pIdx) => (
                   <li key={pIdx}>{point}</li>
                 ))}
               </ul>
@@ -254,61 +282,57 @@ export function renderEduSummaryLayoutHTML(model: EduSummaryModel, theme: ThemeC
     return renderEduSummaryVariantBHTML(data, theme);
   }
 
-  const background = data.background_image
-    ? `linear-gradient(rgba(8,14,32,0.82), rgba(8,14,32,0.88)), url(${data.background_image}) center/cover no-repeat`
-    : 'linear-gradient(180deg, #0b1120 0%, #172554 100%)';
+  const background = deepSpaceBg(theme, data.background_image).replace(/"/g, "'");
 
   const columnsHTML = data.columns.slice(0, 3).map((column, index) => {
-    const points = column.points.slice(0, 4).map((point) => `<li>${point}</li>`).join('');
-    return `<div style="flex:1;border-radius:12px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);padding:24px 20px;box-sizing:border-box;">
-      <div style="color:${TITLE_COLORS[index % TITLE_COLORS.length]};font-size:24px;font-weight:700;padding-bottom:10px;margin-bottom:16px;border-bottom:1px solid ${BORDER_COLORS[index % BORDER_COLORS.length]};font-family:${theme.fonts.title};">${column.title}</div>
-      <ul style="margin:0;padding-left:20px;color:#cbd5e1;font-size:18px;line-height:1.75;">${points}</ul>
+    const points = column.points.slice(0, 4).map((point) => `<li style="padding-left:8px;list-style-type:disc;">${point}</li>`).join('');
+    return `<div style="flex:1;border-radius:20px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);padding:28px 24px;box-sizing:border-box;border-top:4px solid ${BORDER_COLORS[index % BORDER_COLORS.length]};display:flex;flex-direction:column;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 8px 32px 0 rgba(0,0,0,0.36);">
+      <div style="color:${TITLE_COLORS[index % TITLE_COLORS.length]};font-size:24px;font-weight:700;padding-bottom:12px;margin-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.1);font-family:${theme.fonts.title};">${column.title}</div>
+      <ul style="margin:0;padding-left:20px;color:#cbd5e1;font-size:18px;line-height:1.75;flex:1;display:flex;flex-direction:column;justify-content:flex-start;gap:10px;">${points}</ul>
     </div>`;
   }).join('');
 
   const closingHTML = data.closing
-    ? `<div style="margin-top:18px;border-radius:12px;border:1px solid rgba(6,182,212,0.55);background:linear-gradient(to right, rgba(6,182,212,0.22), rgba(59,130,246,0.45), rgba(6,182,212,0.22));box-shadow:0 0 20px rgba(59,130,246,0.22);color:#ffffff;font-size:28px;font-weight:700;letter-spacing:1px;text-align:center;line-height:1.45;padding:22px 28px;">${data.closing}</div>`
+    ? `<div style="margin-top:24px;border-radius:16px;border:1px solid rgba(6,182,212,0.3);background:linear-gradient(to right, rgba(6,182,212,0.15), rgba(59,130,246,0.15));box-shadow:0 0 30px rgba(6,182,212,0.1);color:#ffffff;font-size:26px;font-weight:700;letter-spacing:1px;text-align:center;line-height:1.45;padding:24px 32px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">${data.closing}</div>`
     : '';
 
-  return `<section style="width:1280px;height:720px;padding:56px 76px;box-sizing:border-box;position:relative;overflow:hidden;font-family:${theme.fonts.body};background:${background};">
-  <div style="display:flex;align-items:flex-end;border-bottom:2px solid rgba(6,182,212,0.32);padding-bottom:18px;margin-bottom:28px;">
-    <div style="width:8px;height:40px;border-radius:4px;margin-right:18px;background:#06b6d4;"></div>
-    <h2 style="margin:0;color:#ffffff;font-size:40px;font-family:${theme.fonts.title};">${data.title}</h2>
+  return `<section style="width:1280px;height:720px;padding:56px 76px;box-sizing:border-box;position:relative;overflow:hidden;font-family:${theme.fonts.body};background:${background};color:#ffffff;">
+  <div style="display:flex;align-items:flex-end;border-bottom:1px solid rgba(6,182,212,0.3);padding-bottom:20px;margin-bottom:32px;">
+    <div style="width:6px;height:40px;border-radius:3px;margin-right:20px;background:linear-gradient(to bottom, #06b6d4, #3b82f6);"></div>
+    <h2 style="margin:0;color:#f8fafc;font-size:40px;font-family:${theme.fonts.title};letter-spacing:-0.02em;text-shadow:0 2px 10px rgba(0,0,0,0.5);">${data.title}</h2>
   </div>
-  <div style="display:flex;gap:16px;height:calc(100% - 178px);">${columnsHTML}</div>
+  <div style="display:flex;gap:20px;height:calc(100% - 190px);">${columnsHTML}</div>
   ${closingHTML}
 </section>`;
 }
 
 function renderEduSummaryVariantBHTML(data: EduSummaryModel, theme: ThemeConfig): string {
-  const background = data.background_image
-    ? `linear-gradient(rgba(8,14,32,0.82), rgba(8,14,32,0.88)), url(${data.background_image}) center/cover no-repeat`
-    : 'linear-gradient(180deg, #0b1120 0%, #172554 100%)';
+  const background = deepSpaceBg(theme, data.background_image).replace(/"/g, "'");
 
   const closingHTML = data.closing
-    ? `<p style="font-size:26px;color:#e2e8f0;line-height:1.6;font-weight:bold;margin:0;">${data.closing}</p>`
+    ? `<p style="font-size:24px;color:#e2e8f0;line-height:1.6;font-weight:bold;margin:0;">${data.closing}</p>`
     : '';
 
   const rowsHTML = data.columns.slice(0, 3).map((column, index) => {
-    const points = column.points.slice(0, 4).map((point) => `<li>${point}</li>`).join('');
-    return `<div style="background-color:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:25px 30px;box-sizing:border-box;display:flex;align-items:center;gap:30px;">
-      <div style="width:200px;border-right:1px solid rgba(255,255,255,0.1);padding-right:20px;flex-shrink:0;">
+    const points = column.points.slice(0, 3).map((point) => `<li>${point}</li>`).join('');
+    return `<div style="flex:1;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:0 30px;box-sizing:border-box;display:flex;align-items:center;gap:30px;border-left:4px solid ${BORDER_COLORS[index % BORDER_COLORS.length]};backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 8px 32px 0 rgba(0,0,0,0.36);">
+      <div style="width:180px;border-right:1px solid rgba(255,255,255,0.1);padding-right:20px;flex-shrink:0;height:60%;display:flex;align-items:center;justify-content:flex-end;">
         <div style="font-size:24px;color:${TITLE_COLORS[index % TITLE_COLORS.length]};font-weight:bold;text-align:right;font-family:${theme.fonts.title};">${column.title}</div>
       </div>
       <div style="flex-grow:1;">
-        <ul style="color:#cbd5e1;font-size:18px;line-height:1.6;padding-left:20px;margin:0;">${points}</ul>
+        <ul style="color:#cbd5e1;font-size:18px;line-height:1.6;padding-left:20px;margin:0;display:flex;flex-direction:column;gap:6px;">${points}</ul>
       </div>
     </div>`;
   }).join('');
 
-  return `<section style="width:1280px;height:720px;flex-shrink:0;background:${background};background-size:cover;background-position:center;padding:60px 80px;box-sizing:border-box;display:flex;gap:40px;overflow:hidden;font-family:${theme.fonts.body};">
-  <div style="width:35%;background-image:linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(59,130,246,0.4) 100%);border:1px solid #06b6d4;border-radius:24px;padding:50px 40px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;box-shadow:0 0 40px rgba(6,182,212,0.2);position:relative;">
-    <div style="position:absolute;top:30px;left:30px;font-size:60px;color:rgba(255,255,255,0.2);">💡</div>
-    <h2 style="font-size:46px;color:#ffffff;margin:0 0 30px 0;font-weight:bold;line-height:1.2;font-family:${theme.fonts.title};">${data.title}</h2>
-    <div style="width:60px;height:4px;background-color:#ffffff;margin-bottom:40px;"></div>
+  return `<section style="width:1280px;height:720px;flex-shrink:0;background:${background};padding:60px 80px;box-sizing:border-box;display:flex;gap:40px;overflow:hidden;font-family:${theme.fonts.body};color:#fff;">
+  <div style="width:35%;background:linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(59, 130, 246, 0.25) 100%);border:1px solid rgba(6, 182, 212, 0.4);border-radius:24px;padding:50px 40px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;box-shadow:0 0 40px rgba(6, 182, 212, 0.15);position:relative;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
+    <div style="position:absolute;top:30px;left:30px;font-size:60px;opacity:0.3;filter:grayscale(100%) brightness(200%);">💡</div>
+    <h2 style="font-size:46px;color:#ffffff;margin:0 0 30px 0;font-weight:bold;line-height:1.2;font-family:${theme.fonts.title};text-shadow:0 0 30px rgba(6,182,212,0.4);">${data.title}</h2>
+    <div style="width:60px;height:4px;background:linear-gradient(to right, #06b6d4, #3b82f6);margin-bottom:40px;border-radius:2px;"></div>
     ${closingHTML}
   </div>
-  <div style="width:65%;display:flex;flex-direction:column;justify-content:space-between;">${rowsHTML}</div>
+  <div style="width:65%;display:flex;flex-direction:column;justify-content:space-between;gap:20px;">${rowsHTML}</div>
 </section>`;
 }
 

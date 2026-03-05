@@ -16,6 +16,7 @@ from services import ProjectContext
 from services.ai_service_manager import get_ai_service
 from services.image_prompt_optimizer import optimize_html_image_slots
 from services.prompts import LAYOUT_SCHEMES
+from services.layout_planner import generate_layout_plan
 from services.task_manager import (
     task_manager,
     generate_descriptions_task,
@@ -1513,3 +1514,75 @@ def generate_html_images(project_id: str):
             'Connection': 'keep-alive'
         }
     )
+
+
+@project_bp.route('/<project_id>/generate/layout-plan', methods=['POST'])
+def generate_layout_plan_endpoint(project_id):
+    """
+    POST /api/projects/{project_id}/generate/layout-plan
+
+    Run Layout Planner: assign variant to each page based on diversity
+    constraints and capacity validation. Then persist variant into
+    each page's html_model.
+
+    Returns the layout plan: [{page_id, layout_id, variant}, ...]
+    """
+    try:
+        project = Project.query.get(project_id)
+        if not project:
+            return not_found('Project')
+
+        if project.render_mode != 'html':
+            return bad_request('Layout plan is only available for HTML render mode')
+
+        pages = Page.query.filter_by(project_id=project_id).order_by(Page.order_index).all()
+        if not pages:
+            return bad_request('No pages found')
+
+        page_dicts = []
+        for p in pages:
+            d = {
+                'page_id': p.id,
+                'layout_id': p.layout_id or '',
+                'html_model': p.html_model if isinstance(p.html_model, dict) else {},
+            }
+            if isinstance(p.html_model, str):
+                try:
+                    d['html_model'] = json.loads(p.html_model)
+                except Exception:
+                    d['html_model'] = {}
+            page_dicts.append(d)
+
+        data = request.get_json(silent=True) or {}
+        seed = str(data.get('seed', ''))
+
+        plan = generate_layout_plan(
+            page_dicts,
+            scheme_id=project.scheme_id or 'edu_dark',
+            seed=seed,
+        )
+
+        # Persist variant into each page's html_model
+        plan_map = {item['page_id']: item['variant'] for item in plan}
+        for p in pages:
+            variant = plan_map.get(p.id, 'a')
+            model_data = p.html_model if isinstance(p.html_model, dict) else {}
+            if isinstance(p.html_model, str):
+                try:
+                    model_data = json.loads(p.html_model)
+                except Exception:
+                    model_data = {}
+            model_data['variant'] = variant
+            p.html_model = json.dumps(model_data, ensure_ascii=False)
+
+        db.session.commit()
+
+        return success_response(
+            data={'layout_plan': plan},
+            message='Layout plan generated and applied'
+        )
+
+    except Exception as e:
+        db.session.rollback()
+        logger.exception('generate_layout_plan failed')
+        return error_response('SERVER_ERROR', str(e), 500)

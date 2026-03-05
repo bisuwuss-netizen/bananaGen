@@ -79,7 +79,7 @@ export const SidebarCardLayout: React.FC<SidebarCardLayoutProps> = ({ model, the
     fontFamily: theme.fonts.body,
     ...(background_image
       ? {
-        backgroundImage: `linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,0.9)), url(${background_image})`,
+        backgroundImage: `url(${background_image})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }
@@ -198,7 +198,7 @@ export function renderSidebarCardLayoutHTML(model: SidebarCardModel, theme: Them
   const { title, subtitle, items, background_image } = normalizedModel;
 
   const slideBg = background_image
-    ? `linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,0.9)), url(${background_image})`
+    ? `url(${background_image})`
     : theme.colors.background;
 
   const itemsHTML = items

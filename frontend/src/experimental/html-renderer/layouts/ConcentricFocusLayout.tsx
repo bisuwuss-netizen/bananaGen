@@ -48,7 +48,7 @@ export const ConcentricFocusLayout: React.FC<ConcentricFocusLayoutProps> = ({ mo
     fontFamily: theme.fonts.body,
     ...(background_image
       ? {
-        backgroundImage: `linear-gradient(rgba(12,20,39,0.9), rgba(12,20,39,0.9)), url(${background_image})`,
+        backgroundImage: `url(${background_image})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }
@@ -140,7 +140,7 @@ export function renderConcentricFocusLayoutHTML(model: ConcentricFocusModel, the
   const { label, title, subtitle, accent_color = '#4a90e2', background_image } = normalizedModel;
 
   const slideBg = background_image
-    ? `linear-gradient(rgba(12,20,39,0.9), rgba(12,20,39,0.9)), url(${background_image})`
+    ? `url(${background_image})`
     : '#0c1427';
 
   const titleWithBreaks = title.replace(/\n/g, '<br/>');

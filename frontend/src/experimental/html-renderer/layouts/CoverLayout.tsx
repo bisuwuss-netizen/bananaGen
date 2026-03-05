@@ -24,7 +24,7 @@ export const CoverLayout: React.FC<CoverLayoutProps> = ({ model, theme }) => {
     ...getBaseSlideStyle(theme),
     padding: '0',
     background: background_image
-      ? `linear-gradient(rgba(255,255,255,0.8), rgba(255,255,255,0.8)), url(${background_image}) center/cover no-repeat`
+      ? `url(${background_image}) center/cover no-repeat`
       : generateGradient(theme.colors.primary, theme.colors.secondary, 135),
   };
 

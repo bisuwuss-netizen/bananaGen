@@ -18,7 +18,6 @@ import {
   generateDocumentWithProgress,
   generateFullDocument,
   healthCheck,
-  PPTDocumentData,
 } from './api/pptService';
 
 // FontAwesome CDN
@@ -67,7 +66,7 @@ export const IntegratedPage: React.FC = () => {
   }, []);
 
   // 开始生成
-  const handleGenerate = async () => {
+  const _handleGenerate = async () => {
     if (!topic.trim()) {
       setErrorMessage('请输入PPT主题');
       return;
@@ -212,7 +211,7 @@ export const IntegratedPage: React.FC = () => {
         return;
     }
 
-    newPages[selectedPageIndex] = { ...page, model } as typeof page;
+    newPages[selectedPageIndex] = { ...page, model } as unknown as typeof page;
     setPptDoc({ ...pptDoc, pages: newPages });
   };
 
@@ -408,7 +407,7 @@ export const IntegratedPage: React.FC = () => {
                   <SlideRenderer page={page} theme={theme} scale={thumbnailScale} />
                 </div>
                 <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#a0a0a0' }}>
-                  {index + 1}. {(page.model as Record<string, string>).title || page.layout_id}
+                  {index + 1}. {(page.model as unknown as Record<string, string>).title || page.layout_id}
                 </p>
               </div>
             ))}
