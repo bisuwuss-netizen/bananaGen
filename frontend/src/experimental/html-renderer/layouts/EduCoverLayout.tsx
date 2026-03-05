@@ -151,7 +151,9 @@ export const EduCoverLayout: React.FC<EduCoverLayoutProps> = ({ model, theme, on
               objectFit: 'contain',
               objectPosition: 'center right',
               filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.6))',
-              transform: 'scale(1.1) translateX(-5%)'
+              transform: 'scale(1.1) translateX(-5%)',
+              WebkitMaskImage: 'radial-gradient(ellipse 60% 70% at 60% 50%, black 50%, transparent 100%)',
+              maskImage: 'radial-gradient(ellipse 60% 70% at 60% 50%, black 50%, transparent 100%)',
             }}
           />
         ) : (
@@ -261,7 +263,7 @@ export function renderEduCoverLayoutHTML(model: EduCoverModel, theme: ThemeConfi
 
   const background = deepSpaceBg(theme, data.background_image).replace(/"/g, "'");
   const bgSize = data.background_image ? 'auto' : '20px 20px, 100% 100%, 100% 100%';
-  const heroImage = data.hero_image ? `<img src="${data.hero_image}" alt="${data.title}" style="width:120%;height:120%;object-fit:contain;object-position:center right;filter:drop-shadow(0 20px 40px rgba(0,0,0,0.6));transform:scale(1.1) translateX(-5%);">` : `<div style="width:80%;height:80%;background:linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));color:${theme.colors.accent};font-size:20px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;border-radius:32px;border:2px dashed rgba(255,255,255,0.2);"><span style="font-size:40px;">🖼️</span><span>点击上传主体透明模型图</span></div>`;
+  const heroImage = data.hero_image ? `<img src="${data.hero_image}" alt="${data.title}" style="width:120%;height:120%;object-fit:contain;object-position:center right;filter:drop-shadow(0 20px 40px rgba(0,0,0,0.6));transform:scale(1.1) translateX(-5%);-webkit-mask-image:radial-gradient(ellipse 60% 70% at 60% 50%, black 50%, transparent 100%);mask-image:radial-gradient(ellipse 60% 70% at 60% 50%, black 50%, transparent 100%);">` : `<div style="width:80%;height:80%;background:linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));color:${theme.colors.accent};font-size:20px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;border-radius:32px;border:2px dashed rgba(255,255,255,0.2);"><span style="font-size:40px;">🖼️</span><span>点击上传主体透明模型图</span></div>`;
 
   const metaTags = [
     data.author && { text: data.author, icon: '👤' },
