@@ -37,6 +37,10 @@ from .ppt_quality_guard import (
     apply_structured_outline_quality_guard,
     apply_page_model_quality_guard,
 )
+from .layout_planner import (
+    assign_layout_variants,
+    assign_layout_variants_to_structured_outline,
+)
 from .ai_providers import get_text_provider, get_image_provider, TextProvider, ImageProvider
 from config import get_config
 
@@ -304,7 +308,14 @@ class AIService:
         outline_prompt = get_outline_generation_prompt(project_context, language, render_mode, scheme_id=project_context.scheme_id)
         outline = self.generate_json(outline_prompt, thinking_budget=1000)
         normalized = self.normalize_outline_layouts(outline, render_mode, project_context.scheme_id)
-        return apply_outline_quality_guard(normalized, render_mode=render_mode, scheme_id=project_context.scheme_id)
+        guarded = apply_outline_quality_guard(normalized, render_mode=render_mode, scheme_id=project_context.scheme_id)
+        if render_mode == 'html':
+            guarded = assign_layout_variants(
+                outline=guarded,
+                scheme_id=project_context.scheme_id,
+                layout_aliases=LAYOUT_ID_ALIASES,
+            )
+        return guarded
 
     def parse_outline_text(self, project_context: ProjectContext, language: str = None, render_mode: str = 'image') -> List[Dict]:
         """
@@ -322,7 +333,14 @@ class AIService:
         parse_prompt = get_outline_parsing_prompt(project_context, language, render_mode, scheme_id=project_context.scheme_id)
         outline = self.generate_json(parse_prompt, thinking_budget=1000)
         normalized = self.normalize_outline_layouts(outline, render_mode, project_context.scheme_id)
-        return apply_outline_quality_guard(normalized, render_mode=render_mode, scheme_id=project_context.scheme_id)
+        guarded = apply_outline_quality_guard(normalized, render_mode=render_mode, scheme_id=project_context.scheme_id)
+        if render_mode == 'html':
+            guarded = assign_layout_variants(
+                outline=guarded,
+                scheme_id=project_context.scheme_id,
+                layout_aliases=LAYOUT_ID_ALIASES,
+            )
+        return guarded
     
     def flatten_outline(self, outline: List[Dict]) -> List[Dict]:
         """
@@ -849,7 +867,14 @@ class AIService:
         parse_prompt = get_description_to_outline_prompt(project_context, language, render_mode, scheme_id=project_context.scheme_id)
         outline = self.generate_json(parse_prompt, thinking_budget=1000)
         normalized = self.normalize_outline_layouts(outline, render_mode, project_context.scheme_id)
-        return apply_outline_quality_guard(normalized, render_mode=render_mode, scheme_id=project_context.scheme_id)
+        guarded = apply_outline_quality_guard(normalized, render_mode=render_mode, scheme_id=project_context.scheme_id)
+        if render_mode == 'html':
+            guarded = assign_layout_variants(
+                outline=guarded,
+                scheme_id=project_context.scheme_id,
+                layout_aliases=LAYOUT_ID_ALIASES,
+            )
+        return guarded
 
     @staticmethod
     def normalize_outline_layouts(outline: List[Dict], render_mode: str = 'image', scheme_id: str = 'tech_blue') -> List[Dict]:
@@ -1384,7 +1409,14 @@ class AIService:
         )
         outline = self.generate_json(refinement_prompt, thinking_budget=1000)
         normalized = self.normalize_outline_layouts(outline, render_mode, project_context.scheme_id)
-        return apply_outline_quality_guard(normalized, render_mode=render_mode, scheme_id=project_context.scheme_id)
+        guarded = apply_outline_quality_guard(normalized, render_mode=render_mode, scheme_id=project_context.scheme_id)
+        if render_mode == 'html':
+            guarded = assign_layout_variants(
+                outline=guarded,
+                scheme_id=project_context.scheme_id,
+                layout_aliases=LAYOUT_ID_ALIASES,
+            )
+        return guarded
     
     def refine_descriptions(self, current_descriptions: List[Dict], user_requirement: str,
                            project_context: ProjectContext,
@@ -1576,7 +1608,13 @@ class AIService:
             # 修复空章节问题：检测连续的 section_title 并插入内容页
             outline = self._fix_empty_sections(outline, scheme_id)
 
-        return apply_structured_outline_quality_guard(outline, scheme_id=scheme_id)
+        guarded = apply_structured_outline_quality_guard(outline, scheme_id=scheme_id)
+        guarded = assign_layout_variants_to_structured_outline(
+            outline=guarded,
+            scheme_id=scheme_id,
+            layout_aliases=LAYOUT_ID_ALIASES,
+        )
+        return guarded
 
     def generate_structured_page_content(self, page_outline: Dict,
                                          full_outline: Dict = None,
@@ -1595,10 +1633,14 @@ class AIService:
             页面的 model 数据（符合对应布局的 Schema）
         """
         layout_id = page_outline.get('layout_id', 'title_content').lower()
+        layout_variant = str(page_outline.get('layout_variant') or 'a').strip().lower()
         
         # Special handling for TOC page: generate from actual page titles, not AI
         if 'toc' in layout_id and full_outline:
-            return self._generate_toc_model(page_outline, full_outline, language)
+            toc_model = self._generate_toc_model(page_outline, full_outline, language)
+            toc_model['variant'] = layout_variant
+            toc_model['archetype'] = page_outline.get('layout_archetype', 'toc')
+            return toc_model
         
         prompt = get_structured_page_content_prompt(page_outline, full_outline, language, scheme_id)
         model = self.generate_json(prompt, thinking_budget=1000)
@@ -1770,6 +1812,34 @@ class AIService:
             model=model,
             page_outline=page_outline
         )
+
+        # Attach planner metadata for renderer variant selection.
+        if isinstance(model, dict):
+            model['variant'] = layout_variant
+            if page_outline.get('layout_archetype'):
+                model['archetype'] = page_outline.get('layout_archetype')
+
+            # Ensure ending variant-b has enough structured data for rich summary rendering.
+            if resolved_layout_id == 'ending' and layout_variant == 'b':
+                blocks = model.get('reflection_blocks')
+                if not isinstance(blocks, list) or len(blocks) == 0:
+                    model['reflection_blocks'] = [
+                        {
+                            'title': '技术底座层面',
+                            'items': ['优化推理时延与并发容量，保障系统稳定性。']
+                        },
+                        {
+                            'title': '教学教法层面',
+                            'items': ['完善师训与课堂编排，提升人机协同质量。']
+                        },
+                        {
+                            'title': '数据反馈闭环',
+                            'items': ['缩短预警到干预链路，形成持续改进机制。']
+                        },
+                    ]
+                if not model.get('closing'):
+                    fallback_closing = model.get('subtitle') or model.get('contact') or '构建可信赖、可持续优化的智慧教育新生态。'
+                    model['closing'] = str(fallback_closing)
 
         return model
 

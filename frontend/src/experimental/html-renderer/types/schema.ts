@@ -168,6 +168,8 @@ export interface TitleContentModel {
 export interface TitleBulletsModel {
   title: string;
   subtitle?: string;
+  archetype?: string;
+  variant?: string;
   bullets: {
     icon?: string;
     text: string;              // 核心概念
@@ -209,6 +211,8 @@ export interface ColumnContent {
 export interface ProcessStepsModel {
   title: string;
   subtitle?: string;
+  archetype?: string;
+  variant?: string;
   steps: {
     number: number;
     label: string;
@@ -224,6 +228,13 @@ export interface EndingModel {
   title: string;
   subtitle?: string;
   contact?: string;
+  archetype?: string;
+  variant?: string;
+  reflection_blocks?: {
+    title: string;
+    items: string[];
+  }[];
+  closing?: string;
   qrcode?: string;
   background_image?: string;
 }

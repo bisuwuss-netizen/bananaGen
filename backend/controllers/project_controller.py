@@ -32,8 +32,14 @@ logger = logging.getLogger(__name__)
 project_bp = Blueprint('projects', __name__, url_prefix='/api/projects')
 
 
-def _resolve_user_id(default: str = '1') -> str:
-    """Resolve user_id from query/cookie with a safe fallback."""
+def _resolve_user_id(default: str = None) -> str:
+    """
+    Resolve user_id from query/cookie.
+
+    Notes:
+    - If default is None and user_id is missing, return None (no user filter).
+    - If default is provided, use it as fallback.
+    """
     user_id = request.args.get('user_id', type=str)
     if not user_id:
         user_id = request.cookies.get('user_id')
@@ -145,7 +151,7 @@ def list_projects():
         # Parameter validation
         limit = request.args.get('limit', 50, type=int)
         offset = request.args.get('offset', 0, type=int)
-        user_id = _resolve_user_id(default='1')
+        user_id = _resolve_user_id(default=None)
         
         logger.info(f"list_projects - user_id: {user_id}")
         
@@ -153,11 +159,10 @@ def list_projects():
         limit = min(max(1, limit), 100)  # Between 1-100
         offset = max(0, offset)  # Non-negative
         
-        # Build query with user_id filter.
-        # Include legacy rows whose user_id is NULL for backward compatibility.
-        query = Project.query\
-            .options(joinedload(Project.pages))\
-            .filter(or_(Project.user_id == user_id, Project.user_id.is_(None)))
+        query = Project.query.options(joinedload(Project.pages))
+        if user_id:
+            # Include legacy rows whose user_id is NULL for backward compatibility.
+            query = query.filter(or_(Project.user_id == user_id, Project.user_id.is_(None)))
         
         # Fetch limit + 1 items to check for more pages efficiently
         # This avoids a second database query
@@ -166,6 +171,17 @@ def list_projects():
             .limit(limit + 1)\
             .offset(offset)\
             .all()
+
+        # Compatibility fallback:
+        # If caller passed user_id but no data matched, retry without user filter.
+        if user_id and not projects_with_extra:
+            logger.info(f"list_projects fallback to unfiltered query for user_id={user_id}")
+            projects_with_extra = Project.query\
+                .options(joinedload(Project.pages))\
+                .order_by(desc(Project.updated_at))\
+                .limit(limit + 1)\
+                .offset(offset)\
+                .all()
         
         # Check if there are more items beyond the current page
         has_more = len(projects_with_extra) > limit
@@ -483,7 +499,13 @@ def generate_outline(project_id):
             )
             page.set_outline_content({
                 'title': page_data.get('title'),
-                'points': page_data.get('points', [])
+                'points': page_data.get('points', []),
+                'has_image': bool(page_data.get('has_image', False)),
+                'keywords': page_data.get('keywords', []),
+                'layout_archetype': page_data.get('layout_archetype'),
+                'layout_variant': page_data.get('layout_variant'),
+                'section_number': page_data.get('section_number'),
+                'subtitle': page_data.get('subtitle'),
             })
             
             db.session.add(page)
@@ -612,7 +634,13 @@ def generate_from_description(project_id):
             # Set outline content
             page.set_outline_content({
                 'title': page_data.get('title'),
-                'points': page_data.get('points', [])
+                'points': page_data.get('points', []),
+                'has_image': bool(page_data.get('has_image', False)),
+                'keywords': page_data.get('keywords', []),
+                'layout_archetype': page_data.get('layout_archetype'),
+                'layout_variant': page_data.get('layout_variant'),
+                'section_number': page_data.get('section_number'),
+                'subtitle': page_data.get('subtitle'),
             })
 
             if render_mode == 'html':
@@ -621,8 +649,10 @@ def generate_from_description(project_id):
                     'page_id': f'p{i+1:02d}',
                     'title': page_data.get('title', ''),
                     'layout_id': layout_id or 'title_bullets',
-                    'has_image': False,
-                    'keywords': page_data.get('points', [])[:3]
+                    'has_image': bool(page_data.get('has_image', False)),
+                    'keywords': page_data.get('keywords', page_data.get('points', [])[:3]),
+                    'layout_archetype': page_data.get('layout_archetype'),
+                    'layout_variant': page_data.get('layout_variant', 'a'),
                 }
                 if 'section_number' in page_data:
                     structured_page_outline['section_number'] = page_data.get('section_number')
@@ -636,7 +666,9 @@ def generate_from_description(project_id):
                             'page_id': f'p{j+1:02d}',
                             'title': p.get('title', ''),
                             'layout_id': p.get('layout_id', 'title_bullets'),
-                            'keywords': p.get('points', [])[:3]
+                            'keywords': p.get('keywords', p.get('points', [])[:3]),
+                            'layout_archetype': p.get('layout_archetype'),
+                            'layout_variant': p.get('layout_variant', 'a'),
                         }
                         for j, p in enumerate(pages_data)
                     ]
@@ -1051,7 +1083,13 @@ def refine_outline(project_id):
             )
             page.set_outline_content({
                 'title': title,
-                'points': page_data.get('points', [])
+                'points': page_data.get('points', []),
+                'has_image': bool(page_data.get('has_image', False)),
+                'keywords': page_data.get('keywords', []),
+                'layout_archetype': page_data.get('layout_archetype'),
+                'layout_variant': page_data.get('layout_variant'),
+                'section_number': page_data.get('section_number'),
+                'subtitle': page_data.get('subtitle'),
             })
             
             # 尝试匹配并恢复已有的描述和 html_model

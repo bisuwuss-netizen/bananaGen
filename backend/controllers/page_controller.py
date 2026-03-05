@@ -274,8 +274,10 @@ def generate_page_description(project_id, page_id):
                 'page_id': page_id,
                 'title': page_data.get('title', ''),
                 'layout_id': layout_id,
-                'has_image': False,
-                'keywords': page_data.get('points', [])[:3]
+                'has_image': bool(page_data.get('has_image', False)),
+                'keywords': page_data.get('keywords', page_data.get('points', [])[:3]),
+                'layout_archetype': page_data.get('layout_archetype'),
+                'layout_variant': page_data.get('layout_variant', 'a'),
             }
             if 'section_number' in page_data:
                 structured_page_outline['section_number'] = page_data.get('section_number')
@@ -290,7 +292,9 @@ def generate_page_description(project_id, page_id):
                         'page_id': f'p{i+1:02d}',
                         'title': p.get('title', ''),
                         'layout_id': p.get('layout_id', 'title_bullets'),
-                        'keywords': p.get('points', [])[:3]
+                        'keywords': p.get('keywords', p.get('points', [])[:3]),
+                        'layout_archetype': p.get('layout_archetype'),
+                        'layout_variant': p.get('layout_variant', 'a'),
                     }
                     for i, p in enumerate(ai_service.flatten_outline(outline))
                 ]

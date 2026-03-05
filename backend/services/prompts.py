@@ -1667,7 +1667,7 @@ LAYOUT_SCHEMAS = {
 
     'quote': '{"quote": "引用的名言或金句", "author": "作者", "source": "来源(可选)"}',
 
-    'ending': '{"title": "感谢观看", "subtitle": "副标题(可选)", "contact": "联系方式(可选)"}',
+    'ending': '{"title": "感谢观看", "subtitle": "副标题(可选)", "contact": "联系方式(可选)", "reflection_blocks": [{"title": "反思维度标题", "items": ["要点1", "要点2"]}], "closing": "总结金句(可选)"}',
 
     # 学术方案专属布局
     'learning_objectives': '{"title": "学习目标", "objectives": [{"text": "目标描述", "level": "记忆/理解/应用/分析/综合/评价", "hours": 2, "checked": false}], "course_code": "课程代码(可选)"}',
@@ -1842,6 +1842,8 @@ def get_structured_page_content_prompt(page_outline: dict, full_outline: dict = 
     resolved_layout_id = resolve_layout_id(layout_id)
     schema_template = LAYOUT_SCHEMAS.get(resolved_layout_id, LAYOUT_SCHEMAS['title_content'])
     has_image = page_outline.get('has_image', False)
+    layout_variant = str(page_outline.get('layout_variant') or 'a').strip().lower()
+    layout_archetype = page_outline.get('layout_archetype', '')
 
     # 如果不需要图片，从schema中移除image字段的描述
     if not has_image and 'image' in schema_template:
@@ -1876,6 +1878,25 @@ def get_structured_page_content_prompt(page_outline: dict, full_outline: dict = 
     else:
         section_instruction = ""
 
+    if resolved_layout_id == 'ending' and layout_variant == 'b':
+        variant_instruction = """
+**变体约束（ending, variant=b）**：
+- 必须输出 reflection_blocks，且至少 3 个 block
+- 每个 block 必须包含 title + items（items 至少 1 条）
+- 必须输出 closing 作为总结金句"""
+    elif resolved_layout_id == 'process_steps' and layout_variant == 'b':
+        variant_instruction = """
+**变体约束（process_steps, variant=b）**：
+- steps 保持 3-4 步，强调阶段递进，适配横向步骤条
+- 每步 description 用完整句，不少于 12 字"""
+    elif resolved_layout_id == 'title_bullets' and layout_variant == 'b':
+        variant_instruction = """
+**变体约束（title_bullets, variant=b）**：
+- bullets 优先输出 3-5 条，便于右侧纵向卡片堆叠
+- 每条 description 用完整句，不少于 15 字"""
+    else:
+        variant_instruction = ""
+
     prompt = f"""\
 你是一位专业的PPT内容撰写者。请根据以下页面大纲生成详细的页面内容。
 
@@ -1883,6 +1904,8 @@ def get_structured_page_content_prompt(page_outline: dict, full_outline: dict = 
 - 页面ID: {page_outline.get('page_id', 'unknown')}
 - 标题: {page_outline.get('title', '未命名')}
 - 布局: {layout_id}
+- 语义类型: {layout_archetype or "未指定"}
+- 视觉变体: {layout_variant}
 - 是否配图: {has_image}
 - 关键词: {page_outline.get('keywords', [])}
 {context_info}
@@ -1911,6 +1934,7 @@ def get_structured_page_content_prompt(page_outline: dict, full_outline: dict = 
 14. 若是过渡页/总结页，必须明确与前后页的衔接关系（至少一句）
 {toc_instruction}
 {section_instruction}
+{variant_instruction}
 只返回 JSON 对象，不要包含其他文字。
 {get_language_instruction(language)}
 """

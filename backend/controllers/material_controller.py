@@ -25,8 +25,14 @@ material_global_bp = Blueprint('materials_global', __name__, url_prefix='/api/ma
 ALLOWED_MATERIAL_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg'}
 
 
-def _resolve_user_id(default: str = '1') -> str:
-    """Resolve user_id from query/cookie with a safe fallback."""
+def _resolve_user_id(default: str = None) -> str:
+    """
+    Resolve user_id from query/cookie.
+
+    Notes:
+    - If default is None and user_id is missing, return None (no user filter).
+    - If default is provided, use it as fallback.
+    """
     user_id = request.args.get('user_id', type=str)
     if not user_id:
         user_id = request.cookies.get('user_id')
@@ -62,10 +68,15 @@ def _get_materials_list(filter_project_id: str, user_id: str = None):
         return None, error
     
     # 如果提供了user_id，添加user_id过滤，并兼容 legacy NULL user_id 数据
+    # 若过滤后为空，自动回退到无 user_id 过滤，避免历史数据因 user_id 漂移不可见。
+    base_query = query
     if user_id:
         query = query.filter(or_(Material.user_id == user_id, Material.user_id.is_(None)))
-    
+
     materials = query.order_by(Material.created_at.desc()).all()
+    if user_id and not materials:
+        logger.info(f"_get_materials_list fallback to unfiltered query for user_id={user_id}")
+        materials = base_query.order_by(Material.created_at.desc()).all()
     
     # 过滤掉文件已不存在的孤儿记录，并自动清理数据库
     file_service = FileService(current_app.config['UPLOAD_FOLDER'])
@@ -329,7 +340,7 @@ def list_materials(project_id):
         List of material images with filename, url, and metadata for the specified project
     """
     try:
-        user_id = _resolve_user_id(default='1')
+        user_id = _resolve_user_id(default=None)
         logger.info(f"list_materials - user_id: {user_id}")
 
         materials_list, error = _get_materials_list(project_id, user_id)
@@ -376,7 +387,7 @@ def list_all_materials():
         List of material images with filename, url, and metadata
     """
     try:
-        user_id = _resolve_user_id(default='1')
+        user_id = _resolve_user_id(default=None)
         logger.info(f"list_all_materials - user_id from args: {request.args.get('user_id')}, user_id from cookie: {request.cookies.get('user_id')}, final user_id: {user_id}")
 
         filter_project_id = request.args.get('project_id', 'all')

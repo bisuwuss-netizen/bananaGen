@@ -350,8 +350,10 @@ def generate_descriptions_task(task_id: str, project_id: str, ai_service,
                                 'page_id': page_id,
                                 'title': page_outline.get('title', ''),
                                 'layout_id': layout_id,
-                                'has_image': False,  # Default, can be enhanced later
-                                'keywords': page_outline.get('points', [])[:3]  # Use first 3 points as keywords
+                                'has_image': bool(page_outline.get('has_image', False)),
+                                'keywords': page_outline.get('keywords', page_outline.get('points', [])[:3]),
+                                'layout_archetype': page_outline.get('layout_archetype'),
+                                'layout_variant': page_outline.get('layout_variant', 'a'),
                             }
                             if 'section_number' in page_outline:
                                 structured_page_outline['section_number'] = page_outline.get('section_number')
@@ -367,7 +369,9 @@ def generate_descriptions_task(task_id: str, project_id: str, ai_service,
                                         'page_id': f'p{i+1:02d}',
                                         'title': p.get('title', ''),
                                         'layout_id': p.get('layout_id', 'title_bullets'),
-                                        'keywords': p.get('points', [])[:3]
+                                        'keywords': p.get('keywords', p.get('points', [])[:3]),
+                                        'layout_archetype': p.get('layout_archetype'),
+                                        'layout_variant': p.get('layout_variant', 'a'),
                                     }
                                     for i, p in enumerate(pages_data)
                                 ]

@@ -3,9 +3,13 @@ import type { Project, Task, ApiResponse, CreateProjectRequest, Page } from '@/t
 import type { Settings } from '../types/index';
 import { getCookie } from '@/utils';
 
-const resolveUserId = (input?: string | null): string => {
-  if (input && input.trim()) return input;
-  return getCookie('user_id') || localStorage.getItem('user_id') || '1';
+const resolveUserId = (input?: string | null): string | undefined => {
+  if (input && input.trim()) return input.trim();
+  const fromCookie = getCookie('user_id');
+  if (fromCookie && fromCookie.trim()) return fromCookie.trim();
+  const fromStorage = localStorage.getItem('user_id');
+  if (fromStorage && fromStorage.trim()) return fromStorage.trim();
+  return undefined;
 };
 
 // ===== 项目相关 API =====
@@ -67,7 +71,7 @@ export const listProjects = async (limit?: number, offset?: number, userId?: str
   if (limit !== undefined) params.append('limit', limit.toString());
   if (offset !== undefined) params.append('offset', offset.toString());
   const finalUserId = resolveUserId(userId);
-  params.append('user_id', finalUserId);
+  if (finalUserId) params.append('user_id', finalUserId);
 
   const queryString = params.toString();
   const url = `/api/projects${queryString ? `?${queryString}` : ''}`;
@@ -549,16 +553,17 @@ export const listMaterials = async (
 ): Promise<ApiResponse<{ materials: Material[]; count: number }>> => {
   let url: string;
   const finalUserId = resolveUserId(userId);
+  const userQuery = finalUserId ? `&user_id=${encodeURIComponent(finalUserId)}` : '';
 
   if (!projectId || projectId === 'all') {
     // Get all materials using global endpoint
-    url = `/api/materials?project_id=all&user_id=${encodeURIComponent(finalUserId)}`;
+    url = `/api/materials?project_id=all${userQuery}`;
   } else if (projectId === 'none') {
     // Get global materials (not bound to any project)
-    url = `/api/materials?project_id=none&user_id=${encodeURIComponent(finalUserId)}`;
+    url = `/api/materials?project_id=none${userQuery}`;
   } else {
     // Get materials for specific project
-    url = `/api/projects/${projectId}/materials?user_id=${encodeURIComponent(finalUserId)}`;
+    url = `/api/projects/${projectId}/materials${finalUserId ? `?user_id=${encodeURIComponent(finalUserId)}` : ''}`;
   }
 
   const response = await apiClient.get<ApiResponse<{ materials: Material[]; count: number }>>(url);

@@ -68,6 +68,12 @@ export type LayoutId =
 export interface OutlineContent {
   title: string;
   points: string[];
+  has_image?: boolean;
+  keywords?: string[];
+  layout_archetype?: string;
+  layout_variant?: string;
+  section_number?: string | number;
+  subtitle?: string;
 }
 
 // 描述内容 - 支持两种格式：后端可能返回纯文本或结构化内容
