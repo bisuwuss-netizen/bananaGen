@@ -92,14 +92,21 @@ class Page(db.Model):
 
     def to_dict(self, include_versions=False):
         """Convert to dictionary"""
+        description = self.get_description_content()
+        continuity = {}
+        if isinstance(description, dict):
+            continuity = description.get('continuity') if isinstance(description.get('continuity'), dict) else {}
+
         data = {
             'page_id': self.id,
             'order_index': int(self.order_index) if self.order_index is not None else 0,
             'part': self.part,
             'outline_content': self.get_outline_content(),
-            'description_content': self.get_description_content(),
+            'description_content': description,
             'layout_id': self.layout_id,
             'html_model': self.get_html_model(),
+            'closed_promise_ids': continuity.get('closed_promise_ids', []),
+            'missing_required_close_promise_ids': continuity.get('missing_required_close_promise_ids', []),
             'generated_image_url': f'/files/{self.project_id}/pages/{self.generated_image_path.split("/")[-1]}' if self.generated_image_path else None,
             'status': self.status,
             'created_at': format_datetime_to_iso(self.created_at, add_utc_z=True),
@@ -113,4 +120,3 @@ class Page(db.Model):
     
     def __repr__(self):
         return f'<Page {self.id}: {self.order_index} - {self.status}>'
-

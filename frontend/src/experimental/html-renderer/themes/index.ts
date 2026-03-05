@@ -4,6 +4,7 @@ import { interactiveTheme } from './interactive';
 import { visualTheme } from './visual';
 import { practicalTheme } from './practical';
 import { modernTheme } from './modern';
+import { eduDarkTheme } from './edu-dark';
 import type { ThemeConfig } from '../types/schema';
 
 export const themeMap: Record<string, ThemeConfig> = {
@@ -13,11 +14,12 @@ export const themeMap: Record<string, ThemeConfig> = {
   visual: visualTheme,
   practical: practicalTheme,
   modern: modernTheme,
+  edu_dark: eduDarkTheme,
 };
 
 export const getThemeByScheme = (schemeId?: string): ThemeConfig => {
-  if (!schemeId) return techBlueTheme;
-  return themeMap[schemeId] || techBlueTheme;
+  if (!schemeId) return eduDarkTheme;
+  return themeMap[schemeId] || eduDarkTheme;
 };
 
 export {
@@ -27,4 +29,5 @@ export {
   visualTheme,
   practicalTheme,
   modernTheme,
+  eduDarkTheme,
 };

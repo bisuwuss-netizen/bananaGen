@@ -17,7 +17,7 @@ export function normalizeProject(data: any): Project {
     ...data,
     id: data.project_id || data.id,
     template_image_path: data.template_image_url || data.template_image_path,
-    scheme_id: data.scheme_id || 'tech_blue',
+    scheme_id: data.scheme_id || 'edu_dark',
     pages: (data.pages || []).map(normalizePage).sort((a: any, b: any) =>
       (a.order_index ?? 999) - (b.order_index ?? 999)
     ),

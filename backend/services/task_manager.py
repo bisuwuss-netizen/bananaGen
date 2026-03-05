@@ -3,15 +3,22 @@ Task Manager - handles background tasks using ThreadPoolExecutor
 No need for Celery or Redis, uses in-memory task tracking
 """
 import os
+import copy
 import logging
 import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Callable, List, Dict, Any
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutureTimeoutError
+from typing import Callable, List, Dict, Any, Optional
 from datetime import datetime
 from sqlalchemy import func
 from models import db, Task, Page, Material, PageImageVersion
 from utils import get_filtered_pages
 from pathlib import Path
+from services.narrative_continuity import (
+    NarrativeRuntimeTracker,
+    enrich_outline_with_narrative_contract,
+    inject_unresolved_promise_closure_blocks,
+    split_outline_into_chapters,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -253,7 +260,8 @@ def generate_descriptions_task(task_id: str, project_id: str, ai_service,
                                project_context, outline: List[Dict],
                                max_workers: int = 5, app=None,
                                language: str = None,
-                               render_mode: str = 'image'):
+                               render_mode: str = 'image',
+                               generation_mode: str = 'fast'):
     """
     Background task for generating page descriptions
     Based on demo.py gen_desc() with parallel processing
@@ -271,6 +279,7 @@ def generate_descriptions_task(task_id: str, project_id: str, ai_service,
         language: Output language (zh, en, ja, auto)
         render_mode: Rendering mode ('image' | 'html'). In HTML mode, generates
                      structured JSON for html_model instead of free-text descriptions.
+        generation_mode: HTML generation mode ('fast' | 'strict'). Ignored in image mode.
     """
     if app is None:
         raise ValueError("Flask app instance must be provided")
@@ -314,7 +323,7 @@ def generate_descriptions_task(task_id: str, project_id: str, ai_service,
             })
             db.session.commit()
             
-            # Generate descriptions in parallel
+            # Generate descriptions
             completed = 0
             failed = 0
             description_batch_size = _safe_positive_int(
@@ -322,115 +331,558 @@ def generate_descriptions_task(task_id: str, project_id: str, ai_service,
                 1
             )
 
-            def generate_single_desc(page_id, page_outline, page_index, page_layout_id=None):
-                """
-                Generate description for a single page
-                注意：只传递 page_id（字符串），不传递 ORM 对象，避免跨线程会话问题
+            html_outline_context: Dict[str, Any] = {}
+            narrative_tracker: Optional[NarrativeRuntimeTracker] = None
+            html_jobs: List[Dict[str, Any]] = []
 
-                Args:
-                    page_id: Page ID
-                    page_outline: Page outline data
-                    page_index: Page index (1-indexed)
-                    page_layout_id: Layout ID for HTML mode (from database)
+            if render_mode == 'html':
+                raw_outline_context = {
+                    'title': project_context.idea_prompt or '',
+                    'pages': []
+                }
+                for i, (page_obj, page_data) in enumerate(zip(pages, pages_data), 1):
+                    layout_id = page_obj.layout_id or page_data.get('layout_id', 'title_content')
+                    raw_outline_context['pages'].append({
+                        'page_id': f'p{i:02d}',
+                        'title': page_data.get('title', ''),
+                        'layout_id': layout_id,
+                        'has_image': bool(page_data.get('has_image', False)),
+                        'keywords': page_data.get('keywords', page_data.get('points', [])[:3]),
+                        'points': page_data.get('points', []),
+                        'depends_on': page_data.get('depends_on', []),
+                        'must_cover': page_data.get('must_cover', []),
+                        'promises_open': page_data.get('promises_open', []),
+                        'promises_close': page_data.get('promises_close', []),
+                        'required_close_promise_ids': page_data.get('required_close_promise_ids', page_data.get('promises_close', [])),
+                    })
+
+                html_outline_context = enrich_outline_with_narrative_contract(raw_outline_context)
+                normalized_pages = html_outline_context.get('pages') if isinstance(html_outline_context.get('pages'), list) else []
+                narrative_tracker = NarrativeRuntimeTracker(html_outline_context)
+
+                for i, (page_obj, page_data) in enumerate(zip(pages, pages_data), 1):
+                    normalized_outline = normalized_pages[i - 1] if i - 1 < len(normalized_pages) else {
+                        'page_id': f'p{i:02d}',
+                        'title': page_data.get('title', ''),
+                        'layout_id': page_obj.layout_id or page_data.get('layout_id', 'title_content'),
+                        'has_image': bool(page_data.get('has_image', False)),
+                        'keywords': page_data.get('keywords', page_data.get('points', [])[:3]),
+                    }
+                    html_jobs.append({
+                        'db_page_id': page_obj.id,
+                        'logical_page_id': normalized_outline.get('page_id', f'p{i:02d}'),
+                        'page_index': i,
+                        'layout_id': page_obj.layout_id or normalized_outline.get('layout_id', 'title_content'),
+                        'page_outline': normalized_outline
+                    })
+
+                    # Persist enriched outline contract for downstream audit/debug.
+                    persisted_outline = page_obj.get_outline_content()
+                    if not isinstance(persisted_outline, dict):
+                        persisted_outline = {}
+                    merged_outline = copy.deepcopy(persisted_outline)
+                    merged_outline.update({
+                        'logical_page_id': normalized_outline.get('page_id', f'p{i:02d}'),
+                        'has_image': bool(normalized_outline.get('has_image', False)),
+                        'keywords': normalized_outline.get('keywords', []),
+                        'depends_on': normalized_outline.get('depends_on', []),
+                        'must_cover': normalized_outline.get('must_cover', []),
+                        'promises_open': normalized_outline.get('promises_open', []),
+                        'promises_close': normalized_outline.get('promises_close', []),
+                        'required_close_promise_ids': normalized_outline.get(
+                            'required_close_promise_ids',
+                            normalized_outline.get('promises_close', [])
+                        ),
+                    })
+                    page_obj.set_outline_content(merged_outline)
+
+                db.session.commit()
+
+            def generate_single_desc(page_id,
+                                     page_outline,
+                                     page_index,
+                                     page_layout_id=None,
+                                     logical_page_id=None,
+                                     continuity_context=None,
+                                     rewrite_instruction: str = "",
+                                     thinking_budget: int = 320):
                 """
-                # 关键修复：在子线程中也需要应用上下文
+                Generate description for a single page.
+                In HTML mode this returns structured html_model; in image mode free-text description.
+                """
                 with app.app_context():
                     try:
-                        # Get singleton AI service instance
                         from services.ai_service_manager import get_ai_service
                         ai_service = get_ai_service()
 
                         if render_mode == 'html':
-                            # HTML mode: generate structured JSON for html_model
-                            # Use the layout_id from the page (set during outline generation)
-                            layout_id = page_layout_id or page_outline.get('layout_id', 'title_bullets')
-
-                            # Build page_outline format expected by generate_structured_page_content
+                            layout_id = page_layout_id or page_outline.get('layout_id', 'title_content')
                             structured_page_outline = {
-                                'page_id': page_id,
+                                'page_id': logical_page_id or page_outline.get('page_id', f'p{page_index:02d}'),
                                 'title': page_outline.get('title', ''),
                                 'layout_id': layout_id,
                                 'has_image': bool(page_outline.get('has_image', False)),
                                 'keywords': page_outline.get('keywords', page_outline.get('points', [])[:3]),
-                                'layout_archetype': page_outline.get('layout_archetype'),
-                                'layout_variant': page_outline.get('layout_variant', 'a'),
+                                'depends_on': page_outline.get('depends_on', []),
+                                'must_cover': page_outline.get('must_cover', []),
+                                'promises_open': page_outline.get('promises_open', []),
+                                'promises_close': page_outline.get('promises_close', []),
+                                'required_close_promise_ids': page_outline.get('required_close_promise_ids', page_outline.get('promises_close', [])),
                             }
                             if 'section_number' in page_outline:
                                 structured_page_outline['section_number'] = page_outline.get('section_number')
                             if 'subtitle' in page_outline:
                                 structured_page_outline['subtitle'] = page_outline.get('subtitle')
 
-                            # Build full outline context from pre-built pages_data
-                            # (avoid re-flattening outline which can reorder pages)
-                            full_outline_context = {
-                                'title': project_context.idea_prompt or '',
-                                'pages': [
-                                    {
-                                        'page_id': f'p{i+1:02d}',
-                                        'title': p.get('title', ''),
-                                        'layout_id': p.get('layout_id', 'title_bullets'),
-                                        'keywords': p.get('keywords', p.get('points', [])[:3]),
-                                        'layout_archetype': p.get('layout_archetype'),
-                                        'layout_variant': p.get('layout_variant', 'a'),
-                                    }
-                                    for i, p in enumerate(pages_data)
-                                ]
-                            }
-
-                            # Generate structured content
-                            model = ai_service.generate_structured_page_content(
+                            layout_is_toc = 'toc' in str(layout_id).lower()
+                            full_outline_for_prompt = html_outline_context if layout_is_toc else None
+                            generation_result = ai_service.generate_structured_page_content(
                                 page_outline=structured_page_outline,
-                                full_outline=full_outline_context,
+                                full_outline=full_outline_for_prompt,
                                 language=language,
-                                scheme_id=project_context.scheme_id or 'tech_blue'
+                                scheme_id=project_context.scheme_id or 'edu_dark',
+                                continuity_context=continuity_context,
+                                rewrite_instruction=rewrite_instruction,
+                                thinking_budget=thinking_budget,
+                                return_metadata=True
+                            )
+                            model = generation_result.get('model') if isinstance(generation_result, dict) else {}
+                            closed_promise_ids = generation_result.get('closed_promise_ids') if isinstance(generation_result, dict) else []
+                            required_ids = []
+                            if isinstance(continuity_context, dict):
+                                required_ids = continuity_context.get('required_close_promise_ids', []) or []
+                            missing_required = [
+                                pid for pid in required_ids
+                                if pid not in (closed_promise_ids if isinstance(closed_promise_ids, list) else [])
+                            ]
+
+                            return (
+                                page_id,
+                                {
+                                    'html_model': model,
+                                    'closed_promise_ids': closed_promise_ids if isinstance(closed_promise_ids, list) else [],
+                                    'missing_required_close_promise_ids': missing_required,
+                                    'layout_id': layout_id,
+                                    'logical_page_id': structured_page_outline.get('page_id'),
+                                    'title': structured_page_outline.get('title', '')
+                                },
+                                None
                             )
 
-                            # Return html_model data
-                            return (page_id, {'html_model': model, 'layout_id': layout_id}, None)
-                        else:
-                            # Traditional image mode: generate free-text description
-                            desc_text = ai_service.generate_page_description(
-                                project_context, outline, page_outline, page_index,
-                                language=language
-                            )
-
-                            # Parse description into structured format
-                            desc_content = {
-                                "text": desc_text,
-                                "generated_at": datetime.utcnow().isoformat()
-                            }
-
-                            return (page_id, {'description_content': desc_content}, None)
+                        desc_text = ai_service.generate_page_description(
+                            project_context, outline, page_outline, page_index,
+                            language=language
+                        )
+                        desc_content = {
+                            "text": desc_text,
+                            "generated_at": datetime.utcnow().isoformat()
+                        }
+                        return (page_id, {'description_content': desc_content}, None)
                     except Exception as e:
                         import traceback
                         error_detail = traceback.format_exc()
                         logger.error(f"Failed to generate description for page {page_id}: {error_detail}")
                         return (page_id, None, str(e))
 
-            def update_page_result(page_id, result_data, error):
+            def update_page_result(page_id, result_data, error, count_stats: bool = True):
                 nonlocal completed, failed
                 page = Page.query.get(page_id)
                 if not page:
-                    failed += 1
+                    if count_stats:
+                        failed += 1
                     return
 
                 if error:
                     page.status = 'FAILED'
-                    failed += 1
+                    if count_stats:
+                        failed += 1
                     return
 
                 if render_mode == 'html':
                     page.set_html_model(result_data.get('html_model'))
+                    continuity_meta = {
+                        'closed_promise_ids': (
+                            result_data.get('closed_promise_ids')
+                            if isinstance(result_data.get('closed_promise_ids'), list)
+                            else []
+                        ),
+                        'missing_required_close_promise_ids': (
+                            result_data.get('missing_required_close_promise_ids')
+                            if isinstance(result_data.get('missing_required_close_promise_ids'), list)
+                            else []
+                        ),
+                    }
+                    page.set_description_content({
+                        'continuity': continuity_meta,
+                        'generated_at': datetime.utcnow().isoformat(),
+                    })
                     if result_data.get('layout_id'):
                         page.layout_id = result_data.get('layout_id')
                     page.status = 'HTML_MODEL_GENERATED'
                 else:
                     page.set_description_content(result_data.get('description_content'))
                     page.status = 'DESCRIPTION_GENERATED'
-                completed += 1
+
+                if count_stats:
+                    completed += 1
+
+            if render_mode == 'html':
+                html_mode = str(generation_mode or app.config.get('HTML_CONTINUITY_MODE', 'fast')).strip().lower()
+                strict_mode = html_mode == 'strict'
+                html_batch_size = max(1, min(3, _safe_positive_int(app.config.get('HTML_DESCRIPTION_BATCH_SIZE', 3), 3)))
+                chapter_parallelism = _safe_positive_int(app.config.get('HTML_CHAPTER_PARALLELISM', 3), 3)
+                first_pass_budget = _safe_positive_int(app.config.get('HTML_FIRST_PASS_THINKING_BUDGET', 280), 280)
+                rewrite_budget = _safe_positive_int(app.config.get('HTML_REWRITE_THINKING_BUDGET', 850), 850)
+                rewrite_timeout_seconds = _safe_positive_int(
+                    app.config.get('HTML_REWRITE_TIMEOUT_SECONDS', 210),
+                    210
+                )
+
+                html_job_by_logical_id = {job['logical_page_id']: job for job in html_jobs}
+                chapters = split_outline_into_chapters(html_outline_context)
+                chapter_jobs: List[List[Dict[str, Any]]] = []
+                for chapter in chapters:
+                    jobs = [html_job_by_logical_id[pid] for pid in chapter if pid in html_job_by_logical_id]
+                    if jobs:
+                        chapter_jobs.append(jobs)
+                if not chapter_jobs:
+                    chapter_jobs = [html_jobs]
+
+                logger.info(
+                    "HTML mode pipeline: mode=%s pages=%s chapters=%s chapter_parallelism=%s batch_size=%s",
+                    html_mode,
+                    len(html_jobs),
+                    len(chapter_jobs),
+                    chapter_parallelism,
+                    html_batch_size,
+                )
+
+                def generate_chapter(chapter_job_items: List[Dict[str, Any]]):
+                    with app.app_context():
+                        from services.ai_service_manager import get_ai_service
+                        chapter_ai_service = get_ai_service()
+
+                    local_results: List[Any] = []
+                    local_tracker = NarrativeRuntimeTracker(html_outline_context)
+
+                    for batch_items in _chunked(chapter_job_items, html_batch_size):
+                        batch_requests = []
+                        required_by_page: Dict[str, List[str]] = {}
+                        for job in batch_items:
+                            continuity_context = local_tracker.build_context_for_page(job['logical_page_id'])
+                            required_by_page[job['logical_page_id']] = continuity_context.get('required_close_promise_ids', []) if isinstance(continuity_context, dict) else []
+                            batch_requests.append({
+                                'page_outline': job['page_outline'],
+                                'continuity_context': continuity_context,
+                                'rewrite_instruction': ''
+                            })
+
+                        batch_output: Dict[str, Dict[str, Any]] = {}
+                        try:
+                            batch_output = chapter_ai_service.generate_structured_page_content_batch(
+                                batch_requests=batch_requests,
+                                language=language,
+                                scheme_id=project_context.scheme_id or 'edu_dark',
+                                thinking_budget=first_pass_budget
+                            )
+                        except Exception as batch_err:
+                            logger.warning(
+                                "HTML chapter batch generation failed (size=%s), fallback single-page: %s",
+                                len(batch_items),
+                                batch_err
+                            )
+
+                        for job in batch_items:
+                            logical_page_id = job['logical_page_id']
+                            batch_row = batch_output.get(logical_page_id) if isinstance(batch_output, dict) else None
+                            if isinstance(batch_row, dict) and isinstance(batch_row.get('model'), dict):
+                                closed_ids = batch_row.get('closed_promise_ids') if isinstance(batch_row.get('closed_promise_ids'), list) else []
+                                row_result = {
+                                    'html_model': batch_row.get('model') or {},
+                                    'closed_promise_ids': closed_ids,
+                                    'missing_required_close_promise_ids': [
+                                        pid for pid in required_by_page.get(logical_page_id, [])
+                                        if pid not in closed_ids
+                                    ],
+                                    'layout_id': job.get('layout_id'),
+                                    'logical_page_id': logical_page_id,
+                                    'title': job.get('page_outline', {}).get('title', '')
+                                }
+                                local_results.append((job['db_page_id'], row_result, None))
+                                try:
+                                    local_tracker.apply_generated_page(
+                                        page_id=logical_page_id,
+                                        layout_id=row_result.get('layout_id', job.get('layout_id')),
+                                        title=row_result.get('title', ''),
+                                        model=row_result.get('html_model') or {},
+                                        closed_promise_ids=row_result.get('closed_promise_ids') if isinstance(row_result.get('closed_promise_ids'), list) else []
+                                    )
+                                except Exception as tracker_err:
+                                    logger.warning(f"章节局部追踪失败（页 {logical_page_id}）: {tracker_err}")
+                                continue
+
+                            continuity_context = local_tracker.build_context_for_page(logical_page_id)
+                            page_id, result_data, error = generate_single_desc(
+                                page_id=job['db_page_id'],
+                                page_outline=job['page_outline'],
+                                page_index=job['page_index'],
+                                page_layout_id=job['layout_id'],
+                                logical_page_id=logical_page_id,
+                                continuity_context=continuity_context,
+                                thinking_budget=first_pass_budget
+                            )
+                            local_results.append((page_id, result_data, error))
+                            if not error and result_data:
+                                try:
+                                    local_tracker.apply_generated_page(
+                                        page_id=result_data.get('logical_page_id', logical_page_id),
+                                        layout_id=result_data.get('layout_id', job['layout_id']),
+                                        title=result_data.get('title', job['page_outline'].get('title', '')),
+                                        model=result_data.get('html_model') or {},
+                                        closed_promise_ids=result_data.get('closed_promise_ids') if isinstance(result_data.get('closed_promise_ids'), list) else []
+                                    )
+                                except Exception as tracker_err:
+                                    logger.warning(f"章节单页追踪失败（页 {logical_page_id}）: {tracker_err}")
+                    return local_results
+
+                worker_count = max(1, min(max_workers, chapter_parallelism, len(chapter_jobs)))
+                first_pass_map: Dict[str, Any] = {}
+                with ThreadPoolExecutor(max_workers=worker_count) as executor:
+                    futures = [executor.submit(generate_chapter, items) for items in chapter_jobs]
+                    for future in as_completed(futures):
+                        chapter_results = future.result()
+                        for page_id, result_data, error in chapter_results:
+                            first_pass_map[str(page_id)] = (result_data, error)
+
+                for job in html_jobs:
+                    page_id = str(job['db_page_id'])
+                    result_data, error = first_pass_map.get(page_id, (None, "页面生成结果缺失"))
+
+                    db.session.expire_all()
+                    update_page_result(page_id, result_data, error)
+                    db.session.commit()
+
+                    if not error and result_data and narrative_tracker:
+                        missing_required = result_data.get('missing_required_close_promise_ids', [])
+                        if missing_required:
+                            logger.warning(
+                                "页面 %s 首轮未关闭 required_close_promise_ids: %s",
+                                job['logical_page_id'],
+                                missing_required
+                            )
+                        try:
+                            narrative_tracker.apply_generated_page(
+                                page_id=result_data.get('logical_page_id', job['logical_page_id']),
+                                layout_id=result_data.get('layout_id', job['layout_id']),
+                                title=result_data.get('title', job['page_outline'].get('title', '')),
+                                model=result_data.get('html_model') or {},
+                                closed_promise_ids=result_data.get('closed_promise_ids') if isinstance(result_data.get('closed_promise_ids'), list) else []
+                            )
+                        except Exception as tracker_err:
+                            logger.warning(f"更新叙事追踪器失败（页 {job['logical_page_id']}）: {tracker_err}")
+
+                    task = Task.query.get(task_id)
+                    if task:
+                        task.update_progress(completed=completed, failed=failed)
+                        db.session.commit()
+                        logger.info(
+                            f"Description Progress: {completed}/{len(pages)} pages completed "
+                            f"(failed={failed})"
+                        )
+
+                # First pass finished: deterministic review first.
+                if narrative_tracker and completed > 0:
+                    deterministic_report = narrative_tracker.quality_report()
+                    deterministic_issues = deterministic_report.get('issues', []) if isinstance(deterministic_report, dict) else []
+                    pre_unresolved = deterministic_report.get('unresolved_promises', []) if isinstance(deterministic_report, dict) else []
+                    pre_unresolved_ids = [
+                        str(item.get('promise_id'))
+                        for item in pre_unresolved
+                        if isinstance(item, dict) and item.get('promise_id')
+                    ]
+                    pre_unresolved_text = {
+                        str(item.get('promise_id')): str(item.get('text', ''))
+                        for item in pre_unresolved
+                        if isinstance(item, dict) and item.get('promise_id')
+                    }
+                    logger.info(
+                        "HTML continuity report before rewrite: unresolved=%s ids=%s",
+                        len(pre_unresolved_ids),
+                        pre_unresolved_ids
+                    )
+                    if pre_unresolved_ids:
+                        logger.info(
+                            "HTML unresolved promise topics before rewrite: %s",
+                            [pre_unresolved_text.get(pid, '') for pid in pre_unresolved_ids]
+                        )
+
+                    rewrite_tasks: List[Dict[str, Any]] = []
+                    if strict_mode:
+                        semantic_review = ai_service.review_structured_document_continuity(
+                            outline_doc=html_outline_context,
+                            generated_pages=narrative_tracker.generated_pages_in_order(),
+                            deterministic_issues=deterministic_issues,
+                            language=language or app.config.get('OUTPUT_LANGUAGE', 'zh')
+                        )
+                        rewrite_tasks = ai_service._plan_rewrites_from_reports(
+                            deterministic_issues=deterministic_issues,
+                            semantic_review=semantic_review,
+                            max_pages=4
+                        )
+
+                    if rewrite_tasks:
+                        logger.info(f"HTML continuity review requested targeted rewrites: {len(rewrite_tasks)}")
+                        for rewrite_task in rewrite_tasks:
+                            logical_page_id = rewrite_task.get('page_id')
+                            job = html_job_by_logical_id.get(logical_page_id)
+                            if not job:
+                                continue
+
+                            continuity_context = narrative_tracker.build_context_for_page(logical_page_id)
+                            rewrite_instruction = (
+                                f"{str(rewrite_task.get('reason') or '').strip()}。"
+                                f"{str(rewrite_task.get('instruction') or '').strip()}"
+                            ).strip('。')
+                            if rewrite_instruction:
+                                rewrite_instruction += "。"
+
+                            rewrite_executor = ThreadPoolExecutor(max_workers=1)
+                            rewrite_future = rewrite_executor.submit(
+                                generate_single_desc,
+                                page_id=job['db_page_id'],
+                                page_outline=job['page_outline'],
+                                page_index=job['page_index'],
+                                page_layout_id=job['layout_id'],
+                                logical_page_id=job['logical_page_id'],
+                                continuity_context=continuity_context,
+                                rewrite_instruction=rewrite_instruction,
+                                thinking_budget=rewrite_budget
+                            )
+                            try:
+                                page_id, rewrite_data, rewrite_error = rewrite_future.result(
+                                    timeout=rewrite_timeout_seconds
+                                )
+                            except FutureTimeoutError:
+                                rewrite_future.cancel()
+                                page_id = job['db_page_id']
+                                rewrite_data = None
+                                rewrite_error = f"页面重写超时({rewrite_timeout_seconds}s)"
+                                logger.warning(
+                                    "页面 %s 重写超时(%ss)，跳过重写并保留首轮结果",
+                                    logical_page_id,
+                                    rewrite_timeout_seconds
+                                )
+                            finally:
+                                rewrite_executor.shutdown(wait=False, cancel_futures=True)
+
+                            if rewrite_error or not rewrite_data:
+                                logger.warning(f"页面 {logical_page_id} 重写失败，保留首轮结果: {rewrite_error}")
+                                continue
+
+                            db.session.expire_all()
+                            update_page_result(page_id, rewrite_data, None, count_stats=False)
+                            db.session.commit()
+
+                            try:
+                                narrative_tracker.apply_generated_page(
+                                    page_id=rewrite_data.get('logical_page_id', logical_page_id),
+                                    layout_id=rewrite_data.get('layout_id', job['layout_id']),
+                                    title=rewrite_data.get('title', job['page_outline'].get('title', '')),
+                                    model=rewrite_data.get('html_model') or {},
+                                    closed_promise_ids=rewrite_data.get('closed_promise_ids') if isinstance(rewrite_data.get('closed_promise_ids'), list) else []
+                                )
+                            except Exception as tracker_err:
+                                logger.warning(f"重写后更新追踪器失败（页 {logical_page_id}）: {tracker_err}")
+
+                    mid_report = narrative_tracker.quality_report()
+                    mid_unresolved = mid_report.get('unresolved_promises', []) if isinstance(mid_report, dict) else []
+                    mid_unresolved_ids = [
+                        str(item.get('promise_id'))
+                        for item in mid_unresolved
+                        if isinstance(item, dict) and item.get('promise_id')
+                    ]
+
+                    # Final deterministic fallback: inject closure blocks to guarantee no promise leak.
+                    fallback_result = inject_unresolved_promise_closure_blocks(
+                        outline_doc=html_outline_context,
+                        generated_pages=narrative_tracker.generated_pages_in_order(),
+                        max_lines_per_page=2
+                    )
+                    patched_pages = fallback_result.get('generated_pages', []) if isinstance(fallback_result, dict) else []
+                    patched_outline = fallback_result.get('outline') if isinstance(fallback_result, dict) else None
+                    fallback_applied = fallback_result.get('applied', []) if isinstance(fallback_result, dict) else []
+
+                    if isinstance(patched_outline, dict):
+                        html_outline_context = patched_outline
+                    if patched_pages:
+                        for entry in patched_pages:
+                            if not isinstance(entry, dict):
+                                continue
+                            logical_page_id = str(entry.get('page_id') or '')
+                            job = html_job_by_logical_id.get(logical_page_id)
+                            if not job:
+                                continue
+                            db.session.expire_all()
+                            update_page_result(
+                                job['db_page_id'],
+                                {
+                                    'html_model': entry.get('model') if isinstance(entry.get('model'), dict) else {},
+                                    'layout_id': entry.get('layout_id', job.get('layout_id')),
+                                    'logical_page_id': logical_page_id,
+                                    'title': entry.get('title', job.get('page_outline', {}).get('title', '')),
+                                    'closed_promise_ids': entry.get('closed_promise_ids') if isinstance(entry.get('closed_promise_ids'), list) else []
+                                },
+                                None,
+                                count_stats=False
+                            )
+                        db.session.commit()
+
+                        narrative_tracker = NarrativeRuntimeTracker(html_outline_context)
+                        for entry in patched_pages:
+                            if not isinstance(entry, dict):
+                                continue
+                            narrative_tracker.apply_generated_page(
+                                page_id=entry.get('page_id'),
+                                layout_id=entry.get('layout_id'),
+                                title=entry.get('title', ''),
+                                model=entry.get('model') if isinstance(entry.get('model'), dict) else {},
+                                closed_promise_ids=entry.get('closed_promise_ids') if isinstance(entry.get('closed_promise_ids'), list) else []
+                            )
+
+                    post_report = narrative_tracker.quality_report()
+                    post_unresolved = post_report.get('unresolved_promises', []) if isinstance(post_report, dict) else []
+                    post_unresolved_ids = [
+                        str(item.get('promise_id'))
+                        for item in post_unresolved
+                        if isinstance(item, dict) and item.get('promise_id')
+                    ]
+                    post_unresolved_text = {
+                        str(item.get('promise_id')): str(item.get('text', ''))
+                        for item in post_unresolved
+                        if isinstance(item, dict) and item.get('promise_id')
+                    }
+                    resolved_ids = [pid for pid in pre_unresolved_ids if pid not in set(post_unresolved_ids)]
+                    newly_unresolved = [pid for pid in post_unresolved_ids if pid not in set(pre_unresolved_ids)]
+
+                    logger.info(
+                        "HTML continuity diff after rewrite/fallback: before=%s mid=%s after=%s resolved=%s newly_unresolved=%s fallback_applied=%s",
+                        len(pre_unresolved_ids),
+                        len(mid_unresolved_ids),
+                        len(post_unresolved_ids),
+                        resolved_ids,
+                        newly_unresolved,
+                        len(fallback_applied)
+                    )
+                    if post_unresolved_ids:
+                        logger.info(
+                            "HTML unresolved promise topics after fallback: %s",
+                            [post_unresolved_text.get(pid, '') for pid in post_unresolved_ids]
+                        )
+                    if post_unresolved_ids:
+                        logger.warning(f"兜底后仍有 {len(post_unresolved_ids)} 个承诺未关闭")
 
             # Image mode optimization: batch multiple pages per model call to reduce API round trips.
-            if render_mode != 'html' and description_batch_size > 1:
+            elif description_batch_size > 1:
                 page_jobs = [
                     (page.id, page_data, i, page.layout_id)
                     for i, (page, page_data) in enumerate(zip(pages, pages_data), 1)
@@ -476,7 +928,6 @@ def generate_descriptions_task(task_id: str, project_id: str, ai_service,
                                 results.append((page_id, {'description_content': desc_content}, None))
                                 continue
 
-                            # Fallback per page to keep robustness and quality.
                             results.append(generate_single_desc(page_id, page_outline, idx, page_layout_id))
                         return results
 
@@ -490,7 +941,6 @@ def generate_descriptions_task(task_id: str, project_id: str, ai_service,
                         for page_id, result_data, error in batch_results:
                             update_page_result(page_id, result_data, error)
 
-                        # Commit once per batch to reduce DB write overhead.
                         db.session.commit()
 
                         task = Task.query.get(task_id)
@@ -502,7 +952,7 @@ def generate_descriptions_task(task_id: str, project_id: str, ai_service,
                                 f"(failed={failed})"
                             )
             else:
-                # HTML mode or explicit single-page mode.
+                # Image mode single-page parallel generation.
                 with ThreadPoolExecutor(max_workers=max_workers) as executor:
                     futures = [
                         executor.submit(generate_single_desc, page.id, page_data, i, page.layout_id)

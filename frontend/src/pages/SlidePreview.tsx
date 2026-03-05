@@ -140,6 +140,7 @@ export const SlidePreview: React.FC = () => {
   const [isGeneratingHtmlBackgrounds, setIsGeneratingHtmlBackgrounds] = useState(false);
   const [htmlBackgroundGenerationProgress, setHtmlBackgroundGenerationProgress] = useState({ current: 0, total: 0 });
   const [htmlGlobalBackground, setHtmlGlobalBackground] = useState<string>('');
+  const htmlAutoBackgroundTriggeredRef = useRef<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const backgroundFileInputRef = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<{ pageId: string; slotPath: string } | null>(null);
@@ -185,6 +186,63 @@ export const SlidePreview: React.FC = () => {
     return map;
   }, [currentProject?.pages]);
 
+  const inferTwoColumnPartType = useCallback((part: Record<string, unknown> | undefined): 'text' | 'image' | 'bullets' => {
+    if (!part) return 'text';
+    const rawType = part.type;
+    if (rawType === 'text' || rawType === 'image' || rawType === 'bullets') {
+      return rawType;
+    }
+
+    const bullets = Array.isArray(part.bullets) ? part.bullets : [];
+    if (bullets.length > 0) return 'bullets';
+    if (typeof part.image_src === 'string' && part.image_src.trim()) return 'image';
+    return 'text';
+  }, []);
+
+  const normalizeTwoColumnPart = useCallback((part: Record<string, unknown> | undefined): Record<string, unknown> => {
+    const normalized: Record<string, unknown> = {
+      ...(part || {}),
+    };
+
+    normalized.type = inferTwoColumnPartType(part);
+
+    if (Array.isArray(normalized.bullets)) {
+      normalized.bullets = normalized.bullets
+        .filter((item) => !!item)
+        .map((item) => {
+          if (typeof item === 'string') {
+            return { text: item };
+          }
+          if (typeof item === 'object' && item !== null) {
+            const row = item as Record<string, unknown>;
+            return {
+              icon: typeof row.icon === 'string' ? row.icon : undefined,
+              text: typeof row.text === 'string' ? row.text : '',
+              description: typeof row.description === 'string' ? row.description : undefined,
+            };
+          }
+          return { text: '' };
+        })
+        .filter((item) => item.text.trim());
+    }
+
+    return normalized;
+  }, [inferTwoColumnPartType]);
+
+  const shouldUseOptionalImageSlot = useCallback((
+    page: typeof currentProject.pages[0],
+    normalizedModel?: Record<string, unknown>
+  ): boolean => {
+    const outline = page?.outline_content as Record<string, unknown> | undefined;
+    if (typeof outline?.has_image === 'boolean') {
+      return outline.has_image;
+    }
+
+    const modelCandidate = normalizedModel ?? (page?.html_model as Record<string, unknown> | undefined);
+    const image = modelCandidate?.image as Record<string, unknown> | undefined;
+    return !!(image && typeof image === 'object');
+  }, []);
+
   /**
    * 根据布局类型判断页面的图片插槽数量
    * 这个逻辑与 html-renderer/layouts 中的渲染逻辑保持一致
@@ -225,8 +283,8 @@ export const SlidePreview: React.FC = () => {
       let count = 0;
       const left = htmlModel.left as Record<string, unknown> | undefined;
       const right = htmlModel.right as Record<string, unknown> | undefined;
-      if (left?.type === 'image') count++;
-      if (right?.type === 'image') count++;
+      if (inferTwoColumnPartType(left) === 'image') count++;
+      if (inferTwoColumnPartType(right) === 'image') count++;
       return count;
     }
 
@@ -234,7 +292,7 @@ export const SlidePreview: React.FC = () => {
     // 这些布局总是支持1个可选配图插槽
     // 我们会在 convertPageToPayload 中自动添加默认的 image 字段
     if (['title_content', 'title_bullets', 'process_steps'].includes(layoutId || '')) {
-      return 1;
+      return shouldUseOptionalImageSlot(page, htmlModel) ? 1 : 0;
     }
 
     // cover 布局：如果有 background_image 字段则有1个插槽
@@ -243,7 +301,7 @@ export const SlidePreview: React.FC = () => {
     }
 
     return 0;
-  }, [isHtmlMode]);
+  }, [inferTwoColumnPartType, isHtmlMode, shouldUseOptionalImageSlot]);
 
   // 辅助函数：判断页面是否有图片插槽
   const pageHasImageSlot = useCallback((page: typeof currentProject.pages[0]): boolean => {
@@ -308,10 +366,15 @@ export const SlidePreview: React.FC = () => {
         }
       }
 
-      // 为支持图片的布局添加默认的image字段（如果不存在）
-      // 这样即使AI没有生成image字段，前端也会显示占位符
+      const outlineContent = page.outline_content as Record<string, unknown> | undefined;
+      const outlineHasImage = typeof outlineContent?.has_image === 'boolean'
+        ? outlineContent.has_image
+        : undefined;
+
+      // 为支持图片的布局按需添加默认 image 字段（如果不存在）
+      // 只有 outline 明确要求配图时才补占位，避免页面同质化为左文右图
       const layoutsWithOptionalImage = ['title_content', 'title_bullets', 'process_steps'];
-      if (layoutsWithOptionalImage.includes(layoutId) && !('image' in model)) {
+      if (layoutsWithOptionalImage.includes(layoutId) && outlineHasImage === true && !('image' in model)) {
         const defaultWidth = layoutId === 'process_steps' ? '80%' : '45%';
         // 添加默认的image字段，src为空字符串会显示占位符
         model.image = {
@@ -321,11 +384,27 @@ export const SlidePreview: React.FC = () => {
           width: defaultWidth,
         };
       }
+      if (layoutsWithOptionalImage.includes(layoutId) && outlineHasImage === false && 'image' in model) {
+        const imageField = model.image as Record<string, unknown> | undefined;
+        const imageSrc = typeof imageField?.src === 'string' ? imageField.src.trim() : '';
+        // has_image=false 时移除空占位 image，保留已存在真实图片
+        if (!imageSrc) {
+          delete model.image;
+        }
+      }
 
       // image_full 布局必须有 image_src
       if (layoutId === 'image_full' && !('image_src' in model)) {
         model.image_src = '';
         model.image_alt = page.outline_content?.title || '图片';
+      }
+
+      // two_column 布局：补齐左右栏 type 并标准化 bullets 字段
+      if (layoutId === 'two_column') {
+        const left = model.left as Record<string, unknown> | undefined;
+        const right = model.right as Record<string, unknown> | undefined;
+        model.left = normalizeTwoColumnPart(left);
+        model.right = normalizeTwoColumnPart(right);
       }
 
       // 应用上传的图片到模型
@@ -343,46 +422,126 @@ export const SlidePreview: React.FC = () => {
     const outline = page.outline_content;
     if (!outline) return null;
 
-    // 根据页面位置和内容推断布局
-    let layoutId: LayoutId = 'title_content';
-    let model: Record<string, unknown> = {};
+    const outlineRecord = outline as Record<string, unknown>;
+    const outlineTitle = typeof outlineRecord.title === 'string' ? outlineRecord.title : '未命名';
+    const outlinePoints = Array.isArray(outlineRecord.points)
+      ? outlineRecord.points.map((point) => String(point || '').trim()).filter(Boolean)
+      : [];
+    const outlineHasImage = typeof outlineRecord.has_image === 'boolean' ? outlineRecord.has_image : false;
+    const outlineLayoutRaw = typeof outlineRecord.layout_id === 'string' ? outlineRecord.layout_id : undefined;
+    const outlineLayout = outlineLayoutRaw ? normalizeLayoutId(outlineLayoutRaw as LayoutId) : undefined;
 
+    // 根据 outline 优先恢复布局；仅在缺失时再做推断
+    let layoutId: LayoutId = 'title_content';
     if (index === 0) {
-      // 第一页：封面
       layoutId = 'cover';
-      model = {
-        title: outline.title,
-        subtitle: outline.points?.[0] || '',
-      };
-    } else if (outline.points && outline.points.length > 3) {
-      // 多个要点：使用要点布局
+    } else if (outlineLayout) {
+      layoutId = outlineLayout;
+    } else if (outlinePoints.length > 4) {
       layoutId = 'title_bullets';
-      model = {
-        title: outline.title,
-        bullets: outline.points.map(point => ({
-          text: point,
-        })),
-        // 添加默认的image字段
-        image: {
-          src: '',
-          alt: outline.title || '配图',
-          position: 'right',
-          width: '45%',
-        },
-      };
-    } else {
-      // 默认：标题+正文布局
-      layoutId = 'title_content';
-      model = {
-        title: outline.title,
-        content: outline.points?.join('\n\n') || '',
-        // 添加默认的image字段
-        image: {
-          src: '',
-          alt: outline.title || '配图',
-          position: 'right',
-          width: '45%',
-        },
+    }
+
+    let model: Record<string, unknown> = {};
+    switch (layoutId) {
+      case 'cover':
+        model = {
+          title: outlineTitle,
+          subtitle: outlinePoints[0] || '',
+        };
+        break;
+      case 'toc':
+        model = {
+          title: outlineTitle || '目录',
+          items: outlinePoints.map((text, idx) => ({ index: idx + 1, text })),
+        };
+        break;
+      case 'section_title':
+        model = {
+          title: outlineTitle,
+          subtitle: outlinePoints[0] || '',
+          section_number: typeof outlineRecord.section_number === 'string'
+            ? outlineRecord.section_number
+            : undefined,
+        };
+        break;
+      case 'ending':
+        model = {
+          title: outlineTitle || '感谢观看',
+          subtitle: outlinePoints[0] || '',
+        };
+        break;
+      case 'quote':
+        model = {
+          quote: outlinePoints[0] || outlineTitle,
+          author: outlinePoints[1] || '',
+          source: outlinePoints[2] || '',
+        };
+        break;
+      case 'image_full':
+        model = {
+          title: outlineTitle,
+          image_src: '',
+          image_alt: outlineTitle,
+          caption: outlinePoints[0] || '',
+        };
+        break;
+      case 'two_column': {
+        const pivot = Math.max(1, Math.ceil(outlinePoints.length / 2));
+        const leftContent = outlinePoints.slice(0, pivot);
+        const rightContent = outlinePoints.slice(pivot);
+        model = {
+          title: outlineTitle,
+          left: {
+            type: 'text',
+            header: '左侧要点',
+            content: leftContent.length ? leftContent : [''],
+          },
+          right: {
+            type: 'text',
+            header: '右侧要点',
+            content: rightContent.length ? rightContent : [''],
+          },
+        };
+        break;
+      }
+      case 'process_steps':
+        model = {
+          title: outlineTitle,
+          steps: outlinePoints.map((text, idx) => ({
+            number: idx + 1,
+            label: text,
+            description: '',
+            icon: 'fa-check',
+          })),
+        };
+        break;
+      case 'title_bullets':
+        model = {
+          title: outlineTitle,
+          bullets: outlinePoints.map((text) => ({
+            text,
+          })),
+        };
+        break;
+      case 'title_content':
+      default:
+        model = {
+          title: outlineTitle,
+          content: outlinePoints.length ? outlinePoints : [''],
+        };
+        break;
+    }
+
+    if (
+      outlineHasImage
+      && ['title_content', 'title_bullets', 'process_steps'].includes(layoutId)
+      && !('image' in model)
+    ) {
+      model.image = {
+        src: '',
+        alt: outlineTitle || '配图',
+        position: 'right',
+        width: layoutId === 'process_steps' ? '80%' : '45%',
       };
     }
 
@@ -395,7 +554,7 @@ export const SlidePreview: React.FC = () => {
       layout_id: layoutId,
       model: model,
     };
-  }, [applyUploadedImagesToModel, sectionNumberMap]);
+  }, [applyUploadedImagesToModel, normalizeTwoColumnPart, sectionNumberMap]);
 
   // 根据页面与布局生成 HTML 模式图片插槽
   const buildHtmlImageSlots = useCallback((pages: typeof currentProject.pages, onlyIndex?: number): HtmlImageSlot[] => {
@@ -524,7 +683,7 @@ export const SlidePreview: React.FC = () => {
       const model = payload.model as any;
       const layoutId = normalizeLayoutId(payload.layout_id as LayoutId);
       const pageId = payload.page_id;
-      const schemeId = currentProject?.scheme_id || 'tech_blue';
+      const schemeId = currentProject?.scheme_id || 'edu_dark';
       const push = (slotPath: string) => {
         const facts = collectPageFacts(page, model);
         const pageTitle = cleanText(model?.title) || cleanText(page?.outline_content?.title) || '';
@@ -556,14 +715,20 @@ export const SlidePreview: React.FC = () => {
         case 'image_full':
           if (!model.image_src) push('image_src');
           break;
-        case 'two_column':
-          if (model.left?.type === 'image' && !model.left?.image_src) push('left.image_src');
-          if (model.right?.type === 'image' && !model.right?.image_src) push('right.image_src');
+        case 'two_column': {
+          const left = model.left as Record<string, unknown> | undefined;
+          const right = model.right as Record<string, unknown> | undefined;
+          if (inferTwoColumnPartType(left) === 'image' && !left?.image_src) push('left.image_src');
+          if (inferTwoColumnPartType(right) === 'image' && !right?.image_src) push('right.image_src');
           break;
+        }
         case 'title_bullets':
         case 'title_content':
         case 'process_steps':
-          if (model.image?.src === '' || (model.image && !model.image.src)) {
+          if (
+            shouldUseOptionalImageSlot(page, model) &&
+            (model.image?.src === '' || (model.image && !model.image.src))
+          ) {
             push('image.src');
           }
           break;
@@ -575,6 +740,8 @@ export const SlidePreview: React.FC = () => {
     return slots;
   }, [
     convertPageToPayload,
+    inferTwoColumnPartType,
+    shouldUseOptionalImageSlot,
     currentProject?.scheme_id,
     currentProject?.idea_prompt,
     currentProject?.extra_requirements,
@@ -597,7 +764,7 @@ export const SlidePreview: React.FC = () => {
       || (firstPayload?.model as any)?.title
       || pages[0].outline_content?.title
       || '';
-    const schemeId = currentProject?.scheme_id || 'tech_blue';
+    const schemeId = currentProject?.scheme_id || 'edu_dark';
     const sampledTitles = pages
       .map((p) => cleanText(p.outline_content?.title || ''))
       .filter(Boolean)
@@ -646,20 +813,20 @@ export const SlidePreview: React.FC = () => {
         case 'title_content':
         case 'title_bullets':
         case 'process_steps':
-          return sum + 1;
+          return sum + (shouldUseOptionalImageSlot(page, model) ? 1 : 0);
         case 'image_full':
           return sum + 1;
         case 'two_column': {
           let count = 0;
-          if (model.left?.type === 'image') count += 1;
-          if (model.right?.type === 'image') count += 1;
+          if (inferTwoColumnPartType(model.left as Record<string, unknown> | undefined) === 'image') count += 1;
+          if (inferTwoColumnPartType(model.right as Record<string, unknown> | undefined) === 'image') count += 1;
           return sum + count;
         }
         default:
           return sum;
       }
     }, 0);
-  }, [isHtmlMode, currentProject?.pages, convertPageToPayload]);
+  }, [isHtmlMode, currentProject?.pages, convertPageToPayload, inferTwoColumnPartType, shouldUseOptionalImageSlot]);
 
   // 当前选中页面的PagePayload（用于HTML渲染）
   const selectedPagePayload = useMemo(() => {
@@ -1125,6 +1292,26 @@ export const SlidePreview: React.FC = () => {
       setIsGeneratingHtmlBackgrounds(false);
     }
   }, [currentProject, isHtmlMode, show, buildHtmlBackgroundSlots]);
+
+  // HTML 模式进入预览后自动生成一次统一背景图，避免用户手动点击。
+  useEffect(() => {
+    if (!isHtmlMode || !currentProject?.id) return;
+    if (!Array.isArray(currentProject.pages) || currentProject.pages.length === 0) return;
+    if (htmlGlobalBackground || isGeneratingHtmlBackgrounds) return;
+
+    const projectKey = currentProject.id;
+    if (htmlAutoBackgroundTriggeredRef.current[projectKey]) return;
+    htmlAutoBackgroundTriggeredRef.current[projectKey] = true;
+
+    void handleGenerateHtmlBackgrounds();
+  }, [
+    isHtmlMode,
+    currentProject?.id,
+    currentProject?.pages,
+    htmlGlobalBackground,
+    isGeneratingHtmlBackgrounds,
+    handleGenerateHtmlBackgrounds,
+  ]);
 
   const handleUploadBackground = useCallback(() => {
     setBackgroundPickerMode('menu');

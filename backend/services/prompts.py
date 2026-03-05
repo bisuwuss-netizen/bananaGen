@@ -97,7 +97,7 @@ Guidelines for choosing layouts:
 - Second page MUST be 'toc' (table of contents) - it should list only major section/chapter titles (section_title pages) as its items, NOT every single page title
 - LAST page MUST be 'ending' - this is MANDATORY, the ending page can ONLY appear at the very last position, NEVER in the middle
 - Use 'section_title' for part dividers in multi-part presentations
-- Use 'title_bullets' for lists of points (most common)
+- Use 'title_bullets' only for true list/checklist pages
 - Use 'title_content' for explanatory text
 - Use 'two_column' for comparisons or contrasting ideas
 - Use 'process_steps' for sequential processes or timelines
@@ -115,8 +115,8 @@ Layout diversity requirement (hard constraints):
 - Do NOT use only 2-3 layouts. Use a diverse mix from the 10 layout types above.
 - When pages >= 10, ensure every layout appears at least once (cover/toc/ending must appear exactly once).
 - Avoid more than 2 consecutive pages with the same layout.
-- Ratio target for these four layouts (approximate but mandatory to follow as closely as possible):
-  section_title : title_content : title_bullets : two_column = 5 : 2 : 4 : 2
+- Ratio target for these four layouts (approximate, not hard lock):
+  section_title : title_content : title_bullets : two_column = 2 : 4 : 1 : 3
 - Make layout_id choices match the page's content intent.
 """
 
@@ -260,7 +260,7 @@ Layout constraints:
 For HTML rendering mode, you MUST include a "layout_id" field for each page.
 Only use layout_id from the selected scheme above.
 """
-        scheme_roles = SCHEME_ROLE_LAYOUTS.get(scheme_id or 'tech_blue', SCHEME_ROLE_LAYOUTS['tech_blue'])
+        scheme_roles = SCHEME_ROLE_LAYOUTS.get(scheme_id or 'edu_dark', SCHEME_ROLE_LAYOUTS['edu_dark'])
         cover_id = scheme_roles['cover']
         toc_id = scheme_roles['toc']
         ending_id = scheme_roles['ending']
@@ -364,7 +364,7 @@ Layout constraints:
 For HTML rendering mode, you MUST include a "layout_id" field for each page based on the content type.
 Only use layout_id from the selected scheme above.
 """
-        scheme_roles = SCHEME_ROLE_LAYOUTS.get(scheme_id or 'tech_blue', SCHEME_ROLE_LAYOUTS['tech_blue'])
+        scheme_roles = SCHEME_ROLE_LAYOUTS.get(scheme_id or 'edu_dark', SCHEME_ROLE_LAYOUTS['edu_dark'])
         cover_id = scheme_roles['cover']
         toc_id = scheme_roles['toc']
         ending_id = scheme_roles['ending']
@@ -725,7 +725,7 @@ Layout constraints:
 For HTML rendering mode, you MUST include a "layout_id" field for each page based on the content type.
 Only use layout_id from the selected scheme above.
 """
-        scheme_roles = SCHEME_ROLE_LAYOUTS.get(scheme_id or 'tech_blue', SCHEME_ROLE_LAYOUTS['tech_blue'])
+        scheme_roles = SCHEME_ROLE_LAYOUTS.get(scheme_id or 'edu_dark', SCHEME_ROLE_LAYOUTS['edu_dark'])
         cover_id = scheme_roles['cover']
         toc_id = scheme_roles['toc']
         ending_id = scheme_roles['ending']
@@ -1121,7 +1121,7 @@ def get_html_model_refinement_prompt(current_html_models: List[Dict], user_requi
     elif project_context.idea_prompt:
         original_input_text += f"- 用户输入：{project_context.idea_prompt}\n"
     
-    scheme_id = getattr(project_context, 'scheme_id', None) or 'tech_blue'
+    scheme_id = getattr(project_context, 'scheme_id', None) or 'edu_dark'
 
     # 构建大纲文本
     outline_text = ""
@@ -1487,6 +1487,28 @@ LAYOUT_SCHEMES = {
             'signature': '沉浸全图页/破格叠加页必须出现至少 1 次',
             'avoid': '传统对称布局、小字体密集文字'
         }
+    },
+    'edu_dark': {
+        'name': '深色教育叙事型',
+        'layouts': {
+            'edu_cover': '深色封面 - 左文右图，适合课程主题发布',
+            'edu_toc': '深色目录 - 高对比目录卡片，适合章节导览',
+            'edu_tri_compare': '三栏对比 - 痛点/行动/目标三段式结构',
+            'edu_core_hub': '中心模型 - 中心节点+四向关联，适合核心框架说明',
+            'edu_timeline_steps': '推进时间轴 - 纵向阶段推进，适合实施路径',
+            'edu_logic_flow': '逻辑演进 - 三阶段卡片+箭头，适合课前课中课后链路',
+            'edu_data_board': '数据看板 - 指标卡+图表区，适合结果呈现',
+            'edu_summary': '反思总结 - 三列复盘+结语收束'
+        },
+        'style': {
+            'colors': '深夜蓝 + 青色高亮 + 蓝绿辅助色',
+            'background': '深色渐变与弱光效，中心区域留白保证文字可读',
+            'graphics': '高对比卡片、发光边框、流程箭头、数据面板',
+            'density': '中高密度，强调结构化信息与阶段推进',
+            'rhythm': '封面 → 目录 → 对比/模型 → 实施路径 → 数据结果 → 反思总结',
+            'signature': '中心模型页与数据看板页必须至少出现 1 次',
+            'avoid': '浅色背景、低对比文本、单一列表反复堆叠'
+        }
     }
 }
 
@@ -1498,6 +1520,7 @@ SCHEME_ROLE_LAYOUTS = {
     'visual': {'cover': 'cover_visual', 'toc': 'timeline_navigation', 'ending': 'ending_visual'},
     'practical': {'cover': 'cover_practical', 'toc': 'checklist_practical', 'ending': 'ending_practical'},
     'modern': {'cover': 'cinematic_overlay', 'toc': 'sidebar_card', 'ending': 'cinematic_overlay'},
+    'edu_dark': {'cover': 'edu_cover', 'toc': 'edu_toc', 'ending': 'edu_summary'},
 }
 
 # 布局ID别名映射（用于复用现有Schema）
@@ -1557,12 +1580,21 @@ LAYOUT_ID_ALIASES = {
     # 'vertical_timeline': 独立组件，不映射
     # 'tri_column': 独立组件，不映射
     # 'cinematic_overlay': 独立组件，不映射
+    # edu_dark - 深色教育叙事型
+    'edu_cover': 'cover',
+    'edu_toc': 'toc',
+    'edu_tri_compare': 'two_column',
+    'edu_core_hub': 'title_content',
+    'edu_timeline_steps': 'process_steps',
+    'edu_logic_flow': 'process_steps',
+    'edu_data_board': 'title_bullets',
+    'edu_summary': 'ending',
 }
 
 
 def get_layout_scheme(scheme_id: str = None) -> dict:
-    scheme = scheme_id or 'tech_blue'
-    return LAYOUT_SCHEMES.get(scheme, LAYOUT_SCHEMES['tech_blue'])
+    scheme = scheme_id or 'edu_dark'
+    return LAYOUT_SCHEMES.get(scheme, LAYOUT_SCHEMES['edu_dark'])
 
 
 def get_layout_types_description(scheme_id: str = None) -> str:
@@ -1616,6 +1648,14 @@ def get_scheme_style_prompt(scheme_id: str = None) -> str:
   * detail_zoom（细节标注）：需要详细说明操作细节时使用，主图+标注点（X/Y坐标百分比），每个标注点配说明文字
   * 必须在操作步骤前包含安全提示页
   * 步骤说明具体明确，避免模糊表述
+""",
+        'edu_dark': """
+- 专属布局使用场景：
+  * edu_tri_compare（三栏对比）：用于“问题-方案-目标”或“三维对比”页，三栏语义必须不同，禁止重复复述
+  * edu_core_hub（中心模型）：用于解释核心机制，center_label 放核心对象，nodes 放四个关键支撑点
+  * edu_timeline_steps（推进时间轴）：用于阶段计划，steps 中每阶段需包含“动作+结果”
+  * edu_data_board（数据看板）：用于量化结果，metrics 展示关键指标，bars 展示基线与当前对比
+  * edu_summary（反思总结）：用于收束与改进，columns 输出 3 组改进点，closing 输出一句总目标
 """
     }
 
@@ -1630,11 +1670,12 @@ def resolve_layout_id(layout_id: str) -> str:
 
 
 def get_layout_constraints(scheme_id: str = None) -> str:
-    scheme = scheme_id or 'tech_blue'
+    scheme = scheme_id or 'edu_dark'
     style = get_layout_scheme(scheme_id).get('style', {})
+    layout_count = max(3, len(get_layout_scheme(scheme_id).get('layouts', {})) or 10)
     base = [
         "不要只用 2-3 种布局，整体布局要有明显变化。",
-        "当总页数 >= 10 时，确保该方案的 10 种布局都至少出现 1 次（封面/目录/结束页各 1 次）。",
+        f"当总页数 >= {layout_count} 时，确保该方案的 {layout_count} 种布局都至少出现 1 次（封面/目录/结束页各 1 次）。",
         "避免连续 3 页使用同一种布局。",
         "每个章节内至少使用 2 种不同的内容布局（避免整章都是同一种样式）。",
         "每页最多 1 个主结论 + 3-5 个支撑点，禁止把整段长文直接铺满页面。",
@@ -1644,7 +1685,7 @@ def get_layout_constraints(scheme_id: str = None) -> str:
     if signature:
         base.append(f"招牌页要求：{signature}")
     if scheme == 'tech_blue':
-        base.append("section_title : title_content : title_bullets : two_column 尽量接近 5 : 2 : 4 : 2。")
+        base.append("tech_blue 内容页建议比例：section_title : title_content : title_bullets : two_column ≈ 2 : 4 : 1 : 3（建议值，允许按语义调整）。")
     return "\n".join([f"- {line}" for line in base])
 
 # 各布局的 Schema 模板
@@ -1708,7 +1749,24 @@ LAYOUT_SCHEMAS = {
 
     'tri_column': '{"title": "三列标题", "columns": [{"number": 1, "title": "列标题", "description": "列描述", "accent_color": "#3498db"}]}',
 
-    'cinematic_overlay': '{"label": "标签(如CASE STUDY)", "title": "主标题", "description": "描述文字", "metric": {"value": "90%", "label": "指标名称"}, "background_image": "背景图片URL(可选)"}'
+    'cinematic_overlay': '{"label": "标签(如CASE STUDY)", "title": "主标题", "description": "描述文字", "metric": {"value": "90%", "label": "指标名称"}, "background_image": "背景图片URL(可选)"}',
+
+    # 深色教育叙事方案专属布局
+    'edu_cover': '{"title": "封面标题", "subtitle": "副标题(可选)", "author": "汇报人(可选)", "department": "单位(可选)", "date": "日期(可选)", "hero_image": "封面主图URL(可选)"}',
+
+    'edu_toc': '{"title": "目录标题", "subtitle": "目录说明(可选)", "items": [{"index": 1, "text": "章节标题"}]}',
+
+    'edu_tri_compare': '{"title": "三栏对比标题", "badge": "右上角结论标签(可选)", "columns": [{"title": "列标题", "points": ["要点1", "要点2", "要点3"]}, {"title": "列标题", "points": ["要点1", "要点2"]}, {"title": "列标题", "points": ["要点1", "要点2"]}]}',
+
+    'edu_core_hub': '{"title": "核心模型标题", "subtitle": "副标题(可选)", "center_label": "中心概念", "nodes": [{"title": "关联节点1"}, {"title": "关联节点2"}, {"title": "关联节点3"}, {"title": "关联节点4"}]}',
+
+    'edu_timeline_steps': '{"title": "推进步骤标题", "subtitle": "副标题(可选)", "steps": [{"title": "阶段标题", "description": "阶段说明", "highlights": ["动作1", "动作2"]}]}',
+
+    'edu_logic_flow': '{"title": "逻辑演进标题", "stages": [{"title": "阶段标题", "description": "阶段说明"}, {"title": "阶段标题", "description": "阶段说明"}, {"title": "阶段标题", "description": "阶段说明"}]}',
+
+    'edu_data_board': '{"title": "数据看板标题", "subtitle": "右上角指标说明(可选)", "metrics": [{"value": "+45%", "label": "指标名称", "note": "指标备注(可选)"}], "bars": [{"label": "维度名称", "baseline": 60, "current": 85}], "insight": "结果洞察(可选)"}',
+
+    'edu_summary': '{"title": "总结页标题", "columns": [{"title": "分栏标题", "points": ["要点1", "要点2"]}, {"title": "分栏标题", "points": ["要点1"]}, {"title": "分栏标题", "points": ["要点1"]}], "closing": "结语总结(可选)"}'
 }
 
 
@@ -1726,7 +1784,8 @@ def get_structured_outline_prompt(topic: str, requirements: str = "", language: 
     """
     layout_list = get_layout_types_description(scheme_id)
     scheme_name = get_layout_scheme(scheme_id).get('name', 'tech_blue')
-    scheme_roles = SCHEME_ROLE_LAYOUTS.get(scheme_id or 'tech_blue', SCHEME_ROLE_LAYOUTS['tech_blue'])
+    layout_count = max(3, len(get_layout_scheme(scheme_id).get('layouts', {})) or 10)
+    scheme_roles = SCHEME_ROLE_LAYOUTS.get(scheme_id or 'edu_dark', SCHEME_ROLE_LAYOUTS['edu_dark'])
     cover_id = scheme_roles['cover']
     toc_id = scheme_roles['toc']
     ending_id = scheme_roles['ending']
@@ -1737,17 +1796,29 @@ def get_structured_outline_prompt(topic: str, requirements: str = "", language: 
 主题：{topic}
 {"额外要求：" + requirements if requirements else ""}
 
-请生成包含 layout_id 的结构化大纲，格式如下：
+请生成包含 layout_id + 叙事约束字段 的结构化大纲，格式如下：
 
 {{
   "title": "PPT总标题",
+  "narrative_version": 1,
   "pages": [
     {{
       "page_id": "p01",
       "title": "页面标题",
       "layout_id": "cover",
       "has_image": false,
-      "keywords": ["关键词1", "关键词2"]
+      "keywords": ["关键词1", "关键词2"],
+      "depends_on": [],
+      "must_cover": ["本页必须覆盖的主题1"],
+      "promises_open": [
+        {{
+          "promise_id": "pr_p03_1",
+          "text": "后续需要展开的主题",
+          "must_cover": ["关键点A", "关键点B"],
+          "target_page_ids": ["p04", "p05"]
+        }}
+      ],
+      "promises_close": ["pr_p02_1"]
     }},
     {{
       "page_id": "p02",
@@ -1788,11 +1859,21 @@ def get_structured_outline_prompt(topic: str, requirements: str = "", language: 
 - **禁止 section_title 直接跟 ending**，最后一个章节也必须有内容页
 - 示例正确结构：cover → toc → section_title("第一章") → title_content → title_bullets → section_title("第二章") → two_column → process_steps → ending
 
+叙事契约硬约束（必须严格遵守）：
+- 每页都必须输出 depends_on（依赖页ID列表，首屏可为空）
+- 每页都必须输出 must_cover（该页必须覆盖的主题，可为空数组）
+- 当页面提出“后续会展开/接下来分析/案例稍后详解”等承诺时，必须在 promises_open 中登记
+- promises_open 的每个对象必须包含 promise_id/text，推荐补 target_page_ids
+- 后续兑现承诺的页面必须在 promises_close 中写入对应 promise_id
+- 严禁出现“promises_open 登记了，但全文没有 promises_close 对应”的情况
+- 若本页是概述页且列出3个要点，必须把这3个要点写入 must_cover 或 promises_open
+
 布局多样性约束（硬约束，需尽量满足）：
 - 不要只用 2-3 种布局。
-- 当总页数 >= 10 时，确保 10 种布局都出现至少 1 次（cover/toc/ending 只能各 1 次）。
+- 当总页数 >= {layout_count} 时，确保 {layout_count} 种布局都出现至少 1 次（cover/toc/ending 只能各 1 次）。
 - 避免连续 3 页使用同一种布局。
-- 这些布局的比例尽量接近：section_title : title_content : title_bullets : two_column = 5 : 2 : 4 : 2。
+- tech_blue 的内容页比例建议：section_title : title_content : title_bullets : two_column ≈ 2 : 4 : 1 : 3（建议值，不是死规则）。
+- “重点展开/原理讲解/概念定义”优先使用 title_content；只有确实是“清单/并列项”才使用 title_bullets，避免连续堆叠。
 
 内容与布局匹配硬约束：
 - 标题包含“学习资源/资源推荐/参考资料/工具推荐/学习路径/课程推荐”时，必须使用标题+要点类布局（title_bullets 或其方案对应布局），并设置 has_image=false。
@@ -1807,13 +1888,11 @@ def get_structured_outline_prompt(topic: str, requirements: str = "", language: 
 - 严禁出现“提到了但后面完全没讲”的断链主题。
 
 关于 has_image 字段（图片插槽）：
-- image_full 布局必须设置 has_image=true（布局的核心就是图片）
-- title_content、title_bullets、process_steps 布局**强烈建议设置 has_image=true**，配图可以让内容更生动直观
-- two_column 布局如果其中一栏是图片类型，设置 has_image=true
-- cover 布局如果需要背景图，设置 has_image=true
-- toc、section_title、quote、ending 一般不需要配图（has_image=false）
-
-**重要**：一个好的PPT至少应该有3-5个页面带配图（has_image=true），让演示更加图文并茂。
+- image_full 布局必须设置 has_image=true（布局核心就是图片）
+- title_content/title_bullets/process_steps/two_column 仅在“图片能明显提升理解”时设置 has_image=true，其他情况优先 false
+- cover 布局如需背景图可设置 has_image=true
+- toc、section_title、quote、ending 通常设置 has_image=false
+- 建议整份PPT图片页占比约 20%-35%，并避免连续 3 页以上都需要配图
 
 关于 keywords 字段：
 - 如果 has_image=true，必须填写2-5个用于图片生成的关键词，描述图片应该呈现的内容
@@ -1826,7 +1905,12 @@ def get_structured_outline_prompt(topic: str, requirements: str = "", language: 
     return prompt
 
 
-def get_structured_page_content_prompt(page_outline: dict, full_outline: dict = None, language: str = None, scheme_id: str = None) -> str:
+def get_structured_page_content_prompt(page_outline: dict,
+                                       full_outline: dict = None,
+                                       language: str = None,
+                                       scheme_id: str = None,
+                                       continuity_context: dict = None,
+                                       rewrite_instruction: str = "") -> str:
     """
     根据大纲生成单个页面的结构化内容（用于HTML渲染器）
 
@@ -1855,6 +1939,28 @@ def get_structured_page_content_prompt(page_outline: dict, full_outline: dict = 
     context_info = ""
     if full_outline:
         context_info = f"\n\n完整PPT大纲（供参考）：\n{json.dumps(full_outline, ensure_ascii=False, indent=2)}"
+
+    continuity_info = ""
+    if continuity_context:
+        continuity_info = f"""
+
+叙事连续性上下文（必须遵守）：
+- 当前页契约（page_contract）：{json.dumps(continuity_context.get('page_contract', {}), ensure_ascii=False)}
+- 本页必须关闭承诺（required_close_promise_ids）：{continuity_context.get('required_close_promise_ids', [])}
+- 必须关闭承诺详情（required_close_promises）：{json.dumps(continuity_context.get('required_close_promises', []), ensure_ascii=False)}
+- 当前未闭环承诺（open_promises，最多3条）：{json.dumps(continuity_context.get('open_promises', []), ensure_ascii=False)}
+- 前序页面摘要（prior_page_summaries）：{json.dumps(continuity_context.get('prior_page_summaries', []), ensure_ascii=False)}
+- 模板容量限制（template_constraints）：{json.dumps(continuity_context.get('template_constraints', {}), ensure_ascii=False)}
+"""
+
+    rewrite_info = ""
+    rewrite_instruction = (rewrite_instruction or "").strip()
+    if rewrite_instruction:
+        rewrite_info = f"""
+
+重写任务（必须严格执行）：
+- {rewrite_instruction}
+"""
 
     # TOC 布局特殊指令：必须列出所有章节（section_title）
     if resolved_layout_id == 'toc':
@@ -1909,10 +2015,20 @@ def get_structured_page_content_prompt(page_outline: dict, full_outline: dict = 
 - 是否配图: {has_image}
 - 关键词: {page_outline.get('keywords', [])}
 {context_info}
+{continuity_info}
+{rewrite_info}
 
-请严格按照以下 JSON Schema 格式输出该页面的 model 数据：
+请严格按照以下 JSON 格式输出：
+{{
+  "model": {schema_template},
+  "closed_promise_ids": ["pr_xxx"]
+}}
 
-{schema_template}
+其中：
+- model 必须完全符合对应布局 Schema
+- closed_promise_ids 表示本页已完成收束的 promise_id 列表
+- 若 required_close_promise_ids 非空，closed_promise_ids 必须包含全部 required_close_promise_ids（硬约束）
+- 若本页无可关闭承诺，closed_promise_ids 返回 []
 {image_note}
 
 {get_scheme_style_prompt(scheme_id)}
@@ -1932,10 +2048,81 @@ def get_structured_page_content_prompt(page_outline: dict, full_outline: dict = 
 12. 所有描述必须是完整句，禁止半句、截断句、占位词（如“待补充”“...”）
 13. 案例相关页面必须包含：背景问题、方法动作、结果启示
 14. 若是过渡页/总结页，必须明确与前后页的衔接关系（至少一句）
+15. 若提供了 open_promises，本页需优先兑现与本页相关的承诺，并保证“承诺->展开->收束”闭环
+16. 若提供了 required_close_promise_ids，这是硬约束：必须在正文覆盖对应内容，并在 closed_promise_ids 中返回完整 id 列表
+17. 若提供了 must_cover，必须逐项覆盖，不可遗漏
+18. 必须遵守 template_constraints，禁止输出超出模板容量的列表或过长文案
 {toc_instruction}
 {section_instruction}
 {variant_instruction}
 只返回 JSON 对象，不要包含其他文字。
+{get_language_instruction(language)}
+"""
+    return prompt
+
+
+def get_structured_page_content_batch_prompt(batch_requests: List[dict],
+                                             language: str = None,
+                                             scheme_id: str = None) -> str:
+    """
+    批量生成多个页面的结构化内容（用于减少 API 往返次数）。
+
+    batch_requests item:
+    {
+      "page_outline": {...},
+      "continuity_context": {...},
+      "rewrite_instruction": "..."
+    }
+    """
+    normalized_items: List[Dict[str, Any]] = []
+    for item in batch_requests or []:
+        if not isinstance(item, dict):
+            continue
+        page_outline = item.get('page_outline') if isinstance(item.get('page_outline'), dict) else {}
+        page_id = page_outline.get('page_id')
+        layout_id = page_outline.get('layout_id', 'title_content')
+        resolved_layout_id = resolve_layout_id(layout_id)
+        schema_template = LAYOUT_SCHEMAS.get(resolved_layout_id, LAYOUT_SCHEMAS['title_content'])
+        normalized_items.append({
+            "page_id": page_id,
+            "title": page_outline.get('title', ''),
+            "layout_id": layout_id,
+            "has_image": bool(page_outline.get('has_image', False)),
+            "keywords": page_outline.get('keywords', []),
+            "section_number": page_outline.get('section_number'),
+            "subtitle": page_outline.get('subtitle'),
+            "schema_template": schema_template,
+            "continuity_context": item.get('continuity_context') if isinstance(item.get('continuity_context'), dict) else {},
+            "rewrite_instruction": str(item.get('rewrite_instruction') or '').strip(),
+        })
+
+    payload = json.dumps(normalized_items, ensure_ascii=False, indent=2)
+    prompt = f"""\
+你是一位专业的PPT内容撰写者。请一次性为多个页面生成结构化内容。
+
+输入页面（按顺序处理）：
+{payload}
+
+输出格式（必须严格符合）：
+[
+  {{
+    "page_id": "p03",
+    "model": {{ ...对应该页 schema_template... }},
+    "closed_promise_ids": ["pr_xxx"]
+  }}
+]
+
+硬约束：
+1. 返回数组长度必须与输入页面数量一致，且 page_id 一一对应。
+2. 每页 model 必须严格符合该页 schema_template。
+3. 若 continuity_context.required_close_promise_ids 非空，closed_promise_ids 必须包含全部这些 id。
+4. 每页必须覆盖 continuity_context.page_contract.must_cover（如果提供）。
+5. 必须遵守 continuity_context.template_constraints。
+6. 文案要求完整句，避免截断；案例页必须包含背景问题、方法动作、结果启示。
+
+{get_scheme_style_prompt(scheme_id)}
+
+只返回 JSON 数组，不要包含其他文字。
 {get_language_instruction(language)}
 """
     return prompt

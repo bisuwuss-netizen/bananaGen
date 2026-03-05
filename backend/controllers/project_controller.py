@@ -32,14 +32,8 @@ logger = logging.getLogger(__name__)
 project_bp = Blueprint('projects', __name__, url_prefix='/api/projects')
 
 
-def _resolve_user_id(default: str = None) -> str:
-    """
-    Resolve user_id from query/cookie.
-
-    Notes:
-    - If default is None and user_id is missing, return None (no user filter).
-    - If default is provided, use it as fallback.
-    """
+def _resolve_user_id(default: str = '1') -> str:
+    """Resolve user_id from query/cookie with a safe fallback."""
     user_id = request.args.get('user_id', type=str)
     if not user_id:
         user_id = request.cookies.get('user_id')
@@ -137,6 +131,33 @@ def _reconstruct_outline_from_pages(pages: list) -> list:
     return outline
 
 
+def _build_outline_content_payload(page_data: dict) -> dict:
+    """
+    Build outline_content payload while preserving layout-related metadata.
+    This keeps has_image/keywords and narrative contract fields available
+    for subsequent description regeneration.
+    """
+    payload = {
+        'title': page_data.get('title'),
+        'points': page_data.get('points', []),
+    }
+    passthrough_fields = [
+        'has_image',
+        'keywords',
+        'depends_on',
+        'must_cover',
+        'promises_open',
+        'promises_close',
+        'required_close_promise_ids',
+        'section_number',
+        'subtitle',
+    ]
+    for field in passthrough_fields:
+        if field in page_data:
+            payload[field] = page_data.get(field)
+    return payload
+
+
 @project_bp.route('', methods=['GET'])
 def list_projects():
     """
@@ -151,7 +172,7 @@ def list_projects():
         # Parameter validation
         limit = request.args.get('limit', 50, type=int)
         offset = request.args.get('offset', 0, type=int)
-        user_id = _resolve_user_id(default=None)
+        user_id = _resolve_user_id(default='1')
         
         logger.info(f"list_projects - user_id: {user_id}")
         
@@ -159,10 +180,11 @@ def list_projects():
         limit = min(max(1, limit), 100)  # Between 1-100
         offset = max(0, offset)  # Non-negative
         
-        query = Project.query.options(joinedload(Project.pages))
-        if user_id:
-            # Include legacy rows whose user_id is NULL for backward compatibility.
-            query = query.filter(or_(Project.user_id == user_id, Project.user_id.is_(None)))
+        # Build query with user_id filter.
+        # Include legacy rows whose user_id is NULL for backward compatibility.
+        query = Project.query\
+            .options(joinedload(Project.pages))\
+            .filter(or_(Project.user_id == user_id, Project.user_id.is_(None)))
         
         # Fetch limit + 1 items to check for more pages efficiently
         # This avoids a second database query
@@ -171,17 +193,6 @@ def list_projects():
             .limit(limit + 1)\
             .offset(offset)\
             .all()
-
-        # Compatibility fallback:
-        # If caller passed user_id but no data matched, retry without user filter.
-        if user_id and not projects_with_extra:
-            logger.info(f"list_projects fallback to unfiltered query for user_id={user_id}")
-            projects_with_extra = Project.query\
-                .options(joinedload(Project.pages))\
-                .order_by(desc(Project.updated_at))\
-                .limit(limit + 1)\
-                .offset(offset)\
-                .all()
         
         # Check if there are more items beyond the current page
         has_more = len(projects_with_extra) > limit
@@ -243,9 +254,9 @@ def create_project():
         if render_mode not in ['image', 'html']:
             render_mode = 'image'
 
-        scheme_id = data.get('scheme_id') or 'tech_blue'
+        scheme_id = data.get('scheme_id') or 'edu_dark'
         if scheme_id not in LAYOUT_SCHEMES:
-            scheme_id = 'tech_blue'
+            scheme_id = 'edu_dark'
 
         project = Project(
             creation_type=creation_type,
@@ -342,7 +353,7 @@ def update_project(project_id):
 
         # Update scheme_id if provided
         if 'scheme_id' in data:
-            scheme_id = data.get('scheme_id') or 'tech_blue'
+            scheme_id = data.get('scheme_id') or 'edu_dark'
             if scheme_id in LAYOUT_SCHEMES:
                 project.scheme_id = scheme_id
         
@@ -497,16 +508,7 @@ def generate_outline(project_id):
                 status='DRAFT',
                 layout_id=page_data.get('layout_id')  # HTML模式下由AI生成的布局ID
             )
-            page.set_outline_content({
-                'title': page_data.get('title'),
-                'points': page_data.get('points', []),
-                'has_image': bool(page_data.get('has_image', False)),
-                'keywords': page_data.get('keywords', []),
-                'layout_archetype': page_data.get('layout_archetype'),
-                'layout_variant': page_data.get('layout_variant'),
-                'section_number': page_data.get('section_number'),
-                'subtitle': page_data.get('subtitle'),
-            })
+            page.set_outline_content(_build_outline_content_payload(page_data))
             
             db.session.add(page)
             pages_list.append(page)
@@ -632,27 +634,21 @@ def generate_from_description(project_id):
             )
 
             # Set outline content
-            page.set_outline_content({
-                'title': page_data.get('title'),
-                'points': page_data.get('points', []),
-                'has_image': bool(page_data.get('has_image', False)),
-                'keywords': page_data.get('keywords', []),
-                'layout_archetype': page_data.get('layout_archetype'),
-                'layout_variant': page_data.get('layout_variant'),
-                'section_number': page_data.get('section_number'),
-                'subtitle': page_data.get('subtitle'),
-            })
+            page.set_outline_content(_build_outline_content_payload(page_data))
 
             if render_mode == 'html':
                 # HTML mode: generate structured content for html_model
                 structured_page_outline = {
                     'page_id': f'p{i+1:02d}',
                     'title': page_data.get('title', ''),
-                    'layout_id': layout_id or 'title_bullets',
+                    'layout_id': layout_id or 'title_content',
                     'has_image': bool(page_data.get('has_image', False)),
                     'keywords': page_data.get('keywords', page_data.get('points', [])[:3]),
-                    'layout_archetype': page_data.get('layout_archetype'),
-                    'layout_variant': page_data.get('layout_variant', 'a'),
+                    'depends_on': page_data.get('depends_on', []),
+                    'must_cover': page_data.get('must_cover', []),
+                    'promises_open': page_data.get('promises_open', []),
+                    'promises_close': page_data.get('promises_close', []),
+                    'required_close_promise_ids': page_data.get('required_close_promise_ids', page_data.get('promises_close', [])),
                 }
                 if 'section_number' in page_data:
                     structured_page_outline['section_number'] = page_data.get('section_number')
@@ -665,10 +661,14 @@ def generate_from_description(project_id):
                         {
                             'page_id': f'p{j+1:02d}',
                             'title': p.get('title', ''),
-                            'layout_id': p.get('layout_id', 'title_bullets'),
+                            'layout_id': p.get('layout_id', 'title_content'),
+                            'has_image': bool(p.get('has_image', False)),
                             'keywords': p.get('keywords', p.get('points', [])[:3]),
-                            'layout_archetype': p.get('layout_archetype'),
-                            'layout_variant': p.get('layout_variant', 'a'),
+                            'depends_on': p.get('depends_on', []),
+                            'must_cover': p.get('must_cover', []),
+                            'promises_open': p.get('promises_open', []),
+                            'promises_close': p.get('promises_close', []),
+                            'required_close_promise_ids': p.get('required_close_promise_ids', p.get('promises_close', [])),
                         }
                         for j, p in enumerate(pages_data)
                     ]
@@ -678,7 +678,7 @@ def generate_from_description(project_id):
                     page_outline=structured_page_outline,
                     full_outline=full_outline_context,
                     language=language,
-                    scheme_id=project.scheme_id or 'tech_blue'
+                    scheme_id=project.scheme_id or 'edu_dark'
                 )
                 page.set_html_model(model)
             else:
@@ -720,7 +720,8 @@ def generate_descriptions(project_id):
     Request body:
     {
         "max_workers": 5,
-        "language": "zh"  # output language: zh, en, ja, auto
+        "language": "zh",  # output language: zh, en, ja, auto
+        "generation_mode": "fast|strict"  # html模式默认fast，strict用于高质量导出
     }
     """
     try:
@@ -750,6 +751,11 @@ def generate_descriptions(project_id):
         # 从配置中读取默认并发数，如果请求中提供了则使用请求的值
         max_workers = data.get('max_workers', current_app.config.get('MAX_DESCRIPTION_WORKERS', 5))
         language = data.get('language', current_app.config.get('OUTPUT_LANGUAGE', 'zh'))
+        generation_mode = str(
+            data.get('generation_mode', current_app.config.get('HTML_CONTINUITY_MODE', 'fast'))
+        ).strip().lower()
+        if generation_mode not in {'fast', 'strict'}:
+            generation_mode = 'fast'
         
         # Create task
         task = Task(
@@ -790,7 +796,8 @@ def generate_descriptions(project_id):
             max_workers,
             app,
             language,
-            render_mode
+            render_mode,
+            generation_mode
         )
         
         # Update project status
@@ -1081,16 +1088,7 @@ def refine_outline(project_id):
                 layout_id=layout_id,  # 设置恢复/推断的 layout_id
                 status='DRAFT'
             )
-            page.set_outline_content({
-                'title': title,
-                'points': page_data.get('points', []),
-                'has_image': bool(page_data.get('has_image', False)),
-                'keywords': page_data.get('keywords', []),
-                'layout_archetype': page_data.get('layout_archetype'),
-                'layout_variant': page_data.get('layout_variant'),
-                'section_number': page_data.get('section_number'),
-                'subtitle': page_data.get('subtitle'),
-            })
+            page.set_outline_content(_build_outline_content_payload(page_data))
             
             # 尝试匹配并恢复已有的描述和 html_model
             # 注意：如果大纲结构发生变化，目录页(toc)和结束页(ending)等依赖全局结构的页面需要重新生成
@@ -1225,7 +1223,7 @@ def refine_descriptions(project_id):
                 current_html_models.append({
                     'index': i,
                     'title': outline_content.get('title', '未命名') if outline_content else '未命名',
-                    'layout_id': page.layout_id or 'title_bullets',
+                    'layout_id': page.layout_id or 'title_content',
                     'html_model': html_model if html_model else {}
                 })
             

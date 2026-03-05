@@ -54,6 +54,11 @@ TEMPLATE_PROMPT_PROFILES: Dict[str, Dict[str, str]] = {
         "background_style": "现代先锋底图，非对称几何与柔和渐层，质感高级。",
         "background_texture": "边缘可有玻璃态几何与斜切层次，中心留出讲解空间。",
     },
+    "edu_dark": {
+        "content_style": "深色教育演示视觉，高对比层次，强调结构化教学信息。",
+        "background_style": "深蓝渐层教学底图，边缘有弱光效，中心留白可读。",
+        "background_texture": "边缘可有细线光带与轻网格，禁止中心强主体抢正文。",
+    },
 }
 
 LAYOUT_INTENT_MAP: Dict[str, str] = {
@@ -232,7 +237,7 @@ def _normalize_slot_context(slot: Dict[str, Any], project: Any) -> Dict[str, Any
     scheme_id = _clean_text(
         raw_context.get("scheme_id")
         or getattr(project, "scheme_id", "")
-        or "tech_blue"
+        or "edu_dark"
     )
     visual_goal = _clean_text(raw_context.get("visual_goal", ""))
 
@@ -247,7 +252,7 @@ def _normalize_slot_context(slot: Dict[str, Any], project: Any) -> Dict[str, Any
         "asset_type": asset_type,
         "layout_id": layout_id,
         "slot_role": slot_role,
-        "scheme_id": scheme_id or "tech_blue",
+        "scheme_id": scheme_id or "edu_dark",
         "page_title": page_title,
         "facts": facts,
         "project_topic": project_topic,
@@ -273,7 +278,7 @@ def _build_content_rule_prompt(raw_prompt: str, context: Dict[str, Any], slot_ke
     focus = "；".join(facts[:6]) if facts else topic
     layout_id = context.get("layout_id", "title_content")
     slot_role = context.get("slot_role", "main")
-    scheme_id = context.get("scheme_id", "tech_blue")
+    scheme_id = context.get("scheme_id", "edu_dark")
     profile = _get_template_profile(scheme_id)
     industry = context.get("industry", "")
     audience = context.get("audience", "")
@@ -330,7 +335,7 @@ def _build_content_rule_prompt(raw_prompt: str, context: Dict[str, Any], slot_ke
 
 
 def _build_background_rule_prompt(raw_prompt: str, context: Dict[str, Any], slot_key: str) -> str:
-    scheme_id = context.get("scheme_id", "tech_blue")
+    scheme_id = context.get("scheme_id", "edu_dark")
     profile = _get_template_profile(scheme_id)
     topic = context.get("project_topic") or context.get("page_title") or "知识讲解主题"
     facts = context.get("facts", [])
@@ -567,8 +572,8 @@ def _pick_background_variant(slot_key: str) -> str:
 
 
 def _get_template_profile(scheme_id: str) -> Dict[str, str]:
-    key = (scheme_id or "tech_blue").strip().lower()
-    return TEMPLATE_PROMPT_PROFILES.get(key, TEMPLATE_PROMPT_PROFILES["tech_blue"])
+    key = (scheme_id or "edu_dark").strip().lower()
+    return TEMPLATE_PROMPT_PROFILES.get(key, TEMPLATE_PROMPT_PROFILES["edu_dark"])
 
 
 def _clean_json_block(text: str) -> str:

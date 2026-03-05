@@ -53,7 +53,7 @@ export async function generateOutline(
   topic: string,
   requirements?: string,
   language: string = 'zh',
-  schemeId: string = 'tech_blue'
+  schemeId: string = 'edu_dark'
 ): Promise<StructuredOutline> {
   const response = await fetch(`${API_BASE}/api/html-renderer/outline`, {
     method: 'POST',
@@ -123,7 +123,7 @@ export async function generateFullDocument(
   topic: string,
   requirements?: string,
   language: string = 'zh',
-  schemeId: string = 'tech_blue'
+  schemeId: string = 'edu_dark'
 ): Promise<PPTDocumentData> {
   const response = await fetch(`${API_BASE}/api/html-renderer/full-document`, {
     method: 'POST',
@@ -166,7 +166,7 @@ export async function generateDocumentWithProgress(
   requirements?: string,
   language: string = 'zh',
   onProgress?: ProgressCallback,
-  schemeId: string = 'tech_blue'
+  schemeId: string = 'edu_dark'
 ): Promise<PPTDocumentData> {
   // Step 1: 生成大纲
   onProgress?.(0, 100, '正在生成大纲...');

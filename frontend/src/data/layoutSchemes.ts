@@ -8,6 +8,13 @@ export interface LayoutScheme {
 
 export const layoutSchemes: LayoutScheme[] = [
   {
+    id: 'edu_dark',
+    name: '深色教育型',
+    description: '适合教学汇报与研究路演，深色沉浸视觉搭配结构化演进叙事。',
+    tags: ['教育', '深色', '叙事'],
+    accent: '#06b6d4',
+  },
+  {
     id: 'tech_blue',
     name: '科技发布型',
     description: '适合产品发布、技术路演与企业培训，强调清晰结构与高可读性。',

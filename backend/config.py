@@ -106,6 +106,17 @@ class Config:
     # 描述生成批次大小（image 模式下每次请求生成多少页）
     # 默认关闭批量（=1）以优先保证稳定性；需要提速时可手动调到 2-4。
     DESCRIPTION_BATCH_SIZE = _env_int('DESCRIPTION_BATCH_SIZE', 1)
+    # HTML 连续性生成模式：fast（默认，生产提速）| strict（高质量导出）
+    HTML_CONTINUITY_MODE = os.getenv('HTML_CONTINUITY_MODE', 'fast').strip().lower()
+    # HTML 模式首轮生成批量（建议 2-3）
+    HTML_DESCRIPTION_BATCH_SIZE = _env_int('HTML_DESCRIPTION_BATCH_SIZE', 3)
+    # 章节并行路数（章节内串行、章节间并行）
+    HTML_CHAPTER_PARALLELISM = _env_int('HTML_CHAPTER_PARALLELISM', 3)
+    # HTML 首轮与重写思考预算
+    HTML_FIRST_PASS_THINKING_BUDGET = _env_int('HTML_FIRST_PASS_THINKING_BUDGET', 280)
+    HTML_REWRITE_THINKING_BUDGET = _env_int('HTML_REWRITE_THINKING_BUDGET', 850)
+    # HTML strict 重写单页硬超时（秒），避免卡住整任务
+    HTML_REWRITE_TIMEOUT_SECONDS = _env_int('HTML_REWRITE_TIMEOUT_SECONDS', 210)
     MAX_IMAGE_WORKERS = int(os.getenv('MAX_IMAGE_WORKERS', '8'))
     
     # 图片生成配置
