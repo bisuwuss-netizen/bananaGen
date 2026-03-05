@@ -312,45 +312,65 @@ const EduCoreHubVariantB: React.FC<{ data: EduCoreHubModel; theme: ThemeConfig }
         justifyContent: 'center', alignItems: 'center', gap: 16
       }}>
         {tiers.map((tier, i) => {
-          // 金字塔宽度逻辑
+          // 金字塔宽度逐渐增加
           const width = 60 + (i * 20) + '%';
+
+          // 梯形切割逻辑
+          // 顶层(0): 只有上圆角，下直角
+          // 中层(1), 底层(2): 切割上角形成梯形拼接，只有下圆角
+          let clipStyle = '';
+          let borderRadiusStyle = '';
+          let marginStyle = '';
+
+          if (i === 0) {
+            borderRadiusStyle = '20px 20px 0 0';
+            clipStyle = 'polygon(0% 0%, 100% 0%, 95% 100%, 5% 100%)';
+          } else if (i === 1) {
+            borderRadiusStyle = '0';
+            marginStyle = '-15px';
+            clipStyle = 'polygon(5% 0%, 95% 0%, 98% 100%, 2% 100%)';
+          } else {
+            borderRadiusStyle = '0 0 20px 20px';
+            marginStyle = '-15px';
+            clipStyle = 'polygon(2% 0%, 98% 0%, 100% 100%, 0% 100%)';
+          }
 
           return (
             <div key={i} style={{
               width: width,
-              ...glass,
-              borderRadius: 20,
-              padding: '24px 32px',
-              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              marginTop: marginStyle,
+              background: `linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.01) 100%)`,
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              borderRadius: borderRadiusStyle,
+              clipPath: clipStyle,
+              borderTop: `2px solid ${tier.color}AA`,
+              boxShadow: i === 0 ? `0 -10px 40px -10px ${tier.color}40` : 'none',
+              padding: i === 0 ? '40px 32px 32px' : '32px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
               position: 'relative',
-              transition: 'transform 0.3s ease',
-              borderLeft: `4px solid ${tier.color}` // 侧边高亮
+              zIndex: 3 - i,
             }}>
-              {/* 梯形切角顶部装饰 */}
-              {i > 0 && (
-                <div style={{
-                  position: 'absolute', top: -20, left: '50%', transform: 'translateX(-50%)',
-                  width: '60%', height: 20,
-                  background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.02))',
-                  clipPath: 'polygon(10% 0, 90% 0, 100% 100%, 0% 100%)',
-                }} />
-              )}
 
               <div style={{
-                position: 'absolute', top: 12, left: 24,
-                fontSize: 13, color: tier.color, letterSpacing: 2, fontWeight: 800, opacity: 0.8
+                fontSize: 12, color: tier.color, letterSpacing: 3,
+                fontWeight: 800, opacity: 0.9, textTransform: 'uppercase',
+                marginBottom: 16,
+                textShadow: `0 0 10px ${tier.color}80`
               }}>
                 {tier.title}
               </div>
 
               <div style={{
-                display: 'flex', gap: 32, marginTop: 16,
+                display: 'flex', gap: 24,
                 justifyContent: 'center', width: '100%', flexWrap: 'wrap'
               }}>
                 {tier.nodes.map((node, ni) => (
                   <div key={ni} style={{
-                    fontSize: 22, fontWeight: 600, color: '#fff',
-                    textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                    fontSize: i === 0 ? 26 : 22,
+                    fontWeight: i === 0 ? 700 : 600,
+                    color: '#fff',
+                    textShadow: '0 2px 4px rgba(0,0,0,0.8)'
                   }}>
                     {node}
                   </div>
@@ -466,14 +486,35 @@ function renderEduCoreHubVariantBHTML(data: EduCoreHubModel, theme: ThemeConfig)
 
   const tiersHTML = tiers.map((tier, i) => {
     const width = 60 + (i * 20) + '%';
+
+    let clipStyle = '';
+    let borderRadiusStyle = '';
+    let marginStyle = '';
+
+    if (i === 0) {
+      borderRadiusStyle = '20px 20px 0 0';
+      clipStyle = 'polygon(0% 0%, 100% 0%, 95% 100%, 5% 100%)';
+    } else if (i === 1) {
+      borderRadiusStyle = '0';
+      marginStyle = '-15px';
+      clipStyle = 'polygon(5% 0%, 95% 0%, 98% 100%, 2% 100%)';
+    } else {
+      borderRadiusStyle = '0 0 20px 20px';
+      marginStyle = '-15px';
+      clipStyle = 'polygon(2% 0%, 98% 0%, 100% 100%, 0% 100%)';
+    }
+
+    const paddingStyle = i === 0 ? '40px 32px 32px' : '32px';
+    const shadowStyle = i === 0 ? `box-shadow: 0 -10px 40px -10px ${tier.color}40;` : '';
+    const zIndex = 3 - i;
+
     const nodesHTML = tier.nodes.map(node =>
-      `<div style="font-size:22px;font-weight:600;color:#fff;text-shadow:0 2px 4px rgba(0,0,0,0.5);">${node}</div>`
+      `<div style="font-size:${i === 0 ? 26 : 22}px;font-weight:${i === 0 ? 700 : 600};color:#fff;text-shadow:0 2px 4px rgba(0,0,0,0.8);">${node}</div>`
     ).join('');
 
-    return `<div style="width:${width};background:rgba(255,255,255,0.03);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 32px 0 rgba(0,0,0,0.36);border-radius:20px;padding:24px 32px;display:flex;flex-direction:column;align-items:center;position:relative;border-left:4px solid ${tier.color};">
-      ${i > 0 ? `<div style="position:absolute;top:-20px;left:50%;transform:translateX(-50%);width:60%;height:20px;background:linear-gradient(to bottom, transparent, rgba(255,255,255,0.02));clip-path:polygon(10% 0, 90% 0, 100% 100%, 0% 100%);"></div>` : ''}
-      <div style="position:absolute;top:12px;left:24px;font-size:13px;color:${tier.color};letter-spacing:2px;font-weight:800;opacity:0.8;">${tier.title}</div>
-      <div style="display:flex;gap:32px;margin-top:16px;justify-content:center;width:100%;flex-wrap:wrap;">${nodesHTML}</div>
+    return `<div style="width:${width};margin-top:${marginStyle};background:linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.01) 100%);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:${borderRadiusStyle};clip-path:${clipStyle};border-top:2px solid ${tier.color}AA;${shadowStyle}padding:${paddingStyle};display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;z-index:${zIndex};">
+      <div style="font-size:12px;color:${tier.color};letter-spacing:3px;font-weight:800;opacity:0.9;text-transform:uppercase;margin-bottom:16px;text-shadow:0 0 10px ${tier.color}80;">${tier.title}</div>
+      <div style="display:flex;gap:24px;justify-content:center;width:100%;flex-wrap:wrap;">${nodesHTML}</div>
     </div>`;
   }).join('');
 
@@ -485,7 +526,7 @@ function renderEduCoreHubVariantBHTML(data: EduCoreHubModel, theme: ThemeConfig)
     </div>
     ${subtitleHTML}
   </div>
-  <div style="flex-grow:1;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:16px;">
+  <div style="margin-top:20px;display:flex;flex-direction:column;justify-content:center;align-items:center;">
     ${tiersHTML}
   </div>
 </section>`;
