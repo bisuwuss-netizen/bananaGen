@@ -616,6 +616,7 @@ export interface EduTocModel {
 export interface EduTriCompareModel {
   title: string;
   badge?: string;
+  variant?: string;
   columns: {
     title: string;
     points: string[];
@@ -636,6 +637,7 @@ export interface EduCoreHubModel {
 export interface EduTimelineStepsModel {
   title: string;
   subtitle?: string;
+  variant?: string;
   steps: {
     title: string;
     description: string;
@@ -672,6 +674,7 @@ export interface EduDataBoardModel {
 
 export interface EduSummaryModel {
   title: string;
+  variant?: string;
   columns: {
     title: string;
     points: string[];

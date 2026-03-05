@@ -19,16 +19,17 @@ type LooseEduTimelineStepsModel = Partial<EduTimelineStepsModel> & {
 
 function normalizeModel(input: LooseEduTimelineStepsModel): EduTimelineStepsModel {
   const rawSteps = Array.isArray(input.steps) ? input.steps : [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let steps = rawSteps
-    .map((item) => {
+    .map((item: any) => {
       const title = String(item.title || item.label || '').trim();
       const description = String(item.description || '').trim();
       const highlights = Array.isArray(item.details)
-        ? item.details.map((row) => String(row || '').trim()).filter(Boolean).slice(0, 3)
-        : [];
+        ? item.details.map((row: string) => String(row || '').trim()).filter(Boolean).slice(0, 3)
+        : (Array.isArray(item.highlights) ? item.highlights.map((row: string) => String(row || '').trim()).filter(Boolean).slice(0, 3) : []);
       return { title, description, highlights };
     })
-    .filter((item) => item.title || item.description);
+    .filter((item: { title: string; description: string }) => item.title || item.description);
 
   if (steps.length === 0) {
     const rawContent = Array.isArray(input.content)
@@ -66,13 +67,24 @@ function normalizeModel(input: LooseEduTimelineStepsModel): EduTimelineStepsMode
   return {
     title: String(input.title || '').trim() || '实施方案与推进步骤',
     subtitle: input.subtitle,
+    variant: input.variant,
     steps: steps.slice(0, 4),
     background_image: input.background_image,
   };
 }
 
+const STEP_COLORS = ['#06b6d4', '#3b82f6', '#10b981', '#f59e0b'];
+const STEP_TITLE_COLORS = ['#67e8f9', '#93c5fd', '#6ee7b7', '#fcd34d'];
+
+// ===================== Variant A (原版: 左侧垂直时间轴) =====================
+
 export const EduTimelineStepsLayout: React.FC<EduTimelineStepsLayoutProps> = ({ model, theme }) => {
   const data = normalizeModel(model);
+  const variant = String(data.variant || 'a').toLowerCase();
+
+  if (variant === 'b') {
+    return <EduTimelineStepsVariantB data={data} theme={theme} />;
+  }
 
   const slideStyle: React.CSSProperties = {
     width: 1280,
@@ -168,8 +180,130 @@ export const EduTimelineStepsLayout: React.FC<EduTimelineStepsLayoutProps> = ({ 
   );
 };
 
+// ===================== Variant B (水平横向步骤条) =====================
+
+const EduTimelineStepsVariantB: React.FC<{ data: EduTimelineStepsModel; theme: ThemeConfig }> = ({ data, theme }) => {
+  const slideStyle: React.CSSProperties = {
+    width: 1280,
+    height: 720,
+    flexShrink: 0,
+    backgroundColor: '#0b1120',
+    backgroundImage: data.background_image
+      ? `linear-gradient(rgba(6,12,28,0.9), rgba(6,12,28,0.9)), url(${data.background_image})`
+      : undefined,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    padding: '60px 80px',
+    boxSizing: 'border-box',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+    fontFamily: theme.fonts.body,
+  };
+
+  const steps = data.steps.slice(0, 4);
+
+  return (
+    <section style={slideStyle}>
+      {/* Header */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
+        borderBottom: '2px solid rgba(6, 182, 212, 0.3)', paddingBottom: 20, marginBottom: 60,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div style={{ width: 8, height: 40, backgroundColor: '#06b6d4', marginRight: 20, borderRadius: 4 }} />
+          <h2 style={{ fontSize: 42, color: '#ffffff', margin: 0, fontWeight: 'bold', fontFamily: theme.fonts.title }}>{data.title}</h2>
+        </div>
+        {data.subtitle && (
+          <div style={{ fontSize: 24, color: '#93c5fd', fontWeight: 300 }}>{data.subtitle}</div>
+        )}
+      </div>
+
+      {/* Content area with horizontal stepper */}
+      <div style={{ position: 'relative', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+        {/* Horizontal connecting axis */}
+        <div style={{
+          position: 'absolute', top: 30,
+          left: `${100 / (steps.length * 2)}%`,
+          right: `${100 / (steps.length * 2)}%`,
+          height: 4,
+          backgroundImage: (() => {
+            const pct = 100 / steps.length;
+            const segments = steps.map((_, i) => {
+              const color = i === 0 ? STEP_COLORS[0] : `rgba(${i % 2 === 1 ? '59,130,246' : '16,185,129'},0.3)`;
+              return `${color} ${i * pct}%, ${color} ${(i + 1) * pct}%`;
+            }).join(', ');
+            return `linear-gradient(to right, ${segments})`;
+          })(),
+          zIndex: 1,
+        }} />
+
+        {/* Steps container */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative', zIndex: 2, height: '100%' }}>
+          {steps.map((step, index) => {
+            const color = STEP_COLORS[index % STEP_COLORS.length];
+            const titleColor = STEP_TITLE_COLORS[index % STEP_TITLE_COLORS.length];
+            const isFirst = index === 0;
+
+            return (
+              <div key={index} style={{
+                width: `${Math.floor(90 / steps.length)}%`,
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+              }}>
+                {/* Number circle */}
+                <div style={{
+                  width: 64, height: 64, backgroundColor: '#0b1120',
+                  border: `4px solid ${color}`, borderRadius: '50%',
+                  display: 'flex', justifyContent: 'center', alignItems: 'center',
+                  fontSize: 28, color, fontWeight: 'bold', marginBottom: 30,
+                  boxShadow: isFirst ? `0 0 20px rgba(6, 182, 212, 0.5)` : 'none',
+                  boxSizing: 'border-box',
+                }}>
+                  {String(index + 1).padStart(2, '0')}
+                </div>
+
+                {/* Card */}
+                <div style={{
+                  width: '100%',
+                  backgroundImage: isFirst ? `linear-gradient(180deg, rgba(6, 182, 212, 0.15), rgba(0,0,0,0))` : undefined,
+                  backgroundColor: isFirst ? undefined : 'rgba(255,255,255,0.02)',
+                  border: isFirst ? `1px solid rgba(6, 182, 212, 0.4)` : '1px solid rgba(255,255,255,0.08)',
+                  borderTop: `4px solid ${color}`,
+                  borderRadius: 16, padding: 30, boxSizing: 'border-box', flexGrow: 1,
+                }}>
+                  <h3 style={{ fontSize: 24, color: titleColor, textAlign: 'center', margin: '0 0 20px 0', fontWeight: 'bold', fontFamily: theme.fonts.title }}>{step.title}</h3>
+                  {step.description && (
+                    <p style={{ fontSize: 16, color: isFirst ? '#cbd5e1' : '#94a3b8', margin: 0, lineHeight: 1.6 }}>{step.description}</p>
+                  )}
+                  {Array.isArray(step.highlights) && step.highlights.length > 0 && (
+                    <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {step.highlights.slice(0, 3).map((text, idx) => (
+                        <p key={idx} style={{ fontSize: 16, color: '#cbd5e1', margin: '0 0 12px 0', lineHeight: 1.6 }}>
+                          • {text}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// ===================== HTML 渲染 =====================
+
 export function renderEduTimelineStepsLayoutHTML(model: EduTimelineStepsModel, theme: ThemeConfig): string {
   const data = normalizeModel(model as LooseEduTimelineStepsModel);
+  const variant = String(data.variant || 'a').toLowerCase();
+
+  if (variant === 'b') {
+    return renderEduTimelineStepsVariantBHTML(data, theme);
+  }
+
   const background = data.background_image
     ? `linear-gradient(rgba(6,12,28,0.9), rgba(6,12,28,0.9)), url(${data.background_image}) center/cover no-repeat`
     : '#0b1120';
@@ -203,6 +337,64 @@ export function renderEduTimelineStepsLayoutHTML(model: EduTimelineStepsModel, t
   <div style="position:relative;height:calc(100% - 106px);padding-left:26px;">
     <div style="position:absolute;left:44px;top:10px;bottom:18px;width:2px;background:rgba(6,182,212,0.35);"></div>
     <div style="display:flex;flex-direction:column;gap:26px;">${stepsHTML}</div>
+  </div>
+</section>`;
+}
+
+function renderEduTimelineStepsVariantBHTML(data: EduTimelineStepsModel, theme: ThemeConfig): string {
+  const subtitleHTML = data.subtitle
+    ? `<div style="font-size:24px;color:#93c5fd;font-weight:300;">${data.subtitle}</div>`
+    : '';
+
+  const steps = data.steps.slice(0, 4);
+  const colWidth = Math.floor(90 / steps.length);
+
+  const stepsHTML = steps.map((step, index) => {
+    const color = STEP_COLORS[index % STEP_COLORS.length];
+    const titleColor = STEP_TITLE_COLORS[index % STEP_TITLE_COLORS.length];
+    const isFirst = index === 0;
+    const num = String(index + 1).padStart(2, '0');
+    const cardBg = isFirst ? 'background-image:linear-gradient(180deg, rgba(6,182,212,0.15), rgba(0,0,0,0));' : 'background-color:rgba(255,255,255,0.02);';
+    const cardBorder = isFirst ? 'border:1px solid rgba(6,182,212,0.4);' : 'border:1px solid rgba(255,255,255,0.08);';
+    const shadow = isFirst ? 'box-shadow:0 0 20px rgba(6,182,212,0.5);' : '';
+    const textColor = isFirst ? '#cbd5e1' : '#94a3b8';
+
+    const highlightsHTML = Array.isArray(step.highlights) && step.highlights.length > 0
+      ? step.highlights.slice(0, 3).map((text) => `<p style="font-size:16px;color:#cbd5e1;margin:0 0 12px 0;line-height:1.6;">• ${text}</p>`).join('')
+      : '';
+    const descHTML = step.description
+      ? `<p style="font-size:16px;color:${textColor};margin:0;line-height:1.6;">${step.description}</p>`
+      : '';
+
+    return `<div style="width:${colWidth}%;display:flex;flex-direction:column;align-items:center;">
+      <div style="width:64px;height:64px;background-color:#0b1120;border:4px solid ${color};border-radius:50%;display:flex;justify-content:center;align-items:center;font-size:28px;color:${color};font-weight:bold;margin-bottom:30px;${shadow}box-sizing:border-box;">${num}</div>
+      <div style="width:100%;${cardBg}${cardBorder}border-top:4px solid ${color};border-radius:16px;padding:30px;box-sizing:border-box;flex-grow:1;">
+        <h3 style="font-size:24px;color:${titleColor};text-align:center;margin:0 0 20px 0;font-weight:bold;font-family:${theme.fonts.title};">${step.title}</h3>
+        ${descHTML}
+        ${highlightsHTML ? `<div style="margin-top:12px;">${highlightsHTML}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Horizontal connecting axis gradient
+  const pct = 100 / steps.length;
+  const segments = steps.map((_, i) => {
+    const c = i === 0 ? STEP_COLORS[0] : `rgba(${i % 2 === 1 ? '59,130,246' : '16,185,129'},0.3)`;
+    return `${c} ${i * pct}%, ${c} ${(i + 1) * pct}%`;
+  }).join(', ');
+  const axisLeft = `${100 / (steps.length * 2)}%`;
+
+  return `<section style="width:1280px;height:720px;flex-shrink:0;background-color:#0b1120;${data.background_image ? `background-image:linear-gradient(rgba(6,12,28,0.9),rgba(6,12,28,0.9)),url(${data.background_image});background-size:cover;background-position:center;` : ''}padding:60px 80px;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;font-family:${theme.fonts.body};">
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid rgba(6,182,212,0.3);padding-bottom:20px;margin-bottom:60px;">
+    <div style="display:flex;align-items:center;">
+      <div style="width:8px;height:40px;background-color:#06b6d4;margin-right:20px;border-radius:4px;"></div>
+      <h2 style="font-size:42px;color:#ffffff;margin:0;font-weight:bold;font-family:${theme.fonts.title};">${data.title}</h2>
+    </div>
+    ${subtitleHTML}
+  </div>
+  <div style="position:relative;flex-grow:1;display:flex;flex-direction:column;">
+    <div style="position:absolute;top:30px;left:${axisLeft};right:${axisLeft};height:4px;background-image:linear-gradient(to right, ${segments});z-index:1;"></div>
+    <div style="display:flex;justify-content:space-between;position:relative;z-index:2;height:100%;">${stepsHTML}</div>
   </div>
 </section>`;
 }
