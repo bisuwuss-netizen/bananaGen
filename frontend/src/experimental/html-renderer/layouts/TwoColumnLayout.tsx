@@ -17,6 +17,22 @@ interface TwoColumnLayoutProps {
   onImageUpload?: (slotPath: string) => void; // 图片上传回调
 }
 
+type ResolvedColumnType = 'text' | 'image' | 'bullets';
+
+function resolveColumnType(content: ColumnContent): ResolvedColumnType {
+  if (content.type) return content.type;
+  if (content.bullets && content.bullets.length > 0) return 'bullets';
+  if (content.image_src) return 'image';
+  return 'text';
+}
+
+function normalizeContentLines(content: ColumnContent['content']): string[] {
+  const raw = Array.isArray(content) ? content : [content || ''];
+  return raw
+    .map((item) => String(item || '').trim())
+    .filter(Boolean);
+}
+
 export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({ model, theme, onImageUpload }) => {
   const { title, left, right, background_image } = model;
 
@@ -78,6 +94,9 @@ const ColumnRenderer: React.FC<{
   theme,
   onImageUpload,
 }) => {
+    const resolvedType = resolveColumnType(content);
+    const contentArray = normalizeContentLines(content.content);
+
     const headerStyle = toInlineStyle({
       fontSize: '24px',
       fontWeight: '600',
@@ -118,6 +137,26 @@ const ColumnRenderer: React.FC<{
       marginTop: '12px',
     });
 
+    const bulletTextWrapStyle = toInlineStyle({
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '4px',
+    });
+
+    const bulletTitleStyle = toInlineStyle({
+      fontSize: theme.sizes.bodySize,
+      color: theme.colors.text,
+      lineHeight: '1.8',
+      margin: '0',
+    });
+
+    const bulletDescriptionStyle = toInlineStyle({
+      fontSize: '14px',
+      color: theme.colors.textLight,
+      lineHeight: '1.6',
+      margin: '0',
+    });
+
     const bulletIconStyle = toInlineStyle({
       width: '24px',
       height: '24px',
@@ -132,7 +171,7 @@ const ColumnRenderer: React.FC<{
       marginTop: '2px',
     });
 
-    if (content.type === 'image') {
+    if (resolvedType === 'image') {
       return (
         <>
           {content.header && <h3 style={parseStyle(headerStyle)}>{content.header}</h3>}
@@ -161,12 +200,17 @@ const ColumnRenderer: React.FC<{
       );
     }
 
-    if (content.type === 'bullets') {
+    if (resolvedType === 'bullets') {
       // 优先使用 bullets 数组
       if (content.bullets && content.bullets.length > 0) {
         return (
           <>
             {content.header && <h3 style={parseStyle(headerStyle)}>{content.header}</h3>}
+            {contentArray.map((text, index) => (
+              <p key={`intro-${index}`} style={{ ...parseStyle(textStyle), marginTop: index > 0 ? '10px' : '0' }}>
+                {text}
+              </p>
+            ))}
             <div>
               {content.bullets.map((bullet, index) => (
                 <div key={index} style={parseStyle(bulletItemStyle)}>
@@ -177,7 +221,12 @@ const ColumnRenderer: React.FC<{
                       <i className="fa fa-check" />
                     )}
                   </div>
-                  <span style={parseStyle(textStyle)}>{bullet.text}</span>
+                  <div style={parseStyle(bulletTextWrapStyle)}>
+                    <p style={parseStyle(bulletTitleStyle)}>{bullet.text}</p>
+                    {bullet.description && (
+                      <p style={parseStyle(bulletDescriptionStyle)}>{bullet.description}</p>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -186,7 +235,6 @@ const ColumnRenderer: React.FC<{
       }
 
       // Fallback: 如果使用了 content 数组但 type=bullets，解析其中可能的 HTML 标签
-      const contentArray = Array.isArray(content.content) ? content.content : [content.content || ''];
       return (
         <>
           {content.header && <h3 style={parseStyle(headerStyle)}>{content.header}</h3>}
@@ -212,7 +260,6 @@ const ColumnRenderer: React.FC<{
     }
 
     // 默认文本类型
-    const contentArray = Array.isArray(content.content) ? content.content : [content.content || ''];
     return (
       <>
         {content.header && <h3 style={parseStyle(headerStyle)}>{content.header}</h3>}
@@ -270,6 +317,9 @@ export function renderTwoColumnLayoutHTML(model: TwoColumnModel, theme: ThemeCon
   });
 
   function renderColumnHTML(content: ColumnContent): string {
+    const resolvedType = resolveColumnType(content);
+    const contentArray = normalizeContentLines(content.content);
+
     const headerStyle = toInlineStyle({
       fontSize: '24px',
       fontWeight: '600',
@@ -310,6 +360,26 @@ export function renderTwoColumnLayoutHTML(model: TwoColumnModel, theme: ThemeCon
       marginTop: '12px',
     });
 
+    const bulletTextWrapStyle = toInlineStyle({
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '4px',
+    });
+
+    const bulletTitleStyle = toInlineStyle({
+      fontSize: theme.sizes.bodySize,
+      color: theme.colors.text,
+      lineHeight: '1.8',
+      margin: '0',
+    });
+
+    const bulletDescriptionStyle = toInlineStyle({
+      fontSize: '14px',
+      color: theme.colors.textLight,
+      lineHeight: '1.6',
+      margin: '0',
+    });
+
     const bulletIconStyle = toInlineStyle({
       width: '24px',
       height: '24px',
@@ -329,7 +399,7 @@ export function renderTwoColumnLayoutHTML(model: TwoColumnModel, theme: ThemeCon
       html += `<h3 style="${headerStyle}">${content.header}</h3>`;
     }
 
-    if (content.type === 'image') {
+    if (resolvedType === 'image') {
       if (content.image_src) {
         html += `<div style="${imageFrameStyle}"><img src="${content.image_src}" alt="${content.image_alt || ''}" style="${imageStyle}" /></div>`;
       } else {
@@ -339,20 +409,42 @@ export function renderTwoColumnLayoutHTML(model: TwoColumnModel, theme: ThemeCon
         });
         html += `<div style="${placeholderStyle}">[图片占位]</div>`;
       }
-    } else if (content.type === 'bullets' && content.bullets) {
-      html += '<div>';
-      content.bullets.forEach((bullet) => {
-        const iconClass = bullet.icon
-          ? bullet.icon.startsWith('fa') ? bullet.icon : `fa ${bullet.icon}`
-          : 'fa fa-check';
-        html += `<div style="${bulletItemStyle}">
-          <div style="${bulletIconStyle}"><i class="${iconClass}"></i></div>
-          <span style="${textStyle}">${bullet.text}</span>
-        </div>`;
-      });
-      html += '</div>';
+    } else if (resolvedType === 'bullets') {
+      if (content.bullets && content.bullets.length > 0) {
+        contentArray.forEach((text, index) => {
+          const marginStyle = index > 0 ? 'margin-top:10px;' : '';
+          html += `<p style="${textStyle}${marginStyle}">${text}</p>`;
+        });
+        html += '<div>';
+        content.bullets.forEach((bullet) => {
+          const iconClass = bullet.icon
+            ? bullet.icon.startsWith('fa') ? bullet.icon : `fa ${bullet.icon}`
+            : 'fa fa-check';
+          html += `<div style="${bulletItemStyle}">
+            <div style="${bulletIconStyle}"><i class="${iconClass}"></i></div>
+            <div style="${bulletTextWrapStyle}">
+              <p style="${bulletTitleStyle}">${bullet.text}</p>
+              ${bullet.description ? `<p style="${bulletDescriptionStyle}">${bullet.description}</p>` : ''}
+            </div>
+          </div>`;
+        });
+        html += '</div>';
+      } else {
+        contentArray.forEach((text, index) => {
+          const iconMatch = text.match(/<i[^>]*class=["']([^"']+)["'][^>]*><\/i>\s*/);
+          const cleanText = text.replace(/<i[^>]*><\/i>\s*/, '').trim();
+          const iconClass = iconMatch ? iconMatch[1] : 'fa fa-check';
+          const marginStyle = index > 0 ? 'margin-top:10px;' : '';
+
+          html += `<div style="${bulletItemStyle}${marginStyle}">
+            <div style="${bulletIconStyle}"><i class="${iconClass}"></i></div>
+            <div style="${bulletTextWrapStyle}">
+              <p style="${bulletTitleStyle}">${cleanText}</p>
+            </div>
+          </div>`;
+        });
+      }
     } else {
-      const contentArray = Array.isArray(content.content) ? content.content : [content.content || ''];
       contentArray.forEach((text, index) => {
         const marginStyle = index > 0 ? 'margin-top:16px;' : '';
         html += `<p style="${textStyle}${marginStyle}">${text}</p>`;

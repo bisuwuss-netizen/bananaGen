@@ -29,7 +29,7 @@ export const Home: React.FC = () => {
   const [content, setContent] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<File | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
-  const [selectedSchemeId, setSelectedSchemeId] = useState<string>('tech_blue');
+  const [selectedSchemeId, setSelectedSchemeId] = useState<string>('edu_dark');
   const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [userTemplates, setUserTemplates] = useState<UserTemplate[]>([]);

@@ -37,6 +37,15 @@ import {
   VerticalTimelineModel,
   TriColumnModel,
   CinematicOverlayModel,
+  // Edu dark scheme
+  EduCoverModel,
+  EduTocModel,
+  EduTriCompareModel,
+  EduCoreHubModel,
+  EduTimelineStepsModel,
+  EduLogicFlowModel,
+  EduDataBoardModel,
+  EduSummaryModel,
 } from '../types/schema';
 import { CoverLayout } from '../layouts/CoverLayout';
 import { TocLayout } from '../layouts/TocLayout';
@@ -68,6 +77,15 @@ import { ConcentricFocusLayout } from '../layouts/ConcentricFocusLayout';
 import { VerticalTimelineLayout } from '../layouts/VerticalTimelineLayout';
 import { TriColumnLayout } from '../layouts/TriColumnLayout';
 import { CinematicOverlayLayout } from '../layouts/CinematicOverlayLayout';
+// Edu dark scheme
+import { EduCoverLayout } from '../layouts/EduCoverLayout';
+import { EduTocLayout } from '../layouts/EduTocLayout';
+import { EduTriCompareLayout } from '../layouts/EduTriCompareLayout';
+import { EduCoreHubLayout } from '../layouts/EduCoreHubLayout';
+import { EduTimelineStepsLayout } from '../layouts/EduTimelineStepsLayout';
+import { EduLogicFlowLayout } from '../layouts/EduLogicFlowLayout';
+import { EduDataBoardLayout } from '../layouts/EduDataBoardLayout';
+import { EduSummaryLayout } from '../layouts/EduSummaryLayout';
 import { normalizeLayoutId } from '../layouts';
 
 interface SlideRendererProps {
@@ -233,6 +251,23 @@ export const SlideRenderer: React.FC<SlideRendererProps> = ({
         return <TriColumnLayout model={model as TriColumnModel} theme={theme} />;
       case 'cinematic_overlay':
         return <CinematicOverlayLayout model={model as CinematicOverlayModel} theme={theme} />;
+      // Edu dark scheme
+      case 'edu_cover':
+        return <EduCoverLayout model={model as EduCoverModel} theme={theme} onImageUpload={onImageUpload ? () => onImageUpload('hero_image') : undefined} />;
+      case 'edu_toc':
+        return <EduTocLayout model={model as EduTocModel} theme={theme} />;
+      case 'edu_tri_compare':
+        return <EduTriCompareLayout model={model as EduTriCompareModel} theme={theme} />;
+      case 'edu_core_hub':
+        return <EduCoreHubLayout model={model as EduCoreHubModel} theme={theme} />;
+      case 'edu_timeline_steps':
+        return <EduTimelineStepsLayout model={model as EduTimelineStepsModel} theme={theme} />;
+      case 'edu_logic_flow':
+        return <EduLogicFlowLayout model={model as EduLogicFlowModel} theme={theme} />;
+      case 'edu_data_board':
+        return <EduDataBoardLayout model={model as EduDataBoardModel} theme={theme} />;
+      case 'edu_summary':
+        return <EduSummaryLayout model={model as EduSummaryModel} theme={theme} />;
 
       default:
         return (

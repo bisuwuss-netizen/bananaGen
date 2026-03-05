@@ -218,6 +218,28 @@ def apply_page_model_quality_guard(
         if "image_alt" in safe_model:
             safe_model["image_alt"] = _clean_short(safe_model.get("image_alt")) or page_title
 
+    # Respect optional image switches from outline contract.
+    # If has_image=false, remove optional image fields to avoid accidental left-text-right-image homogenization.
+    wants_image = bool((page_outline or {}).get("has_image", False))
+    if not wants_image:
+        if resolved_layout in {"title_content", "title_bullets", "process_steps"}:
+            safe_model.pop("image", None)
+        if resolved_layout == "cover":
+            safe_model.pop("background_image", None)
+        if resolved_layout == "two_column":
+            for side_key in ("left", "right"):
+                column = safe_model.get(side_key)
+                if not isinstance(column, dict):
+                    continue
+                column.pop("image_src", None)
+                column.pop("image_alt", None)
+                if column.get("type") == "image":
+                    if isinstance(column.get("bullets"), list) and column.get("bullets"):
+                        column["type"] = "bullets"
+                    else:
+                        column["type"] = "text"
+                safe_model[side_key] = column
+
     # Final recursive pass for rich text fields.
     _sanitize_rich_text_fields(safe_model, page_title)
     return safe_model
@@ -466,7 +488,10 @@ def _infer_base_layout_for_topic(topic: str) -> str:
         return "two_column"
     if _contains_any(lowered, _CASE_KEYWORDS):
         return "title_content"
-    return "title_bullets"
+    if _contains_any(lowered, {"要点", "清单", "原则", "维度", "特征", "类型", "分类"}):
+        return "title_bullets"
+    # 默认使用段落型内容，避免过多卡片化要点页导致版式同质化
+    return "title_content"
 
 
 def _pick_scheme_layout(base_layout: str, scheme_id: str) -> str:
@@ -522,7 +547,8 @@ def _build_outline_page(
 
     if render_mode == "html":
         layout_id = _pick_scheme_layout(base_layout, scheme_id)
-        has_image = base_layout in {"title_content", "title_bullets", "two_column", "image_full"}
+        # 质量守卫自动补页默认不强制配图，避免出现大量“左文右图”占位页
+        has_image = base_layout == "image_full"
         page.update(
             {
                 "layout_id": layout_id,

@@ -95,7 +95,16 @@ export type LayoutId =
   | 'concentric_focus'       // 同心聚焦 - 适合关键问题/转场
   | 'vertical_timeline'      // 垂直脉络 - 适合时间轴/大纲
   | 'tri_column'             // 三柱支撑 - 适合三大要素
-  | 'cinematic_overlay';     // 沉浸全图 - 适合案例/封面
+  | 'cinematic_overlay'      // 沉浸全图 - 适合案例/封面
+  // Edu dark scheme - 教育深色风方案
+  | 'edu_cover'
+  | 'edu_toc'
+  | 'edu_tri_compare'
+  | 'edu_core_hub'
+  | 'edu_timeline_steps'
+  | 'edu_logic_flow'
+  | 'edu_data_board'
+  | 'edu_summary';
 
 // 布局Model联合类型
 export type LayoutModel =
@@ -131,7 +140,16 @@ export type LayoutModel =
   | ConcentricFocusModel
   | VerticalTimelineModel
   | TriColumnModel
-  | CinematicOverlayModel;
+  | CinematicOverlayModel
+  // 教育深色风方案专属布局
+  | EduCoverModel
+  | EduTocModel
+  | EduTriCompareModel
+  | EduCoreHubModel
+  | EduTimelineStepsModel
+  | EduLogicFlowModel
+  | EduDataBoardModel
+  | EduSummaryModel;
 
 // ==================== 各布局Model定义 ====================
 
@@ -194,7 +212,7 @@ export interface TwoColumnModel {
 }
 
 export interface ColumnContent {
-  type: 'text' | 'image' | 'bullets';
+  type?: 'text' | 'image' | 'bullets';
   header?: string;
   content?: string | string[];
   image_src?: string;
@@ -202,6 +220,7 @@ export interface ColumnContent {
   bullets?: {
     icon?: string;
     text: string;
+    description?: string;
   }[];
 }
 
@@ -558,5 +577,94 @@ export interface CinematicOverlayModel {
     value: string;          // 数值（如 95%）
     label: string;          // 数值标签（如 生成可用率）
   };
+  background_image?: string;
+}
+
+// ==================== 教育深色风方案专属布局Model定义 ====================
+
+export interface EduCoverModel {
+  title: string;
+  subtitle?: string;
+  author?: string;
+  department?: string;
+  date?: string;
+  hero_image?: string;
+  background_image?: string;
+}
+
+export interface EduTocModel {
+  title: string;
+  subtitle?: string;
+  items: {
+    index: number;
+    text: string;
+  }[];
+  background_image?: string;
+}
+
+export interface EduTriCompareModel {
+  title: string;
+  badge?: string;
+  columns: {
+    title: string;
+    points: string[];
+  }[];
+  background_image?: string;
+}
+
+export interface EduCoreHubModel {
+  title: string;
+  subtitle?: string;
+  center_label: string;
+  nodes: {
+    title: string;
+  }[];
+  background_image?: string;
+}
+
+export interface EduTimelineStepsModel {
+  title: string;
+  subtitle?: string;
+  steps: {
+    title: string;
+    description: string;
+    highlights?: string[];
+  }[];
+  background_image?: string;
+}
+
+export interface EduLogicFlowModel {
+  title: string;
+  stages: {
+    title: string;
+    description: string;
+  }[];
+  background_image?: string;
+}
+
+export interface EduDataBoardModel {
+  title: string;
+  subtitle?: string;
+  metrics: {
+    value: string;
+    label: string;
+    note?: string;
+  }[];
+  bars: {
+    label: string;
+    baseline: number;
+    current: number;
+  }[];
+  insight?: string;
+  background_image?: string;
+}
+
+export interface EduSummaryModel {
+  title: string;
+  columns: {
+    title: string;
+    points: string[];
+  }[];
+  closing?: string;
   background_image?: string;
 }

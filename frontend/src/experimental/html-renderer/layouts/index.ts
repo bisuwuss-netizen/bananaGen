@@ -23,6 +23,15 @@ export { ConcentricFocusLayout, renderConcentricFocusLayoutHTML } from './Concen
 export { VerticalTimelineLayout, renderVerticalTimelineLayoutHTML } from './VerticalTimelineLayout';
 export { TriColumnLayout, renderTriColumnLayoutHTML } from './TriColumnLayout';
 export { CinematicOverlayLayout, renderCinematicOverlayLayoutHTML } from './CinematicOverlayLayout';
+// Edu dark scheme
+export { EduCoverLayout, renderEduCoverLayoutHTML } from './EduCoverLayout';
+export { EduTocLayout, renderEduTocLayoutHTML } from './EduTocLayout';
+export { EduTriCompareLayout, renderEduTriCompareLayoutHTML } from './EduTriCompareLayout';
+export { EduCoreHubLayout, renderEduCoreHubLayoutHTML } from './EduCoreHubLayout';
+export { EduTimelineStepsLayout, renderEduTimelineStepsLayoutHTML } from './EduTimelineStepsLayout';
+export { EduLogicFlowLayout, renderEduLogicFlowLayoutHTML } from './EduLogicFlowLayout';
+export { EduDataBoardLayout, renderEduDataBoardLayoutHTML } from './EduDataBoardLayout';
+export { EduSummaryLayout, renderEduSummaryLayoutHTML } from './EduSummaryLayout';
 
 import { LayoutId, LayoutModel, ThemeConfig } from '../types/schema';
 import { renderCoverLayoutHTML } from './CoverLayout';
@@ -46,6 +55,15 @@ import { renderConcentricFocusLayoutHTML } from './ConcentricFocusLayout';
 import { renderVerticalTimelineLayoutHTML } from './VerticalTimelineLayout';
 import { renderTriColumnLayoutHTML } from './TriColumnLayout';
 import { renderCinematicOverlayLayoutHTML } from './CinematicOverlayLayout';
+// Edu dark scheme
+import { renderEduCoverLayoutHTML } from './EduCoverLayout';
+import { renderEduTocLayoutHTML } from './EduTocLayout';
+import { renderEduTriCompareLayoutHTML } from './EduTriCompareLayout';
+import { renderEduCoreHubLayoutHTML } from './EduCoreHubLayout';
+import { renderEduTimelineStepsLayoutHTML } from './EduTimelineStepsLayout';
+import { renderEduLogicFlowLayoutHTML } from './EduLogicFlowLayout';
+import { renderEduDataBoardLayoutHTML } from './EduDataBoardLayout';
+import { renderEduSummaryLayoutHTML } from './EduSummaryLayout';
 
 export const LAYOUT_ID_ALIASES: Record<string, string> = {
   // academic - 专属布局（learning_objectives, theory_explanation）不映射
@@ -151,6 +169,23 @@ export function renderLayoutHTML(
       return renderTriColumnLayoutHTML(model as any, theme);
     case 'cinematic_overlay':
       return renderCinematicOverlayLayoutHTML(model as any, theme);
+    // Edu dark scheme
+    case 'edu_cover':
+      return renderEduCoverLayoutHTML(model as any, theme);
+    case 'edu_toc':
+      return renderEduTocLayoutHTML(model as any, theme);
+    case 'edu_tri_compare':
+      return renderEduTriCompareLayoutHTML(model as any, theme);
+    case 'edu_core_hub':
+      return renderEduCoreHubLayoutHTML(model as any, theme);
+    case 'edu_timeline_steps':
+      return renderEduTimelineStepsLayoutHTML(model as any, theme);
+    case 'edu_logic_flow':
+      return renderEduLogicFlowLayoutHTML(model as any, theme);
+    case 'edu_data_board':
+      return renderEduDataBoardLayoutHTML(model as any, theme);
+    case 'edu_summary':
+      return renderEduSummaryLayoutHTML(model as any, theme);
     default:
       console.warn(`Unknown layout: ${layoutId}`);
       return `<section style="width:1280px;height:720px;display:flex;align-items:center;justify-content:center;background:#f0f0f0;">
@@ -184,4 +219,13 @@ export const layoutNames: Record<string, string> = {
   vertical_timeline: '垂直脉络',
   tri_column: '三柱支撑',
   cinematic_overlay: '沉浸全图',
+  // Edu dark scheme
+  edu_cover: '深色封面',
+  edu_toc: '深色目录',
+  edu_tri_compare: '三栏对比',
+  edu_core_hub: '中心模型',
+  edu_timeline_steps: '推进时间轴',
+  edu_logic_flow: '逻辑演进',
+  edu_data_board: '数据看板',
+  edu_summary: '反思总结',
 };

@@ -62,7 +62,16 @@ export type LayoutId =
   | 'common_mistakes'
   | 'tip_trick'
   | 'practice_exercise'
-  | 'ending_practical';
+  | 'ending_practical'
+  // Edu dark scheme
+  | 'edu_cover'
+  | 'edu_toc'
+  | 'edu_tri_compare'
+  | 'edu_core_hub'
+  | 'edu_timeline_steps'
+  | 'edu_logic_flow'
+  | 'edu_data_board'
+  | 'edu_summary';
 
 // 大纲内容
 export interface OutlineContent {

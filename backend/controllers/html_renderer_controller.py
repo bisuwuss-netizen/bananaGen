@@ -53,7 +53,7 @@ def generate_outline():
 
         requirements = data.get('requirements', '')
         language = data.get('language', 'zh')
-        scheme_id = data.get('scheme_id') or 'tech_blue'
+        scheme_id = data.get('scheme_id') or 'edu_dark'
 
         ai_service = AIService()
         outline = ai_service.generate_structured_outline(
@@ -109,14 +109,18 @@ def generate_page_content():
 
         full_outline = data.get('full_outline')
         language = data.get('language', 'zh')
+        continuity_context = data.get('continuity_context')
+        rewrite_instruction = data.get('rewrite_instruction', '')
 
         ai_service = AIService()
-        scheme_id = data.get('scheme_id') or 'tech_blue'
+        scheme_id = data.get('scheme_id') or 'edu_dark'
         model = ai_service.generate_structured_page_content(
             page_outline=page_outline,
             full_outline=full_outline,
             language=language,
-            scheme_id=scheme_id
+            scheme_id=scheme_id,
+            continuity_context=continuity_context if isinstance(continuity_context, dict) else None,
+            rewrite_instruction=rewrite_instruction
         )
 
         return success_response({
@@ -140,8 +144,9 @@ def generate_full_document():
         "topic": "PPT主题",
         "requirements": "额外要求（可选）",
         "language": "zh",
-        "scheme_id": "tech_blue/academic/interactive/visual/practical（可选，默认tech_blue）",
-        "content_depth": "concise/balanced/detailed（可选，默认balanced）"
+        "scheme_id": "edu_dark/tech_blue/academic/interactive/visual/practical/modern（可选，默认edu_dark）",
+        "content_depth": "concise/balanced/detailed（可选，默认balanced）",
+        "generation_mode": "fast/strict（可选，默认fast）"
     }
 
     content_depth说明：
@@ -156,7 +161,7 @@ def generate_full_document():
             "project_id": "ai-gen-xxx",
             "ppt_meta": {
                 "title": "PPT标题",
-                "theme_id": "tech_blue",
+                "theme_id": "edu_dark",
                 "aspect_ratio": "16:9"
             },
             "pages": [
@@ -182,8 +187,11 @@ def generate_full_document():
 
         requirements = data.get('requirements', '')
         language = data.get('language', 'zh')
-        scheme_id = data.get('scheme_id') or 'tech_blue'
+        scheme_id = data.get('scheme_id') or 'edu_dark'
         content_depth = data.get('content_depth', 'balanced')  # concise/balanced/detailed
+        generation_mode = str(data.get('generation_mode', 'fast')).strip().lower()
+        if generation_mode not in {'fast', 'strict'}:
+            generation_mode = 'fast'
 
         ai_service = AIService()
         ppt_document = ai_service.generate_full_ppt_document(
@@ -191,7 +199,8 @@ def generate_full_document():
             requirements=requirements,
             language=language,
             scheme_id=scheme_id,
-            content_depth=content_depth
+            content_depth=content_depth,
+            generation_mode=generation_mode
         )
 
         return success_response(ppt_document)

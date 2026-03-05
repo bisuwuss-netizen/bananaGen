@@ -7,6 +7,10 @@ from models import db, Project, Page, PageImageVersion, Task
 from utils import success_response, error_response, not_found, bad_request
 from services import FileService, ProjectContext
 from services.ai_service_manager import get_ai_service
+from services.narrative_continuity import (
+    NarrativeRuntimeTracker,
+    enrich_outline_with_narrative_contract,
+)
 from services.task_manager import task_manager, generate_single_page_image_task, edit_page_image_task
 from datetime import datetime
 from pathlib import Path
@@ -267,41 +271,81 @@ def generate_page_description(project_id, page_id):
         
         if render_mode == 'html':
             # HTML mode: generate structured JSON for html_model
-            layout_id = page.layout_id or page_data.get('layout_id', 'title_bullets')
-            
+            layout_id = page.layout_id or page_data.get('layout_id', 'title_content')
+
+            current_index = 0
+            ordered_outline_pages = []
+            for i, p in enumerate(all_pages, 1):
+                if p.id == page.id:
+                    current_index = i
+                oc = p.get_outline_content() or {}
+                ordered_outline_pages.append({
+                    'page_id': f'p{i:02d}',
+                    'title': oc.get('title', ''),
+                    'layout_id': p.layout_id or oc.get('layout_id', 'title_content'),
+                    'has_image': bool(oc.get('has_image', False)),
+                    'keywords': oc.get('keywords', oc.get('points', [])[:3]),
+                    'points': oc.get('points', []),
+                    'depends_on': oc.get('depends_on', []),
+                    'must_cover': oc.get('must_cover', []),
+                    'promises_open': oc.get('promises_open', []),
+                    'promises_close': oc.get('promises_close', []),
+                    'required_close_promise_ids': oc.get('required_close_promise_ids', oc.get('promises_close', [])),
+                })
+
+            full_outline_context = enrich_outline_with_narrative_contract({
+                'title': project_context.idea_prompt or project.idea_prompt or '',
+                'pages': ordered_outline_pages
+            })
+
+            logical_page_id = f'p{current_index:02d}' if current_index > 0 else f'p{int(page.order_index) + 1:02d}'
+            page_outline_context = next(
+                (item for item in full_outline_context.get('pages', []) if item.get('page_id') == logical_page_id),
+                {}
+            )
+
             # Build page_outline format expected by generate_structured_page_content
             structured_page_outline = {
-                'page_id': page_id,
-                'title': page_data.get('title', ''),
+                'page_id': logical_page_id,
+                'title': page_data.get('title', page_outline_context.get('title', '')),
                 'layout_id': layout_id,
-                'has_image': False,
-                'keywords': page_data.get('points', [])[:3]
+                'has_image': bool(page_outline_context.get('has_image', False)),
+                'keywords': page_outline_context.get('keywords', page_data.get('points', [])[:3]),
+                'depends_on': page_outline_context.get('depends_on', []),
+                'must_cover': page_outline_context.get('must_cover', []),
+                'promises_open': page_outline_context.get('promises_open', []),
+                'promises_close': page_outline_context.get('promises_close', []),
+                'required_close_promise_ids': page_outline_context.get('required_close_promise_ids', page_outline_context.get('promises_close', [])),
             }
             if 'section_number' in page_data:
                 structured_page_outline['section_number'] = page_data.get('section_number')
             if 'subtitle' in page_data:
                 structured_page_outline['subtitle'] = page_data.get('subtitle')
-            
-            # Build full outline context
-            full_outline_context = {
-                'title': project_context.idea_prompt or project.idea_prompt or '',
-                'pages': [
-                    {
-                        'page_id': f'p{i+1:02d}',
-                        'title': p.get('title', ''),
-                        'layout_id': p.get('layout_id', 'title_bullets'),
-                        'keywords': p.get('points', [])[:3]
-                    }
-                    for i, p in enumerate(ai_service.flatten_outline(outline))
-                ]
-            }
+
+            tracker = NarrativeRuntimeTracker(full_outline_context)
+            for i, p in enumerate(all_pages, 1):
+                if i >= current_index:
+                    break
+                existing_model = p.get_html_model()
+                if not existing_model:
+                    continue
+                prev_outline = ordered_outline_pages[i - 1] if i - 1 < len(ordered_outline_pages) else {}
+                tracker.apply_generated_page(
+                    page_id=f'p{i:02d}',
+                    layout_id=p.layout_id or prev_outline.get('layout_id', 'title_content'),
+                    title=prev_outline.get('title', ''),
+                    model=existing_model
+                )
+
+            continuity_context = tracker.build_context_for_page(logical_page_id)
             
             # Generate structured content
             model = ai_service.generate_structured_page_content(
                 page_outline=structured_page_outline,
                 full_outline=full_outline_context,
                 language=language,
-                scheme_id=project.scheme_id or 'tech_blue'
+                scheme_id=project.scheme_id or 'edu_dark',
+                continuity_context=continuity_context
             )
             
             # Save html_model
