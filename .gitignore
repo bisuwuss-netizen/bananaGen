@@ -56,3 +56,11 @@ backend/instance/*.db*
 *.orig
 # 本地备份目录（保存测试文件等）
 _local_backup/
+
+# Local/private workspace files
+AGENT.md
+AGENTS.md
+.cursor/
+node_modules/
+.env*
+!.env.example
