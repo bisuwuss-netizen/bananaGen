@@ -6,7 +6,6 @@
 import React from 'react';
 import { PollInteractiveModel, ThemeConfig } from '../types/schema';
 import {
-  toCSS,
   getBaseSlideStyle,
   getTitleStyle,
   getCardStyle,
@@ -16,6 +15,9 @@ interface PollInteractiveLayoutProps {
   model: PollInteractiveModel;
   theme: ThemeConfig;
 }
+
+const asStyle = (styles: Record<string, string | number | undefined>): React.CSSProperties =>
+  styles as React.CSSProperties;
 
 export const PollInteractiveLayout: React.FC<PollInteractiveLayoutProps> = ({ model, theme }) => {
   const { question, options, instruction, background_image } = model;
@@ -31,20 +33,20 @@ export const PollInteractiveLayout: React.FC<PollInteractiveLayoutProps> = ({ mo
       : {}),
   };
 
-  const titleStyle = toCSS({
+  const titleStyle = asStyle({
     ...getTitleStyle(theme),
     textAlign: 'center',
     marginBottom: '16px',
   });
 
-  const instructionStyle = toCSS({
+  const instructionStyle = asStyle({
     fontSize: theme.sizes.bodySize,
     color: theme.colors.textLight,
     textAlign: 'center',
     marginBottom: '40px',
   });
 
-  const optionsContainerStyle = toCSS({
+  const optionsContainerStyle = asStyle({
     display: 'flex',
     flexDirection: 'column',
     gap: '20px',
@@ -79,7 +81,7 @@ export const PollInteractiveLayout: React.FC<PollInteractiveLayoutProps> = ({ mo
       <div style={optionsContainerStyle}>
         {options.map((option, index) => {
           const baseCardStyle = getCardStyle(theme);
-          const optionCardStyle = toCSS({
+          const optionCardStyle = asStyle({
             ...baseCardStyle,
             padding: '20px 24px',
             cursor: 'pointer',
@@ -88,7 +90,7 @@ export const PollInteractiveLayout: React.FC<PollInteractiveLayoutProps> = ({ mo
             overflow: 'hidden',
           });
 
-          const optionHeaderStyle = toCSS({
+          const optionHeaderStyle = asStyle({
             display: 'flex',
             alignItems: 'center',
             gap: '16px',
@@ -97,7 +99,7 @@ export const PollInteractiveLayout: React.FC<PollInteractiveLayoutProps> = ({ mo
             zIndex: '1',
           });
 
-          const emojiStyle = toCSS({
+          const emojiStyle = asStyle({
             fontSize: '32px',
             width: '48px',
             height: '48px',
@@ -109,21 +111,21 @@ export const PollInteractiveLayout: React.FC<PollInteractiveLayoutProps> = ({ mo
             flexShrink: '0',
           });
 
-          const optionTextStyle = toCSS({
+          const optionTextStyle = asStyle({
             fontSize: theme.sizes.bodySize,
             color: theme.colors.text,
             fontWeight: '600',
             flex: '1',
           });
 
-          const percentageStyle = toCSS({
+          const percentageStyle = asStyle({
             fontSize: '24px',
             color: theme.colors.primary,
             fontWeight: 'bold',
             flexShrink: '0',
           });
 
-          const progressBarBgStyle = toCSS({
+          const progressBarBgStyle = asStyle({
             position: 'absolute',
             top: '0',
             left: '0',

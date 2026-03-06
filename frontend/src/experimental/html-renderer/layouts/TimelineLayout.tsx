@@ -6,7 +6,6 @@
 import React from 'react';
 import { TimelineModel, ThemeConfig } from '../types/schema';
 import {
-  toCSS,
   getBaseSlideStyle,
   getTitleStyle,
   getCardStyle,
@@ -16,6 +15,9 @@ interface TimelineLayoutProps {
   model: TimelineModel;
   theme: ThemeConfig;
 }
+
+const asStyle = (styles: Record<string, string | number | undefined>): React.CSSProperties =>
+  styles as React.CSSProperties;
 
 export const TimelineLayout: React.FC<TimelineLayoutProps> = ({ model, theme }) => {
   const { title, events, orientation = 'horizontal', background_image } = model;
@@ -31,11 +33,11 @@ export const TimelineLayout: React.FC<TimelineLayoutProps> = ({ model, theme }) 
       : {}),
   };
 
-  const titleStyle = toCSS({ ...getTitleStyle(theme), textShadow: '0 1px 2px rgba(0,0,0,0.1)' });
+  const titleStyle = asStyle({ ...getTitleStyle(theme), textShadow: '0 1px 2px rgba(0,0,0,0.1)' });
 
   if (orientation === 'horizontal') {
     // 水平时间轴
-    const timelineContainerStyle = toCSS({
+    const timelineContainerStyle = asStyle({
       marginTop: '50px',
       position: 'relative',
       display: 'flex',
@@ -44,7 +46,7 @@ export const TimelineLayout: React.FC<TimelineLayoutProps> = ({ model, theme }) 
       paddingTop: '60px',
     });
 
-    const timelineLineStyle = toCSS({
+    const timelineLineStyle = asStyle({
       position: 'absolute',
       top: '60px',
       left: '5%',
@@ -65,7 +67,7 @@ export const TimelineLayout: React.FC<TimelineLayoutProps> = ({ model, theme }) 
           {/* 事件节点 */}
           {events.map((event, index) => {
             const baseCardStyle = getCardStyle(theme);
-            const eventNodeStyle = toCSS({
+            const eventNodeStyle = asStyle({
               width: `${100 / events.length - 2}%`,
               display: 'flex',
               flexDirection: 'column',
@@ -73,7 +75,7 @@ export const TimelineLayout: React.FC<TimelineLayoutProps> = ({ model, theme }) 
               position: 'relative',
             });
 
-            const dotStyle = toCSS({
+            const dotStyle = asStyle({
               width: '24px',
               height: '24px',
               borderRadius: '50%',
@@ -85,7 +87,7 @@ export const TimelineLayout: React.FC<TimelineLayoutProps> = ({ model, theme }) 
               zIndex: '2',
             });
 
-            const yearStyle = toCSS({
+            const yearStyle = asStyle({
               fontSize: '28px',
               fontWeight: 'bold',
               color: theme.colors.primary,
@@ -93,7 +95,7 @@ export const TimelineLayout: React.FC<TimelineLayoutProps> = ({ model, theme }) 
               marginTop: '20px',
             });
 
-            const eventCardStyle = toCSS({
+            const eventCardStyle = asStyle({
               ...baseCardStyle,
               padding: '16px',
               textAlign: 'center',
@@ -101,14 +103,14 @@ export const TimelineLayout: React.FC<TimelineLayoutProps> = ({ model, theme }) 
               width: '100%',
             });
 
-            const eventTitleStyle = toCSS({
+            const eventTitleStyle = asStyle({
               fontSize: theme.sizes.bodySize,
               fontWeight: 'bold',
               color: theme.colors.text,
               marginBottom: '8px',
             });
 
-            const eventDescStyle = toCSS({
+            const eventDescStyle = asStyle({
               fontSize: theme.sizes.smallSize,
               color: theme.colors.textLight,
               lineHeight: '1.5',
@@ -140,13 +142,13 @@ export const TimelineLayout: React.FC<TimelineLayoutProps> = ({ model, theme }) 
     );
   } else {
     // 垂直时间轴
-    const timelineContainerStyle = toCSS({
+    const timelineContainerStyle = asStyle({
       marginTop: '40px',
       position: 'relative',
       paddingLeft: '50px',
     });
 
-    const timelineLineStyle = toCSS({
+    const timelineLineStyle = asStyle({
       position: 'absolute',
       top: '0',
       bottom: '0',
@@ -167,13 +169,13 @@ export const TimelineLayout: React.FC<TimelineLayoutProps> = ({ model, theme }) 
           {/* 事件节点 */}
           {events.map((event, index) => {
             const baseCardStyle = getCardStyle(theme);
-            const eventNodeStyle = toCSS({
+            const eventNodeStyle = asStyle({
               position: 'relative',
               marginBottom: '30px',
               paddingLeft: '40px',
             });
 
-            const dotStyle = toCSS({
+            const dotStyle = asStyle({
               width: '24px',
               height: '24px',
               borderRadius: '50%',
@@ -186,14 +188,14 @@ export const TimelineLayout: React.FC<TimelineLayoutProps> = ({ model, theme }) 
               zIndex: '2',
             });
 
-            const eventCardStyle = toCSS({
+            const eventCardStyle = asStyle({
               ...baseCardStyle,
               padding: '16px 20px',
               display: 'flex',
               gap: '16px',
             });
 
-            const yearBadgeStyle = toCSS({
+            const yearBadgeStyle = asStyle({
               fontSize: '20px',
               fontWeight: 'bold',
               color: '#ffffff',
@@ -204,18 +206,18 @@ export const TimelineLayout: React.FC<TimelineLayoutProps> = ({ model, theme }) 
               alignSelf: 'flex-start',
             });
 
-            const eventContentStyle = toCSS({
+            const eventContentStyle = asStyle({
               flex: '1',
             });
 
-            const eventTitleStyle = toCSS({
+            const eventTitleStyle = asStyle({
               fontSize: theme.sizes.bodySize,
               fontWeight: 'bold',
               color: theme.colors.text,
               marginBottom: '6px',
             });
 
-            const eventDescStyle = toCSS({
+            const eventDescStyle = asStyle({
               fontSize: theme.sizes.smallSize,
               color: theme.colors.textLight,
               lineHeight: '1.5',

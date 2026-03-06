@@ -2,7 +2,7 @@
 OpenAI SDK implementation for text generation
 """
 import logging
-from openai import OpenAI
+from openai import AsyncOpenAI, OpenAI
 from .base import TextProvider
 from config import get_config
 
@@ -22,11 +22,19 @@ class OpenAITextProvider(TextProvider):
             model: Model name to use
         """
         try:
+            timeout = get_config().OPENAI_TIMEOUT
+            max_retries = get_config().OPENAI_MAX_RETRIES
             self.client = OpenAI(
                 api_key=api_key,
                 base_url=api_base,
-                timeout=get_config().OPENAI_TIMEOUT,  # set timeout from config
-                max_retries=get_config().OPENAI_MAX_RETRIES  # set max retries from config
+                timeout=timeout,
+                max_retries=max_retries,
+            )
+            self.async_client = AsyncOpenAI(
+                api_key=api_key,
+                base_url=api_base,
+                timeout=timeout,
+                max_retries=max_retries,
             )
         except Exception as e:
             raise
@@ -45,6 +53,21 @@ class OpenAITextProvider(TextProvider):
         """
         try:
             response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            raise
+
+    async def generate_text_async(self, prompt: str, thinking_budget: int = 1000) -> str:
+        """
+        Generate text using AsyncOpenAI SDK.
+        """
+        try:
+            response = await self.async_client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "user", "content": prompt}

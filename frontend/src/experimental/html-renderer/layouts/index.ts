@@ -32,6 +32,7 @@ export { EduTimelineStepsLayout, renderEduTimelineStepsLayoutHTML } from './EduT
 export { EduLogicFlowLayout, renderEduLogicFlowLayoutHTML } from './EduLogicFlowLayout';
 export { EduDataBoardLayout, renderEduDataBoardLayoutHTML } from './EduDataBoardLayout';
 export { EduSummaryLayout, renderEduSummaryLayoutHTML } from './EduSummaryLayout';
+export { EduQACaseLayout, renderEduQACaseLayoutHTML } from './EduQACaseLayout';
 
 import { LayoutId, LayoutModel, ThemeConfig } from '../types/schema';
 import { renderCoverLayoutHTML } from './CoverLayout';
@@ -64,6 +65,7 @@ import { renderEduTimelineStepsLayoutHTML } from './EduTimelineStepsLayout';
 import { renderEduLogicFlowLayoutHTML } from './EduLogicFlowLayout';
 import { renderEduDataBoardLayoutHTML } from './EduDataBoardLayout';
 import { renderEduSummaryLayoutHTML } from './EduSummaryLayout';
+import { renderEduQACaseLayoutHTML } from './EduQACaseLayout';
 
 export const LAYOUT_ID_ALIASES: Record<string, string> = {
   // academic - 专属布局（learning_objectives, theory_explanation）不映射
@@ -186,6 +188,8 @@ export function renderLayoutHTML(
       return renderEduDataBoardLayoutHTML(model as any, theme);
     case 'edu_summary':
       return renderEduSummaryLayoutHTML(model as any, theme);
+    case 'edu_qa_case':
+      return renderEduQACaseLayoutHTML(model as any, theme);
     default:
       console.warn(`Unknown layout: ${layoutId}`);
       return `<section style="width:1280px;height:720px;display:flex;align-items:center;justify-content:center;background:#f0f0f0;">
@@ -228,4 +232,5 @@ export const layoutNames: Record<string, string> = {
   edu_logic_flow: '逻辑演进',
   edu_data_board: '数据看板',
   edu_summary: '反思总结',
+  edu_qa_case: '问答与案例',
 };

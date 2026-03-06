@@ -166,6 +166,7 @@ function parseStyle(styleString: string): React.CSSProperties {
 export default EndingLayout;
 
 function renderEndingVariantB(model: EndingModel, theme: ThemeConfig): React.ReactElement {
+  const contact = typeof model.contact === 'string' ? model.contact : '';
   const blocks = (model.reflection_blocks || []).slice(0, 4);
   const fallbackBlocks = blocks.length > 0
     ? blocks

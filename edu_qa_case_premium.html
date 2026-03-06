@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduQACaseLayout 高质感预览</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 40px;
+            background: #050a14;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 60px;
+            color: #fff;
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        h1 {
+            margin-bottom: 20px;
+            color: #06b6d4;
+            font-size: 32px;
+            text-shadow: 0 0 20px rgba(6,182,212,0.3);
+        }
+        .slide-container {
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+            background: #000;
+            overflow: hidden;
+            border-radius: 4px;
+        }
+        .label-tag {
+            background: rgba(6,182,212,0.1);
+            color: #06b6d4;
+            padding: 12px 24px;
+            border-radius: 30px;
+            margin-bottom: 15px;
+            display: inline-block;
+            font-weight: bold;
+            border: 1px solid rgba(6,182,212,0.2);
+            font-size: 14px;
+            letter-spacing: 1px;
+        }
+        /* 模拟毛玻璃在纯HTML预览中的近似效果 */
+        .glass-card {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body>
+
+    <div>
+        <div class="label-tag">变体 A：灵动问答卡片 (光影/徽章/毛玻璃)</div>
+        <div class="slide-container">
+            <!-- Variant A HTML -->
+            <section style="width:1280px;height:720px;padding:56px 76px;box-sizing:border-box;position:relative;overflow:hidden;font-family:sans-serif;background:radial-gradient(circle at 10% 10%, rgba(6,182,212,0.12) 0%, transparent 50%), radial-gradient(circle at 90% 90%, rgba(59,130,246,0.12) 0%, transparent 50%), linear-gradient(180deg, #0b1120 0%, #051937 100%);display:flex;flex-direction:column;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid rgba(6,182,212,0.15);padding-bottom:24px;margin-bottom:40px;flex-shrink:0;">
+                    <div style="display:flex;align-items:center;">
+                        <div style="width:10px;height:10px;border-radius:50%;margin-right:20px;background:#06b6d4;box-shadow:0 0 15px #06b6d4;"></div>
+                        <h2 style="margin:0;color:#ffffff;font-size:44px;font-weight:700;letter-spacing:1px;">核心问答解析</h2>
+                    </div>
+                    <div style="color:#93c5fd;font-size:18px;letter-spacing:3px;text-transform:uppercase;opacity:0.8;">Q&A INTERACTIVE ANALYSIS</div>
+                </div>
+                <div style="flex-grow:1;display:flex;flex-direction:column;justify-content:center;">
+                    <div style="display:flex;flex-direction:column;gap:48px;max-width:1060px;margin:0 auto;width:100%;">
+                        <!-- Question -->
+                        <div style="align-self:flex-start;max-width:75%;position:relative;margin-top:10px;">
+                            <div style="position:absolute;top:-20px;left:-20px;width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg, #06b6d4, #051937);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:900;z-index:10;box-shadow:0 8px 16px rgba(0,0,0,0.4), 0 0 12px rgba(6,182,212,0.4);border:2px solid rgba(255,255,255,0.2);">Q</div>
+                            <div class="glass-card" style="background:rgba(30, 41, 59, 0.6);border:1px solid rgba(255,255,255,0.08);box-shadow:0 20px 40px rgba(0,0,0,0.4), inset 0 0 10px rgba(255,255,255,0.05);border-radius:24px;padding:24px 32px;color:#cbd5e1;font-size:26px;line-height:1.6;">为什么我们需要为问答页面设计专门的布局？</div>
+                        </div>
+                        <!-- Answer -->
+                        <div style="align-self:flex-end;max-width:85%;position:relative;margin-top:10px;">
+                            <div style="position:absolute;top:-20px;right:-20px;width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg, #10b981, #051937);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:900;z-index:10;box-shadow:0 8px 16px rgba(0,0,0,0.4), 0 0 12px rgba(16,185,129,0.4);border:2px solid rgba(255,255,255,0.2);">A</div>
+                            <div class="glass-card" style="background:rgba(6, 185, 129, 0.12);border:1px solid rgba(16,185,129,0.3);box-shadow:0 20px 40px rgba(0,0,0,0.4), inset 0 0 10px rgba(255,255,255,0.05);border-radius:24px;padding:24px 32px;color:#f8fafc;font-size:26px;line-height:1.6;">因为传统的列表布局无法体现问答的互动感。通过非对称的错落排版和毛玻璃材质，我们能营造出更有深度的空间感，让“问”与“答”在视觉上产生逻辑递进，极大提升课件的现代感。</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div>
+        <div class="label-tag">变体 B：非对称案例看板 (打破平衡/国际化排版/水印图标)</div>
+        <div class="slide-container">
+            <!-- Variant B HTML -->
+            <section style="width:1280px;height:720px;padding:56px 76px;box-sizing:border-box;position:relative;overflow:hidden;font-family:sans-serif;background:radial-gradient(circle at 10% 10%, rgba(6,182,212,0.12) 0%, transparent 50%), radial-gradient(circle at 90% 90%, rgba(59,130,246,0.12) 0%, transparent 50%), linear-gradient(180deg, #0b1120 0%, #051937 100%);display:flex;flex-direction:column;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid rgba(6,182,212,0.15);padding-bottom:24px;margin-bottom:40px;flex-shrink:0;">
+                    <div style="display:flex;align-items:center;">
+                        <div style="width:10px;height:10px;border-radius:50%;margin-right:20px;background:#06b6d4;box-shadow:0 0 15px #06b6d4;"></div>
+                        <h2 style="margin:0;color:#ffffff;font-size:44px;font-weight:700;letter-spacing:1px;">教学创新案例分析</h2>
+                    </div>
+                    <div style="color:#93c5fd;font-size:18px;letter-spacing:3px;text-transform:uppercase;opacity:0.8;">VOCATIONAL EDUCATION CASE STUDY</div>
+                </div>
+                <div style="flex-grow:1;display:flex;flex-direction:column;justify-content:center;">
+                    <div style="display:grid;grid-template-columns:1.2fr 1fr;grid-template-rows:auto auto;gap:30px;height:100%;">
+                        <!-- Item 1 (Featured) -->
+                        <div class="glass-card" style="grid-row:span 2;background:rgba(15, 23, 42, 0.5);border:1px solid rgba(255,255,255,0.05);border-radius:24px;padding:48px 40px;display:flex;flex-direction:column;gap:16px;position:relative;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.4);justify-content:center;">
+                            <div style="position:absolute;bottom:-20px;right:-20px;font-size:120px;opacity:0.05;color:#06b6d4;transform:rotate(-15deg);">◈</div>
+                            <div style="display:flex;flex-direction:column;gap:4px;">
+                                <div style="font-size:14px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:4px;margin-bottom:2px;">BACKGROUND</div>
+                                <div style="font-size:32px;font-weight:800;color:#06b6d4;display:flex;align-items:center;gap:12px;">
+                                    <div style="width:4px;height:24px;background:#06b6d4;border-radius:2px;"></div>
+                                    项目背景
+                                </div>
+                            </div>
+                            <div style="font-size:26px;color:#cbd5e1;line-height:1.6;">某职教学院在大型机械实训中面临设备套数不足、维护成本高以及初学者操作安全风险大等核心痛点。传统的“纯看式”教学难以满足复杂工种的实操需求。</div>
+                        </div>
+                        <!-- Item 2 -->
+                        <div class="glass-card" style="background:rgba(15, 23, 42, 0.5);border:1px solid rgba(255,255,255,0.05);border-radius:24px;padding:32px 36px;display:flex;flex-direction:column;gap:16px;position:relative;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.4);">
+                            <div style="position:absolute;bottom:-20px;right:-20px;font-size:100px;opacity:0.04;color:#3b82f6;transform:rotate(-15deg);">✦</div>
+                            <div style="display:flex;flex-direction:column;gap:4px;">
+                                <div style="font-size:14px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:4px;margin-bottom:2px;">ACTIONS</div>
+                                <div style="font-size:26px;font-weight:800;color:#3b82f6;display:flex;align-items:center;gap:12px;">核心行动</div>
+                            </div>
+                            <div style="font-size:22px;color:#cbd5e1;line-height:1.6;">引入“VR仿真 + AI导师”联动作业系统。通过 1:1 数字孪生还原工业环境，提供即时警示。</div>
+                        </div>
+                        <!-- Item 3 -->
+                        <div class="glass-card" style="background:rgba(15, 23, 42, 0.5);border:1px solid rgba(255,255,255,0.05);border-radius:24px;padding:32px 36px;display:flex;flex-direction:column;gap:16px;position:relative;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.4);">
+                            <div style="position:absolute;bottom:-20px;right:-20px;font-size:100px;opacity:0.04;color:#10b981;transform:rotate(-15deg);">⦿</div>
+                            <div style="display:flex;flex-direction:column;gap:4px;">
+                                <div style="font-size:14px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:4px;margin-bottom:2px;">RESULTS</div>
+                                <div style="font-size:26px;font-weight:800;color:#10b981;display:flex;align-items:center;gap:12px;">关键成效</div>
+                            </div>
+                            <div style="font-size:22px;color:#cbd5e1;line-height:1.6;">实训综合成本降低 65%。通过率由原来的 78% 提升至 94%，实现“零安全事故”。</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+</body>
+</html>

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import * as api from '@/api/endpoints';
+import { openTaskWebSocket } from '@/api/client';
 
 // Note: Backend uses 'RUNNING' but we also accept 'PROCESSING' for compatibility
 export type ExportTaskStatus = 'PENDING' | 'PROCESSING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
@@ -106,65 +106,64 @@ export const useExportTasksStore = create<ExportTasksState>()(
       },
 
       pollTask: async (id, projectId, taskId) => {
-        const poll = async () => {
-          try {
-            const response = await api.getTaskStatus(projectId, taskId);
-            const task = response.data;
+        await new Promise<void>((resolve) => {
+          const socket = openTaskWebSocket<any>(projectId, taskId, {
+            onMessage: (task) => {
+              const updates: Partial<ExportTask> = {
+                status: task.status as ExportTaskStatus,
+              };
 
-            if (!task) {
-              console.warn('[ExportTasksStore] No task data in response');
-              return;
-            }
+              if (task.progress) {
+                let progressData = task.progress;
+                if (typeof progressData === 'string') {
+                  try {
+                    progressData = JSON.parse(progressData);
+                  } catch (e) {
+                    console.warn('[ExportTasksStore] Failed to parse progress:', e);
+                  }
+                }
 
-            const updates: Partial<ExportTask> = {
-              status: task.status as ExportTaskStatus,
-            };
-
-            if (task.progress) {
-              // Parse progress if it's a string (from database JSON field)
-              let progressData = task.progress;
-              if (typeof progressData === 'string') {
-                try {
-                  progressData = JSON.parse(progressData);
-                } catch (e) {
-                  console.warn('[ExportTasksStore] Failed to parse progress:', e);
+                updates.progress = progressData;
+                if (progressData.download_url) {
+                  updates.downloadUrl = progressData.download_url;
+                }
+                if (progressData.filename) {
+                  updates.filename = progressData.filename;
                 }
               }
-              
-              updates.progress = progressData;
-              
-              // Extract download URL if available
-              if (progressData.download_url) {
-                updates.downloadUrl = progressData.download_url;
-              }
-              if (progressData.filename) {
-                updates.filename = progressData.filename;
-              }
-            }
 
-            if (task.status === 'COMPLETED') {
-              updates.completedAt = new Date().toISOString();
-              get().updateTask(id, updates);
-            } else if (task.status === 'FAILED') {
-              updates.errorMessage = task.error_message || task.error || '导出失败';
-              updates.completedAt = new Date().toISOString();
-              get().updateTask(id, updates);
-            } else if (task.status === 'PENDING' || task.status === 'RUNNING' || task.status === 'PROCESSING') {
-              get().updateTask(id, updates);
-              // Continue polling
-              setTimeout(poll, 2000);
-            }
-          } catch (error: any) {
-            console.error('[ExportTasksStore] Poll error:', error);
-            get().updateTask(id, {
-              status: 'FAILED',
-              errorMessage: error.message || '轮询失败',
-              completedAt: new Date().toISOString(),
-            });
-          }
-        };
+              if (task.status === 'COMPLETED') {
+                updates.completedAt = new Date().toISOString();
+                get().updateTask(id, updates);
+                socket.close();
+                resolve();
+                return;
+              }
 
-        await poll();
+              if (task.status === 'FAILED') {
+                updates.errorMessage = task.error_message || task.error || '导出失败';
+                updates.completedAt = new Date().toISOString();
+                get().updateTask(id, updates);
+                socket.close();
+                resolve();
+                return;
+              }
+
+              get().updateTask(id, updates);
+            },
+            onError: () => {
+              get().updateTask(id, {
+                status: 'FAILED',
+                errorMessage: 'WebSocket 连接失败',
+                completedAt: new Date().toISOString(),
+              });
+              resolve();
+            },
+            onClose: () => {
+              resolve();
+            },
+          });
+        });
       },
 
       restoreActiveTasks: () => {
@@ -194,4 +193,3 @@ export const useExportTasksStore = create<ExportTasksState>()(
     }
   )
 );
-

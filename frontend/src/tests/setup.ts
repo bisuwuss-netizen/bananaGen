@@ -43,11 +43,10 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
 }))
 
 // Mock scrollTo
-window.scrollTo = vi.fn() as any
+window.scrollTo = vi.fn(((..._args: [ScrollToOptions?] | [number, number]) => undefined)) as unknown as typeof window.scrollTo
 
 // Mock fetch (可以在具体测试中覆盖)
 global.fetch = vi.fn()
 
 // 设置测试环境变量
 vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:5000')
-

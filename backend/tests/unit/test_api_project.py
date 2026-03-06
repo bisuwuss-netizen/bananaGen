@@ -34,13 +34,13 @@ class TestProjectCreate:
         assert 'project_id' in data['data']
     
     def test_create_project_missing_type(self, client):
-        """测试缺少creation_type参数"""
+        """测试缺少creation_type参数时回退到默认 idea 模式"""
         response = client.post('/api/projects', json={
             'idea_prompt': '测试'
         })
         
-        # 应该返回错误
-        assert response.status_code in [400, 422]
+        data = assert_success_response(response, 201)
+        assert data['data']['status'] == 'DRAFT'
     
     def test_create_project_invalid_type(self, client):
         """测试无效的creation_type"""
@@ -121,4 +121,3 @@ class TestProjectDelete:
         response = client.delete('/api/projects/non-existent-id')
         
         assert response.status_code == 404
-

@@ -1,0 +1,713 @@
+# Flask → FastAPI 迁移重构方案
+
+## 目标
+
+将 Banana Slides 后端从 Flask 同步架构迁移到 FastAPI 异步架构，同时对整个项目（含前端）进行 **深度解构**，将巨型文件拆分为职责单一的模块，提升性能、可维护性和开发效率。
+
+## User Review Required
+
+> [!IMPORTANT]
+> **数据库迁移策略**：方案保持 MySQL 数据库结构不变，ORM 从 Flask-SQLAlchemy 切换到 SQLAlchemy 2.0 (async)，现有数据完全兼容，无需数据迁移。
+
+> [!WARNING]
+> **前后端通信变更**：任务进度推送将从 HTTP 轮询改为 WebSocket，前端 `useProjectStore.ts` 的轮询逻辑需要同步重写。建议迁移过程中保留轮询 API 作为 fallback。
+
+---
+
+## 一、技术栈迁移对照
+
+| 模块 | 当前 (Flask) | 目标 (FastAPI) | 迁移收益 |
+|------|-------------|---------------|---------|
+| Web 框架 | Flask 3.0 | **FastAPI 0.115+** | 原生 async/await、自动 API 文档、请求验证 |
+| 数据验证 | 手动 `Dict[str,Any]` | **Pydantic v2** | 编译期类型检查、自动序列化 |
+| ORM | Flask-SQLAlchemy | **SQLAlchemy 2.0 async** | 异步查询、更好的类型提示 |
+| 后台任务 | ThreadPoolExecutor | **asyncio.TaskGroup + Celery** | 真正并发、持久化队列、可重试 |
+| 实时通信 | HTTP 轮询 (2s) | **WebSocket** | 低延迟推送、减少无效请求 |
+| API 文档 | 无 | **Swagger UI (自动)** | 零成本生成交互式文档 |
+| 数据库迁移 | Alembic | **Alembic (保留)** | 无变化 |
+| ASGI 服务器 | Werkzeug (WSGI) | **Uvicorn** | 高性能异步服务器 |
+
+---
+
+## 二、大文件解构映射（核心）
+
+### 2.1 `ai_service.py` (2,587行 → 7个文件)
+
+这是项目最大的架构痛点。当前 `AIService` 类包含 68 个方法，混合了大纲、描述、图片、解析、编辑等完全不同的关切。
+
+```
+当前: backend/services/ai_service.py (2587行, 68个方法)
+
+拆分为:
+```
+
+#### [NEW] `services/ai/base.py` (~120行)
+**来源**: `AIService.__init__`, `_strip_markdown_json_fence`, `_extract_json_segment`, `_escape_json_control_chars_in_string`, `_normalize_json_text_for_parse`, `_build_json_parse_candidates`, `generate_json`, `generate_json_with_image`
+```
+职责: AI 基础能力 - Provider 初始化 + JSON 解析/重试
+方法:
+  - __init__() → 初始化 text_provider, image_provider
+  - generate_json() → 生成并解析 JSON
+  - generate_json_with_image() → 带图片的 JSON 生成
+  - _normalize_json_text_for_parse() → JSON 文本清洗
+  - _build_json_parse_candidates() → JSON 解析候选列表
+```
+
+#### [NEW] `services/ai/outline_service.py` (~400行)
+**来源**: `generate_outline`, `parse_outline_text`, `flatten_outline`, `_populate_toc_points`, `_generate_toc_model`, `_ensure_page_ordering`, `generate_structured_outline`, `generate_outline_text`, `parse_description_to_outline`
+```
+职责: 大纲的生成、解析、排序
+方法:
+  - generate_outline() → 从Idea生成大纲
+  - parse_outline_text() → 解析用户大纲文本
+  - parse_description_to_outline() → 从描述解析大纲
+  - flatten_outline() → 展平大纲结构
+  - generate_structured_outline() → HTML模式的结构化大纲
+  - _ensure_page_ordering() → 封面/目录/结尾排序
+  - _populate_toc_points() → 自动填充目录
+  - _fix_empty_sections() → 修复空章节
+```
+
+#### [NEW] `services/ai/layout_normalizer.py` (~600行)
+**来源**: `normalize_outline_layouts` (原964-1570行，一个方法606行!)
+```
+职责: HTML布局的自动分配和标准化
+拆分为多个独立函数:
+  - normalize_layouts() → 主入口
+  - _build_page_metadata() → 构建页面元信息
+  - _compute_layout_affinity() → 布局亲和度计算
+  - _assign_initial_layouts() → 首轮布局分配
+  - _enforce_diversity_constraints() → 多样性约束
+  - _enforce_section_gaps() → 章节间距约束
+  - _enforce_reserved_positions() → 特殊位置约束
+  - _assign_section_numbers() → 章节序号分配
+```
+
+#### [NEW] `services/ai/description_service.py` (~200行)
+**来源**: `generate_page_description`, `generate_page_descriptions_batch`, `parse_description_to_page_descriptions`, `generate_structured_page_content`, `generate_structured_page_content_batch`
+```
+职责: 页面描述/结构化内容的生成
+方法:
+  - generate_description() → 单页描述
+  - generate_descriptions_batch() → 批量描述
+  - generate_structured_content() → 单页结构化内容
+  - generate_structured_content_batch() → 批量结构化内容
+```
+
+#### [NEW] `services/ai/image_service.py` (~200行)
+**来源**: `generate_image_prompt`, `generate_image`, `edit_image`, `download_image_from_url`, `extract_image_urls_from_markdown`, `remove_markdown_images`, `_convert_mineru_path_to_local`
+```
+职责: 图片生成、编辑、下载
+方法:
+  - generate_prompt() → 构建图片 prompt
+  - generate() → 生成图片
+  - edit() → 编辑图片
+  - download_from_url() → 下载图片
+```
+
+#### [NEW] `services/ai/refine_service.py` (~200行)
+**来源**: `refine_outline`, `refine_descriptions`, `refine_html_models`
+```
+职责: AI 迭代改写
+方法:
+  - refine_outline() → 按用户要求修改大纲
+  - refine_descriptions() → 修改描述
+  - refine_html_models() → 修改结构化内容
+```
+
+#### [NEW] `services/ai/continuity_service.py` (~200行)
+**来源**: `review_structured_document_continuity`, `_normalize_continuity_review_result`, `_plan_rewrites_from_reports`, `generate_full_ppt_document`
+```
+职责: 叙事连续性检查与编排
+方法:
+  - review_continuity() → 语义连续性审查
+  - plan_rewrites() → 合并审查结果生成改写方案
+  - generate_full_document() → 端到端生成
+```
+
+---
+
+### 2.2 `prompts.py` (2,210行 → 8个文件)
+
+当前 40+ 个 prompt 函数全部挤在一个文件中，每次改一个 prompt 要在 2000+ 行中搜索定位。
+
+```
+当前: backend/services/prompts.py (2210行, 40+函数)
+
+拆分为:
+```
+
+#### [NEW] `prompts/base.py` (~80行)
+```
+来源: LANGUAGE_MAP, get_default_output_language, get_language_instruction,
+      get_ppt_language_instruction, _format_reference_files_xml,
+      _flatten_outline_pages, _build_compact_outline_context, _truncate_prompt_text
+职责: 语言配置 + Prompt 工具函数
+```
+
+#### [NEW] `prompts/outline.py` (~300行)
+```
+来源: get_outline_generation_prompt, get_outline_parsing_prompt,
+      get_description_to_outline_prompt, get_structured_outline_prompt
+职责: 大纲相关 Prompt 模板
+```
+
+#### [NEW] `prompts/description.py` (~200行)
+```
+来源: get_page_description_prompt, get_page_descriptions_batch_prompt,
+      get_description_split_prompt
+职责: 描述相关 Prompt 模板
+```
+
+#### [NEW] `prompts/structured_content.py` (~300行)
+```
+来源: get_structured_page_content_prompt, get_structured_page_content_batch_prompt,
+      get_continuity_review_prompt
+职责: HTML 结构化内容生成 Prompt
+```
+
+#### [NEW] `prompts/image.py` (~100行)
+```
+来源: get_image_generation_prompt, get_image_edit_prompt,
+      get_clean_background_prompt
+职责: 图片生成/编辑 Prompt
+```
+
+#### [NEW] `prompts/refine.py` (~300行)
+```
+来源: get_outline_refinement_prompt, get_descriptions_refinement_prompt,
+      get_html_model_refinement_prompt
+职责: 迭代修改 Prompt
+```
+
+#### [NEW] `prompts/extraction.py` (~150行)
+```
+来源: get_text_attribute_extraction_prompt, get_batch_text_attribute_extraction_prompt
+职责: 文字/样式提取 Prompt
+```
+
+#### [NEW] `prompts/schemas.py` (~200行)
+```
+来源: LAYOUT_SCHEMAS, LAYOUT_SCHEMES, get_layout_scheme, get_layout_types_description,
+      get_scheme_style_prompt, resolve_layout_id, get_layout_constraints
+职责: Layout Schema 定义和方案配置
+```
+
+---
+
+### 2.3 `task_manager.py` (1,765行 → 6个文件)
+
+当前文件混合了任务管理框架和所有具体业务任务的执行逻辑。
+
+```
+当前: backend/services/task_manager.py (1765行, 30函数)
+
+拆分为:
+```
+
+#### [NEW] `tasks/manager.py` (~120行)
+```
+来源: TaskManager class, _env_positive_int, _safe_positive_int,
+      TASK_STALE_TIMEOUT_SECONDS, auto_fail_stale_task
+职责: 任务管理框架（提交、监控、超时）
+```
+
+#### [NEW] `tasks/description_task.py` (~400行)
+```
+来源: generate_descriptions_task, generate_single_desc,
+      update_page_result, generate_chapter, generate_desc_batch
+职责: 描述生成后台任务
+```
+
+#### [NEW] `tasks/image_task.py` (~300行)
+```
+来源: generate_images_task, generate_single_image,
+      generate_single_page_image_task, generate_material_image_task
+职责: 图片生成后台任务
+```
+
+#### [NEW] `tasks/edit_task.py` (~120行)
+```
+来源: edit_page_image_task
+职责: 图片编辑后台任务
+```
+
+#### [NEW] `tasks/export_task.py` (~250行)
+```
+来源: export_editable_pptx_with_recursive_analysis_task, progress_callback
+职责: 导出可编辑 PPTX 后台任务
+```
+
+#### [NEW] `tasks/utils.py` (~80行)
+```
+来源: save_image_with_version, _chunked
+职责: 任务共享工具函数
+```
+
+---
+
+### 2.4 `project_controller.py` (1,589行 → 5个文件)
+
+```
+当前: backend/controllers/project_controller.py (1589行, 21函数)
+
+拆分为:
+```
+
+#### [NEW] `api/routes/projects.py` (~300行)
+```
+来源: list_projects, create_project, get_project, update_project, delete_project
+职责: 项目 CRUD 端点
+```
+
+#### [NEW] `api/routes/generation.py` (~500行)
+```
+来源: generate_outline, generate_from_description, generate_descriptions,
+      generate_images, generate_html_images
+职责: AI 生成相关端点
+```
+
+#### [NEW] `api/routes/refinement.py` (~400行)
+```
+来源: refine_outline, refine_descriptions
+职责: AI 迭代修改端点
+```
+
+#### [NEW] `api/routes/tasks.py` (~50行)
+```
+来源: get_task_status
+职责: 任务状态查询
+```
+
+#### [NEW] `api/deps.py` (~80行)
+```
+来源: _resolve_user_id, _get_project_reference_files_content,
+      _reconstruct_outline_from_pages, _build_outline_content_payload
+职责: 路由共用的依赖注入和工具函数
+```
+
+---
+
+### 2.5 前端 `SlidePreview.tsx` (2,876行 → 8个文件)
+
+```
+当前: frontend/src/pages/SlidePreview.tsx (2876行)
+
+拆分为:
+```
+
+#### [NEW] `features/preview/SlidePreview.tsx` (~200行)
+```
+职责: 页面容器，组合子组件
+```
+
+#### [NEW] `features/preview/components/SlideCanvas.tsx` (~400行)
+```
+职责: 幻灯片渲染画布（图片/HTML 预览）
+```
+
+#### [NEW] `features/preview/components/SlideToolbar.tsx` (~200行)
+```
+职责: 顶部工具栏（返回、标题、生成按钮）
+```
+
+#### [NEW] `features/preview/components/SlideList.tsx` (~300行)
+```
+职责: 左侧幻灯片缩略图列表（含拖拽排序）
+```
+
+#### [NEW] `features/preview/components/DescriptionPanel.tsx` (~300行)
+```
+职责: 右侧描述编辑面板
+```
+
+#### [NEW] `features/preview/components/ExportPanel.tsx` (~200行)
+```
+职责: 导出功能面板
+```
+
+#### [NEW] `features/preview/components/ImageEditPanel.tsx` (~250行)
+```
+职责: 图片编辑面板（指令输入、上下文图片）
+```
+
+#### [NEW] `features/preview/hooks/useSlidePreview.ts` (~300行)
+```
+职责: 预览页的状态管理 Hook
+```
+
+---
+
+### 2.6 前端 `useProjectStore.ts` (933行 → 5个文件)
+
+```
+当前: frontend/src/store/useProjectStore.ts (933行)
+
+拆分为 Zustand slice 模式:
+```
+
+#### [NEW] `store/slices/projectSlice.ts` (~150行)
+```
+职责: 项目 CRUD、初始化、同步
+```
+
+#### [NEW] `store/slices/pageSlice.ts` (~150行)
+```
+职责: 页面新增/删除/排序/更新
+```
+
+#### [NEW] `store/slices/generationSlice.ts` (~250行)
+```
+职责: 大纲/描述/图片生成、任务轮询 → WebSocket
+```
+
+#### [NEW] `store/slices/exportSlice.ts` (~100行)
+```
+职责: PPTX/PDF/可编辑PPTX 导出
+```
+
+#### [NEW] `store/useProjectStore.ts` (~50行)
+```
+职责: 组合所有 slice，导出统一 store
+```
+
+---
+
+## 三、Pydantic Schema 设计（替代 Dict[str, Any]）
+
+当前项目最大的类型安全问题：所有数据流使用裸字典传递。FastAPI + Pydantic 可以彻底解决。
+
+#### [NEW] `schemas/outline.py`
+```python
+from pydantic import BaseModel, Field
+from typing import Optional
+from enum import Enum
+
+class LayoutType(str, Enum):
+    COVER = "cover"
+    TOC = "toc"
+    TITLE_CONTENT = "title_content"
+    TITLE_BULLETS = "title_bullets"
+    TWO_COLUMN = "two_column"
+    PROCESS_STEPS = "process_steps"
+    ENDING = "ending"
+    SECTION_TITLE = "section_title"
+    # ... 其他布局类型
+
+class PageOutline(BaseModel):
+    """单页大纲 - 替代 Dict[str, Any]"""
+    page_id: str = Field(default_factory=lambda: str(uuid4()))
+    title: str
+    points: list[str] = []
+    layout_id: Optional[LayoutType] = None
+    has_image: bool = False
+    keywords: list[str] = []
+    part: Optional[str] = None
+
+class OutlineResponse(BaseModel):
+    """大纲生成响应"""
+    title: str
+    pages: list[PageOutline]
+```
+
+#### [NEW] `schemas/project.py`
+```python
+class CreateProjectRequest(BaseModel):
+    """创建项目请求 - 替代手动解析 request.json"""
+    creation_type: Literal["idea", "outline", "description"]
+    idea_prompt: Optional[str] = None
+    outline_text: Optional[str] = None
+    description_text: Optional[str] = None
+    template_style: Optional[str] = None
+    render_mode: Literal["image", "html"] = "image"
+    scheme_id: str = "edu_dark"
+
+class ProjectResponse(BaseModel):
+    """项目响应 - 替代 project.to_dict()"""
+    project_id: str
+    idea_prompt: Optional[str]
+    creation_type: str
+    status: str
+    render_mode: str
+    pages: list[PageResponse] = []
+    created_at: datetime
+    updated_at: datetime
+```
+
+#### [NEW] `schemas/task.py`
+```python
+class TaskProgress(BaseModel):
+    """任务进度 - 替代 JSON text 字段手动解析"""
+    total: int = 0
+    completed: int = 0
+    failed: int = 0
+    current_page: Optional[str] = None
+    stage: Optional[str] = None
+
+class TaskResponse(BaseModel):
+    task_id: str
+    task_type: str
+    status: Literal["PENDING", "PROCESSING", "COMPLETED", "FAILED"]
+    progress: TaskProgress
+    error_message: Optional[str] = None
+```
+
+---
+
+## 四、新目录结构总览
+
+```
+backend/
+├── app.py                          # FastAPI 应用入口（~50行）
+├── config.py                       # 环境配置（Pydantic Settings）
+├── deps.py                         # 全局依赖注入（DB session, AI service等）
+│
+├── api/                            # 路由层（薄层，只做参数校验和调度）
+│   ├── __init__.py
+│   ├── routes/
+│   │   ├── projects.py             # 项目 CRUD (~300行)
+│   │   ├── pages.py                # 页面 CRUD (~200行)
+│   │   ├── generation.py           # AI 生成端点 (~500行)
+│   │   ├── refinement.py           # AI 修改端点 (~400行)
+│   │   ├── export.py               # 导出端点 (~200行)
+│   │   ├── files.py                # 文件上传/下载 (~200行)
+│   │   ├── materials.py            # 素材管理 (~200行)
+│   │   ├── templates.py            # 模板管理 (~200行)
+│   │   ├── settings.py             # 系统设置 (~200行)
+│   │   └── tasks.py                # 任务状态 (~50行)
+│   ├── websocket.py                # WebSocket 连接管理 (~100行)
+│   └── middleware.py               # 中间件（CORS, 错误处理, 日志）
+│
+├── schemas/                        # Pydantic 数据模型
+│   ├── __init__.py
+│   ├── project.py                  # 项目相关 Schema
+│   ├── page.py                     # 页面相关 Schema
+│   ├── outline.py                  # 大纲相关 Schema
+│   ├── task.py                     # 任务相关 Schema
+│   ├── generation.py               # 生成请求/响应 Schema
+│   └── common.py                   # 通用 Schema（分页、响应包装）
+│
+├── models/                         # SQLAlchemy ORM 模型（结构不变，移除 to_dict）
+│   ├── __init__.py
+│   ├── project.py
+│   ├── page.py
+│   ├── task.py
+│   └── ...
+│
+├── services/                       # 业务逻辑层
+│   ├── ai/                         # AI 服务（从 ai_service.py 拆分）
+│   │   ├── __init__.py
+│   │   ├── base.py                 # AI 基础能力
+│   │   ├── outline_service.py      # 大纲生成
+│   │   ├── layout_normalizer.py    # 布局标准化
+│   │   ├── description_service.py  # 描述生成
+│   │   ├── image_service.py        # 图片生成
+│   │   ├── refine_service.py       # 迭代修改
+│   │   └── continuity_service.py   # 连续性审查
+│   │
+│   ├── prompts/                    # Prompt 管理（从 prompts.py 拆分）
+│   │   ├── __init__.py
+│   │   ├── base.py                 # 语言配置 + 工具
+│   │   ├── outline.py              # 大纲 Prompt
+│   │   ├── description.py          # 描述 Prompt
+│   │   ├── structured_content.py   # 结构化内容 Prompt
+│   │   ├── image.py                # 图片 Prompt
+│   │   ├── refine.py               # 修改 Prompt
+│   │   ├── extraction.py           # 提取 Prompt
+│   │   └── schemas.py              # Layout Schema 配置
+│   │
+│   ├── tasks/                      # 后台任务（从 task_manager.py 拆分）
+│   │   ├── __init__.py
+│   │   ├── manager.py              # 任务管理框架
+│   │   ├── description_task.py     # 描述生成任务
+│   │   ├── image_task.py           # 图片生成任务
+│   │   ├── edit_task.py            # 图片编辑任务
+│   │   ├── export_task.py          # 导出任务
+│   │   └── utils.py                # 共享工具
+│   │
+│   ├── ai_providers/               # AI Provider 层（保留）
+│   ├── export_service.py           # 导出服务
+│   ├── file_parser_service.py      # 文件解析服务
+│   ├── file_service.py             # 文件存储服务
+│   ├── narrative_continuity.py     # 叙事连续性
+│   ├── ppt_quality_guard.py        # 质量检查
+│   └── image_editability/          # 图片可编辑化（保留）
+│
+├── utils/                          # 工具函数（保留）
+├── migrations/                     # Alembic 迁移（保留）
+└── tests/                          # 测试（同步重构）
+    ├── test_ai/
+    │   ├── test_outline_service.py
+    │   ├── test_description_service.py
+    │   └── test_layout_normalizer.py
+    ├── test_api/
+    │   ├── test_projects.py
+    │   └── test_generation.py
+    └── ...
+```
+
+---
+
+## 五、关键代码模式变化
+
+### 5.1 路由：Flask Blueprint → FastAPI Router
+
+```diff
+- # Flask (当前)
+- from flask import Blueprint, request, jsonify
+- project_bp = Blueprint('projects', __name__, url_prefix='/api/projects')
+-
+- @project_bp.route('/', methods=['POST'])
+- def create_project():
+-     data = request.json
+-     creation_type = data.get('creation_type', 'idea')
+-     idea_prompt = data.get('idea_prompt')
+-     # ... 手动验证每个字段
+
++ # FastAPI (目标)
++ from fastapi import APIRouter, Depends
++ router = APIRouter(prefix="/api/projects", tags=["projects"])
++
++ @router.post("/", response_model=ProjectResponse)
++ async def create_project(
++     req: CreateProjectRequest,           # Pydantic 自动验证
++     db: AsyncSession = Depends(get_db),  # 依赖注入
++ ):
++     # req.creation_type 自动类型检查，拼错字段直接报400
+```
+
+### 5.2 异步：ThreadPoolExecutor → async/await
+
+```diff
+- # Flask (当前) - 线程池伪并发
+- self.executor = ThreadPoolExecutor(max_workers=12)
+- future = self.executor.submit(generate_descriptions_task, ...)
+-
+- # 每个 AI 调用都占一个线程，受 GIL 限制
+
++ # FastAPI (目标) - 原生异步
++ async def generate_descriptions(project_id: str):
++     tasks = [
++         generate_single_description(page)  # 异步协程
++         for page in pages
++     ]
++     results = await asyncio.gather(*tasks, return_exceptions=True)
++     # 单线程事件循环，无 GIL 限制，真正并发
+```
+
+### 5.3 实时推送：轮询 → WebSocket
+
+```diff
+- # 前端 (当前) - 每2秒轮询
+- setTimeout(poll, 2000);
+- const response = await api.getTaskStatus(projectId, taskId);
+
++ # 前端 (目标) - WebSocket 实时推送
++ const ws = new WebSocket(`ws://localhost:5000/ws/tasks/${taskId}`);
++ ws.onmessage = (event) => {
++     const progress = JSON.parse(event.data);
++     setTaskProgress(progress);  // 实时更新
++ };
+```
+
+### 5.4 配置：手动 env → Pydantic Settings
+
+```diff
+- # Flask (当前)
+- class Config:
+-     SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key')
+-     MYSQL_HOST = os.getenv('MYSQL_HOST', 'localhost')
+-     # 没有类型检查，拼错环境变量名不会报错
+
++ # FastAPI (目标)
++ from pydantic_settings import BaseSettings
++
++ class Settings(BaseSettings):
++     secret_key: str = "your-secret-key"
++     mysql_host: str = "localhost"
++     mysql_port: int = 3306        # 类型自动转换
++     ai_provider: str = "gemini"
++
++     model_config = SettingsConfigDict(env_file=".env")
+```
+
+---
+
+## 六、迁移路线图
+
+### Phase 1: 基础骨架 (3-4天)
+
+- [ ] 创建 FastAPI 应用骨架 (`app.py`, `config.py`, `deps.py`)
+- [ ] 配置 Pydantic Settings 替代 `config.py`
+- [ ] SQLAlchemy 2.0 async session 配置
+- [ ] CORS、错误处理中间件
+- [ ] `/health` 端点验证基础设施
+- [ ] 保持旧 Flask 应用并行运行
+
+### Phase 2: Schema + 模型层 (3-4天)
+
+- [ ] 定义所有 Pydantic Schema（`schemas/` 目录）
+- [ ] 迁移 ORM 模型到 SQLAlchemy 2.0（删除 `to_dict()`，由 Pydantic 序列化）
+- [ ] 数据库 session 依赖注入
+
+### Phase 3: AI 服务解构 (5-7天)
+
+- [ ] 拆分 `ai_service.py` → `services/ai/` 7个模块
+- [ ] 拆分 `prompts.py` → `services/prompts/` 8个模块
+- [ ] 所有 AI 调用改为 `async def`
+- [ ] 单元测试覆盖每个新模块
+
+### Phase 4: 路由 + 任务 (5-7天)
+
+- [ ] 拆分 `project_controller.py` → `api/routes/` 4个路由文件
+- [ ] 迁移所有 Controller → FastAPI Router
+- [ ] 拆分 `task_manager.py` → `tasks/` 6个模块
+- [ ] 实现 WebSocket 任务进度推送
+- [ ] API 集成测试
+
+### Phase 5: 前端适配 + 收尾 (3-4天)
+
+- [ ] 拆分 `SlidePreview.tsx` → 8个组件
+- [ ] 拆分 `useProjectStore.ts` → 5个 slice
+- [ ] 前端 WebSocket hook 替代轮询
+- [ ] E2E 测试
+- [ ] 下线旧 Flask 应用
+
+**总计: 约 19-26 天**（一人开发）
+
+---
+
+## Verification Plan
+
+### Automated Tests
+
+1. **后端单元测试**（Phase 3 完成后）
+```bash
+# 运行所有后端测试
+cd backend && python -m pytest tests/ -v
+
+# 单独测试 AI 服务拆分后的模块
+python -m pytest tests/test_ai/ -v
+```
+
+2. **API 集成测试**（Phase 4 完成后）
+```bash
+# 启动 FastAPI 服务器后运行
+cd backend && python -m pytest tests/test_api/ -v
+```
+
+3. **前端测试**（Phase 5 完成后）
+```bash
+cd frontend && npm run test:run
+```
+
+4. **E2E 测试**
+```bash
+cd frontend && npm run test:e2e
+```
+
+### Manual Verification
+
+1. **API 文档自动生成验证**：启动 FastAPI 后访问 `http://localhost:5000/docs`，确认 Swagger UI 正常显示所有端点
+2. **核心流程端到端测试**：用户在首页创建项目 → 生成大纲 → 生成描述 → 生成图片 → 导出 PPTX，验证整个流程无回归
+3. **WebSocket 推送验证**：生成描述时观察浏览器 DevTools 的 WebSocket 连接，确认进度实时推送

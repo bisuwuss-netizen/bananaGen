@@ -141,6 +141,8 @@ class Settings(BaseSettings):
     def sqlalchemy_sync_url(self) -> str:
         """Sync database URL for Alembic migrations"""
         if self.database_url:
+            if self.database_url.startswith("mysql+aiomysql://"):
+                return self.database_url.replace("mysql+aiomysql://", "mysql+pymysql://")
             return self.database_url
         return (
             f"mysql+pymysql://{self.mysql_user}:{self.mysql_password}@"

@@ -74,9 +74,14 @@ function deepSpaceBg(theme: ThemeConfig, backgroundImage?: string): string {
 /* ==================== Variant A (原版：横向三卡片) ==================== */
 
 export const EduLogicFlowLayout: React.FC<EduLogicFlowLayoutProps> = ({ model, theme }) => {
+  const variant = String((model as any).variant || 'a').toLowerCase();
   const data = normalizeModel(model);
   const variant = String(data.variant || 'a').toLowerCase();
   const glass = glassStyle(theme);
+
+  if (variant === 'b') {
+    return <EduLogicFlowVariantB data={data} theme={theme} />;
+  }
 
   if (variant === 'b') {
     return <EduLogicFlowVariantB data={data} theme={theme} />;
@@ -160,113 +165,58 @@ export const EduLogicFlowLayout: React.FC<EduLogicFlowLayoutProps> = ({ model, t
   );
 };
 
-/* ==================== Variant B (蛇形交错时间轴) ==================== */
+const FLOW_COLORS = ['#06b6d4', '#3b82f6', '#10b981'];
 
 const EduLogicFlowVariantB: React.FC<{ data: EduLogicFlowModel; theme: ThemeConfig }> = ({ data, theme }) => {
-  const stages = data.stages.slice(0, 4);
-  const glass = glassStyle(theme);
-
+  const stages = data.stages.slice(0, 3);
+  const slideStyle: React.CSSProperties = {
+    width: 1280, height: 720, padding: '56px 76px', boxSizing: 'border-box',
+    position: 'relative', overflow: 'hidden', fontFamily: theme.fonts.body,
+    background: data.background_image
+      ? `linear-gradient(rgba(8,14,32,0.88), rgba(8,14,32,0.9)), url(${data.background_image}) center/cover no-repeat`
+      : 'linear-gradient(135deg, #0f172a 0%, #0b1120 100%)',
+  };
   return (
-    <section style={{
-      width: 1280, height: 720, flexShrink: 0,
-      background: deepSpaceBg(theme, data.background_image),
-      padding: '60px 80px', boxSizing: 'border-box',
-      display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: theme.fonts.body,
-      color: '#fff',
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '1px solid rgba(6,182,212,0.3)', paddingBottom: 20, marginBottom: 30 }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ width: 6, height: 40, background: 'linear-gradient(to bottom, #06b6d4, #3b82f6)', marginRight: 20, borderRadius: 3 }} />
-          <h2 style={{ fontSize: 42, color: '#f8fafc', margin: 0, fontWeight: 'bold', fontFamily: theme.fonts.title, letterSpacing: '-0.02em', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>{data.title}</h2>
-        </div>
+    <section style={slideStyle}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', borderBottom: '2px solid rgba(6,182,212,0.32)', paddingBottom: 18, marginBottom: 44 }}>
+        <div style={{ width: 8, height: 40, borderRadius: 4, marginRight: 18, background: '#06b6d4' }} />
+        <h2 style={{ margin: 0, color: '#ffffff', fontSize: 42, fontFamily: theme.fonts.title }}>{data.title}</h2>
       </div>
-
-      <div style={{ flexGrow: 1, position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        {/* 中心纵向穿透轴 */}
-        <div style={{
-          position: 'absolute', left: '50%', top: 20, bottom: 20, width: 2,
-          backgroundImage: `linear-gradient(to bottom, ${NODE_COLORS.slice(0, stages.length).join(', ')})`,
-          transform: 'translateX(-50%)', zIndex: 1,
-          opacity: 0.5,
-        }} />
-
-        {stages.map((stage, i) => {
-          const isLeft = i % 2 === 0;
-          const color = NODE_COLORS[i % NODE_COLORS.length];
-          const titleColor = TITLE_COLORS[i % TITLE_COLORS.length];
-
-          return (
-            <div key={i} style={{ display: 'flex', width: '100%', position: 'relative', zIndex: 2, marginBottom: i < stages.length - 1 ? 0 : 0 }}>
-              {isLeft ? (
-                <>
-                  <div style={{ width: '50%', paddingRight: 60, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-end' }}>
-                    <div style={{
-                        ...glass,
-                        padding: '20px 24px',
-                        borderRadius: 16,
-                        borderRight: `4px solid ${color}`,
-                        textAlign: 'right',
-                        width: '80%',
-                    }}>
-                        <h3 style={{ fontSize: 24, color: titleColor, margin: '0 0 10px 0', fontWeight: 'bold', fontFamily: theme.fonts.title }}>{stage.title}</h3>
-                        <p style={{ fontSize: 16, color: '#cbd5e1', margin: 0, lineHeight: 1.6 }}>{stage.description}</p>
-                    </div>
-                  </div>
-                  <div style={{
-                    position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
-                    width: 24, height: 24, backgroundColor: '#0f172a',
-                    border: `2px solid ${color}`, borderRadius: '50%', boxShadow: `0 0 15px ${color}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
-                  </div>
-                  <div style={{ width: '50%' }} />
-                </>
-              ) : (
-                <>
-                  <div style={{ width: '50%' }} />
-                  <div style={{
-                    position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
-                    width: 24, height: 24, backgroundColor: '#0f172a',
-                    border: `2px solid ${color}`, borderRadius: '50%', boxShadow: `0 0 15px ${color}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
-                  </div>
-                  <div style={{ width: '50%', paddingLeft: 60, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start' }}>
-                    <div style={{
-                        ...glass,
-                        padding: '20px 24px',
-                        borderRadius: 16,
-                        borderLeft: `4px solid ${color}`,
-                        textAlign: 'left',
-                        width: '80%',
-                    }}>
-                      <h3 style={{ fontSize: 24, color: titleColor, margin: '0 0 10px 0', fontWeight: 'bold', fontFamily: theme.fonts.title }}>{stage.title}</h3>
-                      <p style={{ fontSize: 16, color: '#cbd5e1', margin: 0, lineHeight: 1.6 }}>{stage.description}</p>
-                    </div>
-                  </div>
-                </>
-              )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, height: 'calc(100% - 120px)', justifyContent: 'center' }}>
+        {stages.map((stage, index) => (
+          <div key={index} style={{
+            display: 'flex', alignItems: 'center', gap: 20,
+            padding: '20px 28px', borderRadius: 16,
+            border: `1px solid ${FLOW_COLORS[index]}55`,
+            background: `linear-gradient(90deg, ${FLOW_COLORS[index]}22, rgba(0,0,0,0))`,
+            marginLeft: index * 60,
+          }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: '50%',
+              background: `linear-gradient(135deg, ${FLOW_COLORS[index]}, ${FLOW_COLORS[index]}88)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 28, flexShrink: 0,
+            }}>{ICONS[index]}</div>
+            <div>
+              <h3 style={{ margin: 0, color: FLOW_COLORS[index], fontSize: 26, fontFamily: theme.fonts.title }}>{stage.title}</h3>
+              <p style={{ margin: '6px 0 0', color: '#cbd5e1', fontSize: 18, lineHeight: 1.5 }}>{stage.description}</p>
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
     </section>
   );
 };
 
-/* ==================== HTML Rendering ==================== */
-
 export function renderEduLogicFlowLayoutHTML(model: EduLogicFlowModel, theme: ThemeConfig): string {
+  const variant = String((model as any).variant || 'a').toLowerCase();
   const data = normalizeModel(model as LooseEduLogicFlowModel);
-  const variant = String(data.variant || 'a').toLowerCase();
-
   if (variant === 'b') {
     return renderEduLogicFlowVariantBHTML(data, theme);
   }
-
-  const background = deepSpaceBg(theme, data.background_image).replace(/"/g, "'");
+  const background = data.background_image
+    ? `linear-gradient(rgba(8,14,32,0.88), rgba(8,14,32,0.9)), url(${data.background_image}) center/cover no-repeat`
+    : 'linear-gradient(135deg, #0f172a 0%, #0b1120 100%)';
 
   const stagesHTML = data.stages.slice(0, 3).map((stage, index) => {
     const highlight = index === 1;
@@ -348,6 +298,29 @@ function renderEduLogicFlowVariantBHTML(data: EduLogicFlowModel, theme: ThemeCon
     <div style="position:absolute;left:50%;top:20px;bottom:20px;width:2px;background-image:linear-gradient(to bottom, ${gradientColors});transform:translateX(-50%);z-index:1;opacity:0.5;"></div>
     ${nodesHTML}
   </div>
+</section>`;
+}
+
+function renderEduLogicFlowVariantBHTML(data: EduLogicFlowModel, theme: ThemeConfig): string {
+  const background = data.background_image
+    ? `linear-gradient(rgba(8,14,32,0.88), rgba(8,14,32,0.9)), url(${data.background_image}) center/cover no-repeat`
+    : 'linear-gradient(135deg, #0f172a 0%, #0b1120 100%)';
+  const stagesHTML = data.stages.slice(0, 3).map((stage, i) => {
+    const c = FLOW_COLORS[i];
+    return `<div style="display:flex;align-items:center;gap:20px;padding:20px 28px;border-radius:16px;border:1px solid ${c}55;background:linear-gradient(90deg,${c}22,rgba(0,0,0,0));margin-left:${i * 60}px;">
+      <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,${c},${c}88);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">${ICONS[i]}</div>
+      <div>
+        <h3 style="margin:0;color:${c};font-size:26px;font-family:${theme.fonts.title};">${stage.title}</h3>
+        <p style="margin:6px 0 0;color:#cbd5e1;font-size:18px;line-height:1.5;">${stage.description}</p>
+      </div>
+    </div>`;
+  }).join('');
+  return `<section style="width:1280px;height:720px;padding:56px 76px;box-sizing:border-box;position:relative;overflow:hidden;font-family:${theme.fonts.body};background:${background};">
+  <div style="display:flex;align-items:flex-end;border-bottom:2px solid rgba(6,182,212,0.32);padding-bottom:18px;margin-bottom:44px;">
+    <div style="width:8px;height:40px;border-radius:4px;margin-right:18px;background:#06b6d4;"></div>
+    <h2 style="margin:0;color:#ffffff;font-size:42px;font-family:${theme.fonts.title};">${data.title}</h2>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:20px;height:calc(100% - 120px);justify-content:center;">${stagesHTML}</div>
 </section>`;
 }
 

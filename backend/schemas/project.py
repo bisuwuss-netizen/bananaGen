@@ -1,7 +1,8 @@
 """Project-related Pydantic schemas"""
+import json
 from datetime import datetime
 from typing import Optional, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from .page import PageResponse
 
@@ -16,10 +17,17 @@ class CreateProjectRequest(BaseModel):
     creation_type: Literal["idea", "outline", "description"] = "idea"
     idea_prompt: Optional[str] = None
     outline_text: Optional[str] = None
+    outline: Optional[list[dict]] = None
     description_text: Optional[str] = None
     template_style: Optional[str] = None
     render_mode: Literal["image", "html"] = "image"
     scheme_id: str = "edu_dark"
+
+    @model_validator(mode="after")
+    def normalize_outline(self):
+        if self.outline_text is None and self.outline is not None:
+            self.outline_text = json.dumps(self.outline, ensure_ascii=False)
+        return self
 
 
 class UpdateProjectRequest(BaseModel):

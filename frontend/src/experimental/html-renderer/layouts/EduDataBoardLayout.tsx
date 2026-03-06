@@ -110,9 +110,14 @@ function deepSpaceBg(theme: ThemeConfig, backgroundImage?: string): string {
 }
 
 export const EduDataBoardLayout: React.FC<EduDataBoardLayoutProps> = ({ model, theme }) => {
+  const variant = String((model as any).variant || 'a').toLowerCase();
   const data = normalizeModel(model);
   const variant = String((model as LooseEduDataBoardModel).variant || 'a').toLowerCase();
   const glass = glassStyle(theme);
+
+  if (variant === 'b') {
+    return <EduDataBoardVariantB data={data} theme={theme} />;
+  }
 
   if (variant === 'b') {
     return <EduDataBoardVariantB data={data} theme={theme} />;
@@ -285,151 +290,56 @@ export const EduDataBoardLayout: React.FC<EduDataBoardLayoutProps> = ({ model, t
   );
 };
 
-/* ==================== Variant B (环形 HUD 控制台) ==================== */
-
-const CARD_COLORS_B = [
-  { accent: '#3b82f6', label: '课堂互动参与度增长' },
-  { accent: '#10b981', label: '期末综合优秀率均值' },
-];
-
 const EduDataBoardVariantB: React.FC<{ data: EduDataBoardModel; theme: ThemeConfig }> = ({ data, theme }) => {
-  const heroMetric = data.metrics[0] || { value: '98%', label: '核心模式满意度', note: '极度认可' };
-  const sideMetrics = data.metrics.slice(1, 3);
-  const glass = glassStyle(theme);
-
-  const heroPercent = parseInt(heroMetric.value.replace(/[^0-9]/g, ''), 10) || 98;
-  const conicBg = `conic-gradient(#06b6d4 0% ${heroPercent}%, rgba(30,41,59,0.5) ${heroPercent}% 100%)`;
-
+  const slideStyle: React.CSSProperties = {
+    width: 1280, height: 720, padding: '56px 76px', boxSizing: 'border-box',
+    position: 'relative', overflow: 'hidden', fontFamily: theme.fonts.body,
+    background: data.background_image
+      ? `linear-gradient(rgba(6,12,28,0.9), rgba(6,12,28,0.9)), url(${data.background_image}) center/cover no-repeat`
+      : '#0b1120',
+  };
   return (
-    <section style={{
-      width: 1280, height: 720, flexShrink: 0,
-      background: deepSpaceBg(theme, data.background_image),
-      padding: '60px 80px', boxSizing: 'border-box',
-      display: 'flex', flexDirection: 'column', overflow: 'hidden',
-      fontFamily: theme.fonts.body,
-      color: '#fff',
-    }}>
-      {/* Header */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
-        borderBottom: '1px solid rgba(6,182,212,0.3)', paddingBottom: 20, marginBottom: 40,
-      }}>
+    <section style={slideStyle}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '2px solid rgba(6,182,212,0.32)', paddingBottom: 16, marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ width: 6, height: 40, background: 'linear-gradient(to bottom, #06b6d4, #3b82f6)', marginRight: 20, borderRadius: 3 }} />
-          <h2 style={{ fontSize: 42, color: '#f8fafc', margin: 0, fontWeight: 'bold', fontFamily: theme.fonts.title, letterSpacing: '-0.02em', textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>{data.title}</h2>
+          <div style={{ width: 8, height: 40, borderRadius: 4, marginRight: 18, background: '#06b6d4' }} />
+          <h2 style={{ margin: 0, color: '#ffffff', fontSize: 40, fontFamily: theme.fonts.title }}>{data.title}</h2>
         </div>
-        <div style={{ backgroundColor: 'rgba(6,182,212,0.1)', border: '1px solid #06b6d4', padding: '6px 16px', borderRadius: 6, color: '#67e8f9', fontWeight: 'bold', boxShadow: '0 0 10px rgba(6,182,212,0.2)' }}>Dashboard View</div>
+        {data.subtitle && <div style={{ color: '#34d399', fontSize: 20, fontWeight: 700 }}>{data.subtitle}</div>}
       </div>
-
-      {/* Body */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', flexGrow: 1, alignItems: 'center', gap: 40 }}>
-        {/* Left: HUD ring */}
-        <div style={{
-          ...glass,
-          width: '45%', height: '100%', display: 'flex', flexDirection: 'column',
-          justifyContent: 'center', alignItems: 'center',
-          borderRadius: 24, position: 'relative',
-        }}>
-          <div style={{ fontSize: 24, color: '#94a3b8', position: 'absolute', top: 40, fontFamily: theme.fonts.title }}>{heroMetric.label}</div>
-          {/* CSS donut */}
-          <div style={{
-            position: 'relative', width: 320, height: 320, borderRadius: '50%',
-            background: conicBg, display: 'flex', justifyContent: 'center', alignItems: 'center',
-            boxShadow: '0 0 50px rgba(6,182,212,0.3)',
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, height: 'calc(100% - 110px)' }}>
+        {data.metrics.slice(0, 3).map((metric, index) => (
+          <div key={index} style={{
+            borderRadius: 16, border: `1px solid ${BAR_COLORS[index]}55`,
+            background: `linear-gradient(180deg, ${BAR_COLORS[index]}22, rgba(0,0,0,0))`,
+            padding: '28px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', textAlign: 'center', boxSizing: 'border-box',
           }}>
-            <div style={{
-              width: 260, height: 260, backgroundColor: '#020617', borderRadius: '50%',
-              display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
-              boxShadow: 'inset 0 0 30px rgba(0,0,0,0.8)',
-            }}>
-              <span style={{ fontSize: 80, fontWeight: 900, color: '#fff', textShadow: '0 0 30px #06b6d4', lineHeight: 1 }}>{heroMetric.value}</span>
-              {heroMetric.note && <span style={{ fontSize: 20, color: '#67e8f9', marginTop: 10 }}>{heroMetric.note}</span>}
+            <div style={{ fontSize: 56, color: BAR_COLORS[index], fontWeight: 900, marginBottom: 12 }}>{metric.value}</div>
+            <div style={{ color: '#e2e8f0', fontSize: 22, fontWeight: 700, marginBottom: 8 }}>{metric.label}</div>
+            {metric.note && <div style={{ color: '#94a3b8', fontSize: 16 }}>{metric.note}</div>}
+            <div style={{ width: '80%', height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.08)', marginTop: 16 }}>
+              <div style={{ width: `${data.bars[index]?.current || 70}%`, height: '100%', borderRadius: 3, background: BAR_COLORS[index] }} />
             </div>
           </div>
-        </div>
-
-        {/* Right: side metrics + insight bar */}
-        <div style={{ width: '55%', height: '100%', display: 'flex', flexWrap: 'wrap', alignContent: 'center', gap: 20 }}>
-          {sideMetrics.map((metric, i) => {
-            const accent = CARD_COLORS_B[i]?.accent || BAR_COLORS[i + 1];
-            const numericVal = parseInt(metric.value.replace(/[^0-9]/g, ''), 10) || 50;
-            const barW = Math.min(numericVal, 100);
-            return (
-              <div key={i} style={{
-                ...glass,
-                width: 'calc(50% - 10px)',
-                padding: 30, borderRadius: 20, boxSizing: 'border-box',
-                borderTop: `4px solid ${accent}`,
-              }}>
-                <div style={{ fontSize: 16, color: '#94a3b8', marginBottom: 10 }}>{metric.label}</div>
-                <div style={{ fontSize: 48, color: accent, fontWeight: 'bold', textShadow: `0 0 20px ${accent}40` }}>{metric.value}</div>
-                <div style={{ width: '100%', height: 6, backgroundColor: 'rgba(255,255,255,0.1)', marginTop: 20, borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{ width: `${barW}%`, height: '100%', backgroundColor: accent, boxShadow: `0 0 10px ${accent}` }} />
-                </div>
-              </div>
-            );
-          })}
-
-          {data.bullets && data.bullets.length > 0 ? (
-            <div style={{
-              width: '100%', backgroundColor: 'rgba(6,182,212,0.08)',
-              border: '1px solid rgba(6,182,212,0.2)', padding: '24px 30px', borderRadius: 20, boxSizing: 'border-box',
-              backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-            }}>
-              {data.bullets.slice(0, 3).map((bullet, bi) => (
-                <div key={bi} style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: bi < data.bullets!.length - 1 ? 12 : 0 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#06b6d4', flexShrink: 0, marginTop: 6, boxShadow: '0 0 8px #06b6d4' }} />
-                  <div>
-                    <span style={{ color: '#e2e8f0', fontSize: 18, fontWeight: 700 }}>{bullet.text}</span>
-                    {bullet.description && <span style={{ color: '#94a3b8', fontSize: 15, marginLeft: 8 }}>{bullet.description}</span>}
-                  </div>
-                </div>
-              ))}
-              {data.insight && <div style={{ color: '#67e8f9', fontSize: 15, marginTop: 16, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 12 }}>{data.insight}</div>}
-            </div>
-          ) : (
-            <div style={{
-              width: '100%', backgroundColor: 'rgba(6,182,212,0.08)',
-              border: '1px solid rgba(6,182,212,0.2)', padding: 30, borderRadius: 20, boxSizing: 'border-box',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-            }}>
-              <div>
-                <div style={{ fontSize: 20, color: '#e2e8f0', fontWeight: 'bold', marginBottom: 8 }}>
-                  {data.bars[0]?.label || '知识点掌握率对比预测'}
-                </div>
-                <div style={{ fontSize: 16, color: '#94a3b8' }}>{data.insight || '理论理解 vs 综合创新能力大幅度跃升'}</div>
-              </div>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', height: 60 }}>
-                {(() => {
-                  const maxVal = Math.max(...data.bars.slice(0, 3).map(b => Math.max(b.baseline, b.current)), 1);
-                  return data.bars.slice(0, 3).map((bar, bi) => (
-                    <React.Fragment key={bi}>
-                      <div style={{ width: 14, height: Math.max(10, (bar.baseline / maxVal) * 60), backgroundColor: '#475569', borderRadius: 2 }} />
-                      <div style={{ width: 14, height: Math.max(10, (bar.current / maxVal) * 60), backgroundColor: BAR_COLORS[bi], borderRadius: 2, boxShadow: `0 0 10px ${BAR_COLORS[bi]}`, marginRight: bi < 2 ? 12 : 0 }} />
-                    </React.Fragment>
-                  ));
-                })()}
-              </div>
-            </div>
-          )}
-        </div>
+        ))}
       </div>
+      {data.insight && (
+        <div style={{ position: 'absolute', bottom: 20, left: 76, right: 76, color: '#94a3b8', fontSize: 16, textAlign: 'center' }}>{data.insight}</div>
+      )}
     </section>
   );
 };
 
-/* ==================== HTML Rendering ==================== */
-
 export function renderEduDataBoardLayoutHTML(model: EduDataBoardModel, theme: ThemeConfig): string {
+  const variant = String((model as any).variant || 'a').toLowerCase();
   const data = normalizeModel(model as LooseEduDataBoardModel);
-  const variant = String((model as LooseEduDataBoardModel).variant || 'a').toLowerCase();
-
   if (variant === 'b') {
     return renderEduDataBoardVariantBHTML(data, theme);
   }
-
-  const background = deepSpaceBg(theme, data.background_image).replace(/"/g, "'");
+  const background = data.background_image
+    ? `linear-gradient(rgba(6,12,28,0.9), rgba(6,12,28,0.9)), url(${data.background_image}) center/cover no-repeat`
+    : '#0b1120';
 
   const metricHTML = data.metrics.slice(0, 3).map((metric, index) => `
     <div style="flex:1;border-radius:16px;border:1px solid ${BAR_COLORS[index]}40;background:linear-gradient(135deg, ${BAR_COLORS[index]}15, rgba(255,255,255,0.02));padding:20px 24px;display:flex;align-items:center;box-sizing:border-box;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 8px 32px 0 rgba(0,0,0,0.36);">
@@ -564,6 +474,34 @@ function renderEduDataBoardVariantBHTML(data: EduDataBoardModel, theme: ThemeCon
     }
     </div>
   </div>
+</section>`;
+}
+
+function renderEduDataBoardVariantBHTML(data: EduDataBoardModel, theme: ThemeConfig): string {
+  const background = data.background_image
+    ? `linear-gradient(rgba(6,12,28,0.9), rgba(6,12,28,0.9)), url(${data.background_image}) center/cover no-repeat`
+    : '#0b1120';
+  const subtitleHTML = data.subtitle ? `<div style="color:#34d399;font-size:20px;font-weight:700;">${data.subtitle}</div>` : '';
+  const cardsHTML = data.metrics.slice(0, 3).map((metric, i) => {
+    const barW = data.bars[i]?.current || 70;
+    return `<div style="border-radius:16px;border:1px solid ${BAR_COLORS[i]}55;background:linear-gradient(180deg,${BAR_COLORS[i]}22,rgba(0,0,0,0));padding:28px 24px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;box-sizing:border-box;">
+      <div style="font-size:56px;color:${BAR_COLORS[i]};font-weight:900;margin-bottom:12px;">${metric.value}</div>
+      <div style="color:#e2e8f0;font-size:22px;font-weight:700;margin-bottom:8px;">${metric.label}</div>
+      ${metric.note ? `<div style="color:#94a3b8;font-size:16px;">${metric.note}</div>` : ''}
+      <div style="width:80%;height:6px;border-radius:3px;background:rgba(255,255,255,0.08);margin-top:16px;"><div style="width:${barW}%;height:100%;border-radius:3px;background:${BAR_COLORS[i]};"></div></div>
+    </div>`;
+  }).join('');
+  const insightHTML = data.insight ? `<div style="position:absolute;bottom:20px;left:76px;right:76px;color:#94a3b8;font-size:16px;text-align:center;">${data.insight}</div>` : '';
+  return `<section style="width:1280px;height:720px;padding:56px 76px;box-sizing:border-box;position:relative;overflow:hidden;font-family:${theme.fonts.body};background:${background};">
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid rgba(6,182,212,0.32);padding-bottom:16px;margin-bottom:24px;">
+    <div style="display:flex;align-items:center;">
+      <div style="width:8px;height:40px;border-radius:4px;margin-right:18px;background:#06b6d4;"></div>
+      <h2 style="margin:0;color:#ffffff;font-size:40px;font-family:${theme.fonts.title};">${data.title}</h2>
+    </div>
+    ${subtitleHTML}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;height:calc(100% - 110px);">${cardsHTML}</div>
+  ${insightHTML}
 </section>`;
 }
 

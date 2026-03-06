@@ -1,4 +1,3 @@
-// TODO: split components
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
@@ -14,19 +13,29 @@ import {
   FileText,
   Loader2,
 } from 'lucide-react';
-import { Button, Loading, Modal, useToast, useConfirm, MaterialSelector, ProjectSettingsModal, ExportTasksPanel } from '@/components/shared';
-import { MaterialGeneratorModal } from '@/components/shared/MaterialGeneratorModal';
-import { TemplateSelector, getTemplateFile } from '@/components/shared/TemplateSelector';
+import { Button, Loading, Textarea, useToast, useConfirm, Markdown } from '@/components/shared';
+import { getTemplateFile } from '@/components/shared/TemplateSelector';
 import { listUserTemplates, listMaterials, type UserTemplate } from '@/api/endpoints';
 import { materialUrlToFile } from '@/components/shared/MaterialSelector';
 import type { Material } from '@/api/endpoints';
 import { SlideCard } from '@/components/preview/SlideCard';
+import {
+  BackgroundPickerModal,
+  HtmlFileInputs,
+  HtmlUrlModal,
+  ProjectAuxiliaryModals,
+  SlidePreviewFooter,
+  SlidePreviewHeader,
+  SlidePreviewStage,
+  SlideThumbnailRail,
+  TemplatePickerModal,
+} from '@/components/slide-preview';
 import { useProjectStore } from '@/store/useProjectStore';
 import { useExportTasksStore, type ExportTaskType } from '@/store/useExportTasksStore';
 import { getImageUrl } from '@/api/client';
-import { getPageImageVersions, setCurrentImageVersion, updateProject, updatePage, uploadTemplate, exportPPTX as apiExportPPTX, exportPDF as apiExportPDF, exportEditablePPTX as apiExportEditablePPTX, generateHtmlImagesStreaming, generateLayoutPlan, type HtmlImageSlot, type HtmlImageSSEEvent } from '@/api/endpoints';
+import { getPageImageVersions, setCurrentImageVersion, updateProject, updatePage, uploadTemplate, exportPPTX as apiExportPPTX, exportPDF as apiExportPDF, exportEditablePPTX as apiExportEditablePPTX, generateHtmlImagesStreaming, type HtmlImageSlot, type HtmlImageSSEEvent } from '@/api/endpoints';
 import { fileToBase64 } from '@/experimental/html-renderer/utils/htmlExporter';
-import type { ImageVersion, DescriptionContent, ExportExtractorMethod, ExportInpaintMethod, LayoutId } from '@/types';
+import type { Page, ImageVersion, DescriptionContent, ExportExtractorMethod, ExportInpaintMethod, LayoutId } from '@/types';
 import { normalizeErrorMessage } from '@/utils';
 // HTML渲染模式组件
 import { SlideRenderer } from '@/experimental/html-renderer/components/SlideRenderer';
@@ -69,6 +78,11 @@ export const SlidePreview: React.FC = () => {
   } = useProjectStore();
 
   const { addTask, pollTask: pollExportTask, tasks: exportTasks, restoreActiveTasks } = useExportTasksStore();
+  const { show, ToastContainer } = useToast();
+  const notify = useCallback(
+    (message: string, type: 'success' | 'error' | 'info' = 'info') => show({ message, type }),
+    [show]
+  );
 
   // 页面挂载时恢复正在进行的导出任务（页面刷新后）
   useEffect(() => {
@@ -161,7 +175,6 @@ export const SlidePreview: React.FC = () => {
   const [isSelectingRegion, setIsSelectingRegion] = useState(false);
   const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | null>(null);
   const [selectionRect, setSelectionRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
-  const { show, ToastContainer } = useToast();
 
   // HTML 上传相关状态
   const [_isUploadingHtml, setIsUploadingHtml] = useState(false);
@@ -276,10 +289,12 @@ export const SlidePreview: React.FC = () => {
   }, [inferTwoColumnPartType]);
 
   const shouldUseOptionalImageSlot = useCallback((
-    page: NonNullable<typeof currentProject>["pages"][0],
+    page: Page,
     normalizedModel?: Record<string, unknown>
   ): boolean => {
-    const outline = page?.outline_content as unknown as Record<string, unknown> | undefined;
+    const outline = page?.outline_content
+      ? ({ ...page.outline_content } as Record<string, unknown>)
+      : undefined;
     if (typeof outline?.has_image === 'boolean') {
       return outline.has_image;
     }
@@ -304,7 +319,7 @@ export const SlidePreview: React.FC = () => {
    * 不支持图片插槽的布局：
    * - toc, section_title, quote, ending
    */
-  const getPageImageSlotCount = useCallback((page: NonNullable<typeof currentProject>["pages"][0]): number => {
+  const getPageImageSlotCount = useCallback((page: Page): number => {
     if (!page) return 0;
 
     // 非HTML模式：所有页面都需要生成图片（每页1张）
@@ -350,8 +365,13 @@ export const SlidePreview: React.FC = () => {
       return shouldUseOptionalImageSlot(page, htmlModel) ? 1 : 0;
     }
 
-    // cover 布局：如果有 background_image 字段则有1个插槽
-    if (layoutId === 'cover' && htmlModel && 'background_image' in htmlModel) {
+    // cover 布局：有1个背景/封面图插槽
+    if (layoutId === 'cover') {
+      return 1;
+    }
+
+    // edu_cover 布局：有1个封面图插槽 (hero_image)
+    if (layoutId === 'edu_cover') {
       return 1;
     }
 
@@ -359,7 +379,7 @@ export const SlidePreview: React.FC = () => {
   }, [inferTwoColumnPartType, isHtmlMode, shouldUseOptionalImageSlot]);
 
   // 辅助函数：判断页面是否有图片插槽
-  const pageHasImageSlot = useCallback((page: NonNullable<typeof currentProject>["pages"][0]): boolean => {
+  const pageHasImageSlot = useCallback((page: Page): boolean => {
     return getPageImageSlotCount(page) > 0;
   }, [getPageImageSlotCount]);
 
@@ -402,7 +422,7 @@ export const SlidePreview: React.FC = () => {
 
   // 将Page转换为PagePayload（用于HTML渲染）
   // 会自动为支持图片的布局添加默认的image字段，以显示占位符
-  const convertPageToPayload = useCallback((page: NonNullable<typeof currentProject>["pages"][0], index: number): PagePayload | null => {
+  const convertPageToPayload = useCallback((page: Page, index: number): PagePayload | null => {
     if (!page) return null;
     const pageId = page.id || page.page_id || `page-${index}`;
 
@@ -421,7 +441,9 @@ export const SlidePreview: React.FC = () => {
         }
       }
 
-      const outlineContent = page.outline_content as unknown as Record<string, unknown> | undefined;
+      const outlineContent = page.outline_content
+        ? ({ ...page.outline_content } as Record<string, unknown>)
+        : undefined;
       const outlineHasImage = typeof outlineContent?.has_image === 'boolean'
         ? outlineContent.has_image
         : undefined;
@@ -469,7 +491,7 @@ export const SlidePreview: React.FC = () => {
         page_id: pageId,
         order_index: index,
         layout_id: layoutId,
-        model: model as any,
+        model: model as unknown as PagePayload['model'],
       };
     }
 
@@ -477,7 +499,7 @@ export const SlidePreview: React.FC = () => {
     const outline = page.outline_content;
     if (!outline) return null;
 
-    const outlineRecord = outline as unknown as Record<string, unknown>;
+    const outlineRecord = { ...outline } as Record<string, unknown>;
     const outlineTitle = typeof outlineRecord.title === 'string' ? outlineRecord.title : '未命名';
     const outlinePoints = Array.isArray(outlineRecord.points)
       ? outlineRecord.points.map((point) => String(point || '').trim()).filter(Boolean)
@@ -607,12 +629,12 @@ export const SlidePreview: React.FC = () => {
       page_id: pageId,
       order_index: index,
       layout_id: layoutId,
-      model: model as any,
+      model: model as unknown as PagePayload['model'],
     };
   }, [applyUploadedImagesToModel, normalizeTwoColumnPart, sectionNumberMap]);
 
   // 根据页面与布局生成 HTML 模式图片插槽
-  const buildHtmlImageSlots = useCallback((pages: NonNullable<typeof currentProject>["pages"], onlyIndex?: number): HtmlImageSlot[] => {
+  const buildHtmlImageSlots = useCallback((pages: Page[], onlyIndex?: number): HtmlImageSlot[] => {
     const slots: HtmlImageSlot[] = [];
     if (!pages) return slots;
 
@@ -624,7 +646,7 @@ export const SlidePreview: React.FC = () => {
         .trim();
     };
 
-    const collectPageFacts = (page: NonNullable<typeof currentProject>["pages"][0], model: Record<string, any>): string[] => {
+    const collectPageFacts = (page: Page, model: Record<string, any>): string[] => {
       const facts: string[] = [];
 
       const outline = page?.outline_content as any;
@@ -707,6 +729,9 @@ export const SlidePreview: React.FC = () => {
       if (layoutId === 'image_full') {
         return '生成“整页核心场景图”，突出主题对象与关键情境。';
       }
+      if (layoutId === 'edu_cover' || layoutId === 'cover' || slotPath === 'hero_image' || slotPath === 'background_image') {
+        return '生成“封面辅助图”，强化主题识别，主体靠边，中心留白给标题，禁止文字/数字/Logo/水印。';
+      }
       return '生成“概念解释图”，用于辅助理解，不是背景纹理图。';
     };
 
@@ -725,6 +750,15 @@ export const SlidePreview: React.FC = () => {
       const topicLine = facts.length > 0
         ? `页面主题与信息：${facts.slice(0, 6).join('；')}`
         : '页面主题与信息：专业知识讲解场景';
+
+      if (layoutId === 'edu_cover' || layoutId === 'cover' || slotPath === 'hero_image' || slotPath === 'background_image') {
+        return [
+          '任务：为PPT封面生成辅助图，强化主题识别，不抢标题。',
+          topicLine,
+          '构图要求：主体靠右或靠边，中心及上方留白给标题与副标题，氛围感强。',
+          '禁止：文字、数字、Logo、水印、纯抽象渐变、无意义背景纹理。',
+        ].join(' ');
+      }
 
       return [
         '任务：为PPT生成“内容解释型配图”，目标是帮助观众理解页面知识点。',
@@ -770,7 +804,15 @@ export const SlidePreview: React.FC = () => {
       };
 
       switch (layoutId) {
+        case 'edu_cover':
+          if (!model.hero_image) {
+            push('hero_image');
+          }
+          break;
         case 'cover':
+          if (!model.background_image) {
+            push('background_image');
+          }
           break;
         case 'edu_cover': {
           const variant = String(model?.variant || 'a').toLowerCase();
@@ -817,7 +859,7 @@ export const SlidePreview: React.FC = () => {
   ]);
 
   // 生成背景图的插槽（全页底图）
-  const buildHtmlBackgroundSlots = useCallback((pages: NonNullable<typeof currentProject>["pages"]): HtmlImageSlot[] => {
+  const buildHtmlBackgroundSlots = useCallback((pages: Page[]): HtmlImageSlot[] => {
     if (!pages || pages.length === 0) return [];
     const cleanText = (value: unknown): string => {
       if (typeof value !== 'string') return '';
@@ -873,8 +915,31 @@ export const SlidePreview: React.FC = () => {
 
   const totalImageSlots = useMemo(() => {
     if (!isHtmlMode || !currentProject?.pages) return 0;
-    return currentProject.pages.reduce((sum, page) => sum + getPageImageSlotCount(page), 0);
-  }, [isHtmlMode, currentProject?.pages, getPageImageSlotCount]);
+    return currentProject.pages.reduce((sum, page, index) => {
+      const payload = convertPageToPayload(page, index);
+      if (!payload) return sum;
+      const model = payload.model as any;
+      switch (normalizeLayoutId(payload.layout_id as LayoutId)) {
+        case 'title_content':
+        case 'title_bullets':
+        case 'process_steps':
+          return sum + (shouldUseOptionalImageSlot(page, model) ? 1 : 0);
+        case 'image_full':
+          return sum + 1;
+        case 'edu_cover':
+        case 'cover':
+          return sum + 1;
+        case 'two_column': {
+          let count = 0;
+          if (inferTwoColumnPartType(model.left as Record<string, unknown> | undefined) === 'image') count += 1;
+          if (inferTwoColumnPartType(model.right as Record<string, unknown> | undefined) === 'image') count += 1;
+          return sum + count;
+        }
+        default:
+          return sum;
+      }
+    }, 0);
+  }, [isHtmlMode, currentProject?.pages, convertPageToPayload, inferTwoColumnPartType, shouldUseOptionalImageSlot]);
 
   // 当前选中页面的PagePayload（用于HTML渲染）
   const selectedPagePayload = useMemo(() => {
@@ -934,7 +999,7 @@ export const SlidePreview: React.FC = () => {
   // 上传 HTML 到同域服务器获取在线链接（避免跨域问题）
   const handleUploadHTML = useCallback(async (options?: { silent?: boolean }): Promise<string | null> => {
     if (!currentProject || !isHtmlMode || allPagesPayload.length === 0) {
-      show('暂无内容可上传', 'warning');
+      notify('暂无内容可上传', 'info');
       return null;
     }
 
@@ -983,7 +1048,7 @@ export const SlidePreview: React.FC = () => {
         setUploadedHtmlUrl(fullUrl);
         if (!options?.silent) {
           setShowHtmlUrlModal(true);
-          show('上传成功', 'success');
+          notify('上传成功', 'success');
         }
         return fullUrl;
       } else {
@@ -991,7 +1056,7 @@ export const SlidePreview: React.FC = () => {
       }
     } catch (error) {
       console.error('上传 HTML 失败:', error);
-      show(error instanceof Error ? error.message : '上传失败', 'error');
+      notify(error instanceof Error ? error.message : '上传失败', 'error');
       return null;
     } finally {
       setIsUploadingHtml(false);
@@ -1003,7 +1068,7 @@ export const SlidePreview: React.FC = () => {
     if (!uploadedHtmlUrl) return;
     try {
       await navigator.clipboard.writeText(uploadedHtmlUrl);
-      show('链接已复制', 'success');
+      notify('链接已复制', 'success');
     } catch {
       // 降级方案
       const input = document.createElement('input');
@@ -1012,7 +1077,7 @@ export const SlidePreview: React.FC = () => {
       input.select();
       document.execCommand('copy');
       document.body.removeChild(input);
-      show('链接已复制', 'success');
+      notify('链接已复制', 'success');
     }
   }, [uploadedHtmlUrl, show]);
 
@@ -1030,7 +1095,7 @@ export const SlidePreview: React.FC = () => {
         if (response.data?.templates) {
           setUserTemplates(response.data.templates);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('加载用户模板失败:', error);
       }
     };
@@ -1103,7 +1168,7 @@ export const SlidePreview: React.FC = () => {
         if (response.data?.versions) {
           setImageVersions(response.data.versions);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to load image versions:', error);
         setImageVersions([]);
       }
@@ -1111,6 +1176,48 @@ export const SlidePreview: React.FC = () => {
 
     loadVersions();
   }, [currentProject, selectedIndex, projectId]);
+
+  // 当前页面可用的布局变体
+  const currentPageVariants = useMemo(() => {
+    if (!currentProject?.pages || !isHtmlMode) return null;
+    const page = currentProject.pages[selectedIndex];
+    if (!page?.layout_id) return null;
+    const layoutId = normalizeLayoutId(page.layout_id as LayoutId);
+    const pool = VARIANT_POOLS[layoutId] || null;
+    return pool;
+  }, [currentProject?.pages, selectedIndex, isHtmlMode]);
+
+  const currentPageVariantId = useMemo(() => {
+    if (!currentProject?.pages) return 'a';
+    const page = currentProject.pages[selectedIndex];
+    const model = page?.html_model as Record<string, unknown> | undefined;
+    const variantId = String(model?.variant || 'a').toLowerCase();
+    return variantId;
+  }, [currentProject?.pages, selectedIndex]);
+
+  const handleVariantChange = useCallback(async (variantId: string) => {
+    if (!currentProject?.pages || !projectId) return;
+    const page = currentProject.pages[selectedIndex];
+    if (!page?.id) return;
+
+    const existingModel = (page.html_model || {}) as Record<string, unknown>;
+    const updatedModel = { ...existingModel, variant: variantId };
+
+    // Optimistic local update: immediately reflect variant in UI
+    const updatedPages = [...currentProject.pages];
+    updatedPages[selectedIndex] = { ...updatedPages[selectedIndex], html_model: updatedModel };
+    useProjectStore.setState({ currentProject: { ...currentProject, pages: updatedPages } });
+
+    try {
+      await updatePage(projectId, page.id, { html_model: updatedModel } as any);
+      syncProject(projectId).catch(() => {});
+    } catch (error) {
+      console.error('Failed to switch variant:', error);
+      // Revert optimistic update on failure
+      useProjectStore.setState({ currentProject });
+      notify('切换变体失败', 'error');
+    }
+  }, [currentProject, selectedIndex, projectId, syncProject, notify]);
 
   const handleGenerateAll = async () => {
     const pageIds = getSelectedPageIdsForExport();
@@ -1206,6 +1313,9 @@ export const SlidePreview: React.FC = () => {
       );
     } catch (error) {
       console.error('生成 HTML 图片失败:', error);
+      // #region agent log
+      fetch('http://127.0.0.1:7249/ingest/f63d39ca-6fcd-4fcb-87bf-224f2267b8e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3fe128'},body:JSON.stringify({sessionId:'3fe128',location:'SlidePreview.tsx:handleGenerateHtmlImages',message:'generate_html_images_error',data:{error:String(error),name:(error as any)?.name,status:(error as any)?.status},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
       show({ message: normalizeErrorMessage(error, '图片生成失败'), type: 'error' });
     } finally {
       setIsGeneratingHtmlImages(false);
@@ -1278,6 +1388,9 @@ export const SlidePreview: React.FC = () => {
       );
     } catch (error) {
       console.error('生成 HTML 图片失败:', error);
+      // #region agent log
+      fetch('http://127.0.0.1:7249/ingest/f63d39ca-6fcd-4fcb-87bf-224f2267b8e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3fe128'},body:JSON.stringify({sessionId:'3fe128',location:'SlidePreview.tsx:handleGenerateCurrentHtmlImages',message:'generate_current_error',data:{error:String(error),name:(error as any)?.name},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
       show({ message: normalizeErrorMessage(error, '图片生成失败'), type: 'error' });
     } finally {
       setIsGeneratingHtmlImages(false);
@@ -1339,6 +1452,9 @@ export const SlidePreview: React.FC = () => {
       );
     } catch (error) {
       console.error('生成背景图失败:', error);
+      // #region agent log
+      fetch('http://127.0.0.1:7249/ingest/f63d39ca-6fcd-4fcb-87bf-224f2267b8e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3fe128'},body:JSON.stringify({sessionId:'3fe128',location:'SlidePreview.tsx:handleGenerateHtmlBackgrounds',message:'generate_bg_error',data:{error:String(error),name:(error as any)?.name,status:(error as any)?.status},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
       show({ message: normalizeErrorMessage(error, '背景图生成失败'), type: 'error' });
     } finally {
       setIsGeneratingHtmlBackgrounds(false);
@@ -1797,12 +1913,12 @@ export const SlidePreview: React.FC = () => {
         let htmlUrl = uploadedHtmlUrl;
         
         if (!htmlUrl) {
-          show('正在生成在线链接...', 'info');
+          notify('正在生成在线链接...', 'info');
           htmlUrl = await handleUploadHTML({ silent: true });
         }
         
         if (!htmlUrl) {
-          show('获取在线链接失败，请重试', 'error');
+          notify('获取在线链接失败，请重试', 'error');
           return;
         }
         
@@ -1810,16 +1926,16 @@ export const SlidePreview: React.FC = () => {
         const generator = (window as any).generateHighFidelityPPT;
         
         if (typeof generator !== 'function') {
-          show('未检测到 PPTX 导出脚本，请检查 HTMLtoPPT.js 是否加载', 'error');
+          notify('未检测到 PPTX 导出脚本，请检查 HTMLtoPPT.js 是否加载', 'error');
           return;
         }
         
         try {
           generator(htmlUrl);
-          show('正在导出 PPTX...', 'success');
+          notify('正在导出 PPTX...', 'success');
         } catch (genError: any) {
           console.error('[PPTX导出] generator 执行出错:', genError);
-          show(`导出失败: ${genError?.message || genError}`, 'error');
+          notify(`导出失败: ${genError?.message || genError}`, 'error');
         }
         return;
       }
@@ -2067,398 +2183,183 @@ export const SlidePreview: React.FC = () => {
 
   return (
     <div className="app-shell h-screen flex flex-col overflow-hidden">
-      {/* 版式规划加载遮罩 */}
-      {isLayoutPlanning && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
-          background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          color: '#fff', fontFamily: 'system-ui, sans-serif',
-        }}>
-          <Loader2 size={40} className="animate-spin" style={{ color: '#06b6d4', marginBottom: 24 }} />
-          <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 32 }}>正在优化版式布局...</div>
-          <div style={{ display: 'flex', gap: 16 }}>
-            {LAYOUT_PLAN_STEPS.map((label, i) => {
-              const stepNum = i + 1;
-              const isActive = layoutPlanStep === stepNum;
-              const isDone = layoutPlanStep > stepNum;
-              return (
-                <div key={i} style={{
-                  display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px',
-                  borderRadius: 8,
-                  background: isActive ? 'rgba(6,182,212,0.2)' : isDone ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)',
-                  border: `1px solid ${isActive ? '#06b6d4' : isDone ? '#10b981' : 'rgba(255,255,255,0.1)'}`,
-                  transition: 'all 0.3s',
-                }}>
-                  <div style={{
-                    width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 12, fontWeight: 700,
-                    background: isDone ? '#10b981' : isActive ? '#06b6d4' : '#334155',
-                    color: '#fff',
-                  }}>
-                    {isDone ? <Check size={14} /> : stepNum}
-                  </div>
-                  <span style={{ fontSize: 14, color: isActive ? '#67e8f9' : isDone ? '#6ee7b7' : '#94a3b8' }}>{label}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-      
-      {/* 顶栏 */}
-      <header className="app-navbar relative z-40 h-14 md:h-16 flex items-center justify-between px-3 md:px-6 flex-shrink-0 overflow-visible">
-        <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<Home size={16} className="md:w-[18px] md:h-[18px]" />}
-            onClick={redirectHomepage}
-            className="hidden sm:inline-flex flex-shrink-0"
-          >
-            <span className="hidden md:inline">主页</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<ArrowLeft size={16} className="md:w-[18px] md:h-[18px]" />}
-            onClick={() => {
-              if (fromHistory) {
-                navigate('/history');
-              } else {
-                navigate(`/project/${projectId}/detail`);
-              }
-            }}
-            className="flex-shrink-0"
-          >
-            <span className="hidden sm:inline">返回</span>
-          </Button>
-          {/*<div className="flex items-center gap-1.5 md:gap-2 min-w-0">
-            <span className="text-xl md:text-2xl">🍌</span>
-            <span className="text-base md:text-xl font-bold truncate">蕉幻</span>
-          </div>
-          <span className="text-gray-400 hidden md:inline">|</span>*/}
-          <span className="text-sm md:text-lg font-semibold truncate hidden sm:inline">预览</span>
-        </div>
-        <div className="flex items-center gap-1 md:gap-3 flex-shrink-0">
-          {/*<Button
-            variant="ghost"
-            size="sm"
-            icon={<Settings size={16} className="md:w-[18px] md:h-[18px]" />}
-            onClick={() => setIsProjectSettingsOpen(true)}
-            className="hidden lg:inline-flex"
-          >
-            <span className="hidden xl:inline">项目设置</span>
-          </Button>*/}
-          {isHtmlMode && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearBackground}
-              className="hidden sm:inline-flex"
-              disabled={!htmlGlobalBackground}
-            >
-              清除背景图
-            </Button>
-          )}
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<ArrowLeft size={16} className="md:w-[18px] md:h-[18px]" />}
-            onClick={() => navigate(`/project/${projectId}/detail`)}
-            className="hidden sm:inline-flex"
-          >
-            <span className="hidden md:inline">上一步</span>
-          </Button>
-
-          {/* 导出任务按钮 */}
-          {exportTasks.filter(t => t.projectId === projectId).length > 0 && (
-            <div className="relative">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setShowExportTasksPanel(!showExportTasksPanel);
-                  setShowExportMenu(false);
-                }}
-                className="relative"
-              >
-                {exportTasks.filter(t => t.projectId === projectId && (t.status === 'PROCESSING' || t.status === 'RUNNING' || t.status === 'PENDING')).length > 0 ? (
-                  <Loader2 size={16} className="animate-spin text-banana-500" />
-                ) : (
-                  <FileText size={16} />
-                )}
-                <span className="ml-1 text-xs">
-                  {exportTasks.filter(t => t.projectId === projectId).length}
-                </span>
-              </Button>
-              {showExportTasksPanel && (
-                <div className="absolute right-0 mt-2 z-50">
-                  <ExportTasksPanel
-                    projectId={projectId}
-                    pages={currentProject?.pages || []}
-                    className="w-96 max-h-[28rem] shadow-lg"
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="relative" ref={exportMenuRef}>
-            <Button
-              variant="primary"
-              size="sm"
-              icon={<Download size={16} className="md:w-[18px] md:h-[18px]" />}
-              onClick={() => {
-                setShowExportMenu(!showExportMenu);
-                setShowExportTasksPanel(false);
-              }}
-              disabled={false}
-              className="text-xs md:text-sm"
-            >
-              <span className="hidden sm:inline">导出</span>
-              <span className="sm:hidden">导出</span>
-            </Button>
-            {showExportMenu && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                <button
-                  onClick={() => handleExport('pptx')}
-                  className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors text-sm"
-                >
-                  导出为 PPTX
-                </button>
-                {isHtmlMode && (
-                  <>
-                    <button
-                      onClick={handleDownloadHTMLSlides}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors text-sm text-banana-600 font-medium"
-                    >
-                      下载 HTML 幻灯片
-                    </button>
-                    <div className="border-t border-gray-100 my-1" />
-                    <button
-                      onClick={() => {
-                        setShowExportMenu(false);
-                        layoutPlanAppliedRef.current = false;
-                        runLayoutPlan(String(Date.now()));
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors text-sm text-gray-600"
-                    >
-                      重新规划版式
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+      <SlidePreviewHeader
+        projectId={projectId}
+        pages={currentProject.pages}
+        exportTasks={exportTasks}
+        htmlGlobalBackground={htmlGlobalBackground}
+        isHtmlMode={isHtmlMode}
+        showExportMenu={showExportMenu}
+        showExportTasksPanel={showExportTasksPanel}
+        exportMenuRef={exportMenuRef}
+        onGoHome={redirectHomepage}
+        onGoBack={() => {
+          if (fromHistory) {
+            navigate('/history');
+          } else {
+            navigate(`/project/${projectId}/detail`);
+          }
+        }}
+        onGoPreviousStep={() => navigate(`/project/${projectId}/detail`)}
+        onToggleExportMenu={() => {
+          setShowExportMenu(!showExportMenu);
+          setShowExportTasksPanel(false);
+        }}
+        onToggleExportTasksPanel={() => {
+          setShowExportTasksPanel(!showExportTasksPanel);
+          setShowExportMenu(false);
+        }}
+        onClearBackground={handleClearBackground}
+        onExportPptx={() => handleExport('pptx')}
+        onDownloadHtmlSlides={handleDownloadHTMLSlides}
+      />
 
       {/* 主内容区 */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-w-0 min-h-0">
-        {/* 左侧：缩略图列表 */}
-        <aside className="w-full md:w-80 bg-white border-b md:border-b-0 md:border-r border-gray-200 flex flex-col flex-shrink-0">
-          <div className="p-3 md:p-4 border-b border-gray-200 flex-shrink-0 space-y-2 md:space-y-3">
-            <Button
-              variant="primary"
-              icon={isGeneratingHtmlImages ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} className="md:w-[18px] md:h-[18px]" />}
-              onClick={isHtmlMode ? handleGenerateHtmlImages : handleGenerateAll}
-              className="w-full text-sm md:text-base"
-              disabled={isGeneratingHtmlImages}
-            >
-              {isGeneratingHtmlImages
-                ? `生成中 (${htmlImageGenerationProgress.current}/${htmlImageGenerationProgress.total})`
-                : isHtmlMode
-                  ? `批量生成图片 (${totalImageSlots})`
-                  : `批量生成图片 (${currentProject.pages.length})`}
-            </Button>
-            {isHtmlMode && (
-              <Button
-                variant="ghost"
-                icon={<Sparkles size={14} />}
-                onClick={handleGenerateCurrentHtmlImages}
-                className="w-full text-xs md:text-sm"
-                disabled={isGeneratingHtmlImages}
-              >
-                生成当前页
-              </Button>
-            )}
-            {isHtmlMode && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  icon={isGeneratingHtmlBackgrounds ? <Loader2 size={14} className="animate-spin" /> : <ImageIcon size={14} />}
-                  onClick={handleGenerateHtmlBackgrounds}
-                  className="flex-1 text-xs md:text-sm"
-                  disabled={isGeneratingHtmlBackgrounds}
-                >
-                  {isGeneratingHtmlBackgrounds
-                    ? `生成中 (${htmlBackgroundGenerationProgress.current}/${htmlBackgroundGenerationProgress.total})`
-                    : '生成背景'}
-                </Button>
-                <Button
-                  variant="ghost"
-                  icon={<Upload size={14} />}
-                  onClick={handleUploadBackground}
-                  className="flex-1 text-xs md:text-sm"
-                  disabled={isGeneratingHtmlBackgrounds}
-                >
-                  上传背景
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* 缩略图列表：桌面端垂直，移动端横向滚动 */}
-          <div className="flex-1 overflow-y-auto md:overflow-y-auto overflow-x-auto md:overflow-x-visible p-3 md:p-4 min-h-0">
-            <div className="flex md:flex-col gap-2 md:gap-4 min-w-max md:min-w-0">
-              {currentProject.pages.map((page, index) => (
-                <div key={page.id} className="md:w-full flex-shrink-0 relative">
+        <SlideThumbnailRail
+          batchActionLabel={isGeneratingHtmlImages
+            ? `生成中 (${htmlImageGenerationProgress.current}/${htmlImageGenerationProgress.total})`
+            : isHtmlMode
+              ? `批量生成图片 (${totalImageSlots})`
+              : `批量生成图片 (${currentProject.pages.length})`}
+          isGeneratingHtmlImages={isGeneratingHtmlImages}
+          isGeneratingHtmlBackgrounds={isGeneratingHtmlBackgrounds}
+          htmlBackgroundProgressLabel={isGeneratingHtmlBackgrounds
+            ? `生成中 (${htmlBackgroundGenerationProgress.current}/${htmlBackgroundGenerationProgress.total})`
+            : '生成背景'}
+          onBatchGenerate={isHtmlMode ? handleGenerateHtmlImages : handleGenerateAll}
+          onGenerateCurrentHtmlImages={handleGenerateCurrentHtmlImages}
+          onGenerateHtmlBackgrounds={handleGenerateHtmlBackgrounds}
+          onUploadBackground={handleUploadBackground}
+          isHtmlMode={isHtmlMode}
+        >
+          {currentProject.pages.map((page, index) => (
+            <div key={page.id} className="md:w-full flex-shrink-0 relative">
                   {/* 移动端：简化缩略图 */}
-                  <div className="md:hidden relative">
-                    <button
-                      onClick={() => {
-                        setSelectedIndex(index);
-                      }}
-                      className={`w-20 h-14 rounded border-2 transition-all overflow-hidden ${selectedIndex === index
-                        ? 'border-banana-500 shadow-md'
-                        : 'border-gray-200'
-                        }`}
-                    >
-                      {isHtmlMode ? (
+              <div className="md:hidden relative">
+                <button
+                  onClick={() => {
+                    setSelectedIndex(index);
+                  }}
+                  className={`w-20 h-14 rounded border-2 transition-all overflow-hidden ${selectedIndex === index
+                    ? 'border-banana-500 shadow-md'
+                    : 'border-gray-200'
+                    }`}
+                >
+                  {isHtmlMode ? (
                         // HTML模式：显示渲染的缩略图
-                        (() => {
-                          const payload = convertPageToPayload(page, index);
-                          if (payload) {
-                            return (
-                              <div style={{
-                                transform: 'scale(0.08)',
-                                transformOrigin: 'top left',
-                                width: htmlTheme.sizes.slideWidth,
-                                height: htmlTheme.sizes.slideHeight,
-                              }}>
-                                <SlideRenderer
-                                  page={payload}
-                                  theme={htmlTheme}
-                                  scale={1}
-                                  onImageUpload={(slotPath) => triggerImageUpload(slotPath, page.id || payload.page_id)}
-                                />
-                              </div>
-                            );
-                          }
-                          return (
-                            <div className="w-full h-full bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400">
-                              {index + 1}
-                            </div>
-                          );
-                        })()
-                      ) : page.generated_image_path ? (
+                    (() => {
+                      const payload = convertPageToPayload(page, index);
+                      if (payload) {
+                        return (
+                          <div style={{
+                            transform: 'scale(0.08)',
+                            transformOrigin: 'top left',
+                            width: htmlTheme.sizes.slideWidth,
+                            height: htmlTheme.sizes.slideHeight,
+                          }}>
+                            <SlideRenderer
+                              page={payload}
+                              theme={htmlTheme}
+                              scale={1}
+                              onImageUpload={(slotPath) => triggerImageUpload(slotPath, page.id || payload.page_id)}
+                            />
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="w-full h-full bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400">
+                          {index + 1}
+                        </div>
+                      );
+                    })()
+                  ) : page.generated_image_path ? (
                         <img
                           src={getImageUrl(page.generated_image_path, page.updated_at)}
                           alt={`Slide ${index + 1}`}
                           className="w-full h-full object-cover rounded"
                         />
-                      ) : (
+                  ) : (
                         <div className="w-full h-full bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400">
                           {index + 1}
                         </div>
-                      )}
-                    </button>
-                  </div>
+                  )}
+                </button>
+              </div>
                   {/* 桌面端：完整卡片 */}
-                  <div className="hidden md:block relative">
-                    {isHtmlMode ? (
+              <div className="hidden md:block relative">
+                {isHtmlMode ? (
                       // HTML模式：使用SlideRenderer渲染缩略图
-                      (() => {
-                        const payload = convertPageToPayload(page, index);
-                        if (payload) {
-                          return (
-                            <div
-                              onClick={() => {
-                                setSelectedIndex(index);
-                              }}
-                              className={`md:w-full cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${selectedIndex === index
-                                ? 'border-banana-500 shadow-lg'
-                                : 'border-gray-200 hover:border-gray-300'
-                                }`}
-                            >
-                              <div
-                                ref={index === 0 ? thumbnailContainerRef : undefined}
-                                className="md:w-full"
-                                style={{
-                                  width: '100%',
-                                  overflow: 'hidden',
-                                  aspectRatio: '1280 / 720',
-                                }}
-                              >
-                                <SlideRenderer
-                                  page={payload}
-                                  theme={htmlTheme}
-                                  scale={thumbnailScale}
-                                  onImageUpload={(slotPath) => triggerImageUpload(slotPath, page.id || payload.page_id)}
-                                />
-                              </div>
-                              <div className="p-2 bg-white">
-                                <p className="text-xs text-gray-600 truncate">
-                                  {index + 1}. {page.outline_content?.title || payload.layout_id}
-                                </p>
-                              </div>
-                            </div>
-                          );
-                        }
-                        return (
-                          <div className="p-4 bg-gray-100 rounded-lg text-center text-xs text-gray-400">
-                            页面 {index + 1}
+                  (() => {
+                    const payload = convertPageToPayload(page, index);
+                    if (payload) {
+                      return (
+                        <div
+                          onClick={() => {
+                            setSelectedIndex(index);
+                          }}
+                          className={`md:w-full cursor-pointer rounded-lg overflow-hidden border-2 transition-all ${selectedIndex === index
+                            ? 'border-banana-500 shadow-lg'
+                            : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                        >
+                          <div
+                            ref={index === 0 ? thumbnailContainerRef : undefined}
+                            className="md:w-full"
+                            style={{
+                              width: '100%',
+                              overflow: 'hidden',
+                              aspectRatio: '1280 / 720',
+                            }}
+                          >
+                            <SlideRenderer
+                              page={payload}
+                              theme={htmlTheme}
+                              scale={thumbnailScale}
+                              onImageUpload={(slotPath) => triggerImageUpload(slotPath, page.id || payload.page_id)}
+                            />
                           </div>
-                        );
-                      })()
-                    ) : (
+                          <div className="p-2 bg-white">
+                            <p className="text-xs text-gray-600 truncate">
+                              {index + 1}. {page.outline_content?.title || payload.layout_id}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="p-4 bg-gray-100 rounded-lg text-center text-xs text-gray-400">
+                        页面 {index + 1}
+                      </div>
+                    );
+                  })()
+                ) : (
                       // 传统模式：使用SlideCard
-                      <SlideCard
-                        page={page}
-                        index={index}
-                        isSelected={selectedIndex === index}
-                        onClick={() => {
-                          setSelectedIndex(index);
-                        }}
-                        onEdit={() => {
-                          setSelectedIndex(index);
-                          handleEditPage();
-                        }}
-                        onDelete={() => page.id && deletePageById(page.id)}
-                        isGenerating={page.id ? !!pageGeneratingTasks[page.id] : false}
-                      />
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </aside>
-
-        {/* 右侧：大图预览 */}
-        <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-gradient-to-b from-banana-50/40 to-slate-100/80">
-          {currentProject.pages.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center overflow-y-auto">
-              <div className="text-center">
-                <div className="text-4xl md:text-6xl mb-4">📊</div>
-                <h3 className="text-lg md:text-xl font-semibold text-gray-700 mb-2">
-                  还没有页面
-                </h3>
-                <p className="text-sm md:text-base text-gray-500 mb-6">
-                  请先返回编辑页面添加内容
-                </p>
-                <Button
-                  variant="primary"
-                  onClick={() => navigate(`/project/${projectId}/outline`)}
-                  className="text-sm md:text-base"
-                >
-                  返回编辑
-                </Button>
+                  <SlideCard
+                    page={page}
+                    index={index}
+                    isSelected={selectedIndex === index}
+                    onClick={() => {
+                      setSelectedIndex(index);
+                    }}
+                    onEdit={() => {
+                      setSelectedIndex(index);
+                      handleEditPage();
+                    }}
+                    onDelete={() => page.id && deletePageById(page.id)}
+                    isGenerating={page.id ? !!pageGeneratingTasks[page.id] : false}
+                  />
+                )}
               </div>
             </div>
-          ) : (
-            <>
+          ))}
+        </SlideThumbnailRail>
+
+        <SlidePreviewStage
+          hasPages={currentProject.pages.length > 0}
+          onBackToEdit={() => navigate(`/project/${projectId}/outline`)}
+        >
+          <>
               {/* 预览区 */}
               <div className="flex-1 overflow-y-auto min-h-0 flex items-center justify-center p-4 md:p-8">
                 <div className="max-w-5xl w-full">
@@ -2532,344 +2433,140 @@ export const SlidePreview: React.FC = () => {
                 </div>
               </div>
 
-              {/* 控制栏 */}
-              <div className="bg-white border-t border-gray-200 px-3 md:px-6 py-3 md:py-4 flex-shrink-0">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 max-w-5xl mx-auto">
-                  {/* 导航 */}
-                  <div className="flex items-center gap-2 w-full sm:w-auto justify-center">
+              <SlidePreviewFooter
+                selectedIndex={selectedIndex}
+                totalPages={currentProject.pages.length}
+                onPrevious={() => setSelectedIndex(Math.max(0, selectedIndex - 1))}
+                onNext={() => setSelectedIndex(Math.min(currentProject.pages.length - 1, selectedIndex + 1))}
+                variants={currentPageVariants ?? undefined}
+                currentVariant={currentPageVariantId}
+                onVariantChange={handleVariantChange}
+                versionMenu={imageVersions.length > 1 ? (
+                  <div className="relative">
                     <Button
                       variant="ghost"
                       size="sm"
-                      icon={<ChevronLeft size={16} className="md:w-[18px] md:h-[18px]" />}
-                      onClick={() => setSelectedIndex(Math.max(0, selectedIndex - 1))}
-                      disabled={selectedIndex === 0}
+                      onClick={() => setShowVersionMenu(!showVersionMenu)}
                       className="text-xs md:text-sm"
                     >
-                      <span className="hidden sm:inline">上一页</span>
-                      <span className="sm:hidden">上一页</span>
+                      <span className="hidden md:inline">历史版本 ({imageVersions.length})</span>
+                      <span className="md:hidden">版本</span>
                     </Button>
-                    <span className="px-2 md:px-4 text-xs md:text-sm text-gray-600 whitespace-nowrap">
-                      {selectedIndex + 1} / {currentProject.pages.length}
-                    </span>
-                    {/* 变体选择 */}
-                    {isHtmlMode && (() => {
-                      const page = currentProject.pages[selectedIndex];
-                      const layoutId = page?.layout_id ? normalizeLayoutId(page.layout_id as LayoutId) : '';
-                      const rawLayoutId = page?.layout_id || '';
-                      const variants = VARIANT_POOLS[rawLayoutId] || VARIANT_POOLS[layoutId];
-                      const currentVariant = String((page?.html_model as any)?.variant || 'a').toLowerCase();
-                      if (!variants || variants.length < 2) return null;
-                      return (
-                        <div className="flex items-center gap-1 mx-1 md:mx-2 px-1 border-l border-r border-gray-200">
-                          <span className="text-xs text-gray-400 hidden md:inline mr-1">样式</span>
-                          {variants.map((v) => (
-                            <button
-                              key={v.id}
-                              onClick={() => handleChangeVariant(v.id)}
-                              className={`px-2 py-0.5 text-xs rounded transition-colors ${currentVariant === v.id ? 'bg-banana-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                              title={v.label}
-                            >
-                              {v.label}
-                            </button>
-                          ))}
-                        </div>
-                      );
-                    })()}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      icon={<ChevronRight size={16} className="md:w-[18px] md:h-[18px]" />}
-                      onClick={() =>
-                        setSelectedIndex(
-                          Math.min(currentProject.pages.length - 1, selectedIndex + 1)
-                        )
-                      }
-                      disabled={selectedIndex === currentProject.pages.length - 1}
-                      className="text-xs md:text-sm"
-                    >
-                      <span className="hidden sm:inline">下一页</span>
-                      <span className="sm:hidden">下一页</span>
-                    </Button>
-                  </div>
-
-                  {/* 操作 */}
-                  <div className="flex items-center gap-1.5 md:gap-2 w-full sm:w-auto justify-center">
-                    {imageVersions.length > 1 && (
-                      <div className="relative">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setShowVersionMenu(!showVersionMenu)}
-                          className="text-xs md:text-sm"
-                        >
-                          <span className="hidden md:inline">历史版本 ({imageVersions.length})</span>
-                          <span className="md:hidden">版本</span>
-                        </Button>
-                        {showVersionMenu && (
-                          <div className="absolute right-0 bottom-full mb-2 w-56 md:w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-40 max-h-96 overflow-y-auto">
-                            {imageVersions.map((version) => (
-                              <button
-                                key={version.version_id}
-                                onClick={() => handleSwitchVersion(version.version_id)}
-                                className={`w-full px-3 md:px-4 py-2 text-left hover:bg-gray-50 transition-colors flex items-center justify-between text-xs md:text-sm ${version.is_current ? 'bg-banana-50' : ''
-                                  }`}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span>
-                                    版本 {version.version_number}
-                                  </span>
-                                  {version.is_current && (
-                                    <span className="text-xs text-banana-600 font-medium">
-                                      (当前)
-                                    </span>
-                                  )}
-                                </div>
-                                <span className="text-xs text-gray-400 hidden md:inline">
-                                  {version.created_at
-                                    ? new Date(version.created_at).toLocaleString('zh-CN', {
-                                      month: 'short',
-                                      day: 'numeric',
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                    })
-                                    : ''}
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                    {showVersionMenu && (
+                      <div className="absolute right-0 bottom-full mb-2 w-56 md:w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-40 max-h-96 overflow-y-auto">
+                        {imageVersions.map((version) => (
+                          <button
+                            key={version.version_id}
+                            onClick={() => handleSwitchVersion(version.version_id)}
+                            className={`w-full px-3 md:px-4 py-2 text-left hover:bg-gray-50 transition-colors flex items-center justify-between text-xs md:text-sm ${version.is_current ? 'bg-banana-50' : ''}`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span>版本 {version.version_number}</span>
+                              {version.is_current && (
+                                <span className="text-xs text-banana-600 font-medium">(当前)</span>
+                              )}
+                            </div>
+                            <span className="text-xs text-gray-400 hidden md:inline">
+                              {version.created_at
+                                ? new Date(version.created_at).toLocaleString('zh-CN', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                                : ''}
+                            </span>
+                          </button>
+                        ))}
                       </div>
                     )}
                   </div>
-                </div>
-              </div>
-            </>
-          )}
-        </main>
+                ) : null}
+              />
+          </>
+        </SlidePreviewStage>
       </div>
 
-      {/* HTML模式图片上传入口（隐藏） */}
-      {isHtmlMode && (
-        <input
-          type="file"
-          ref={fileInputRef}
-          style={{ display: 'none' }}
-          accept="image/*"
-          onChange={handleFileChange}
-        />
-      )}
-      {isHtmlMode && (
-        <input
-          type="file"
-          ref={backgroundFileInputRef}
-          style={{ display: 'none' }}
-          accept="image/*"
-          onChange={handleBackgroundFileChange}
-        />
-      )}
+      <HtmlFileInputs
+        isHtmlMode={isHtmlMode}
+        fileInputRef={fileInputRef}
+        backgroundFileInputRef={backgroundFileInputRef}
+        onFileChange={handleFileChange}
+        onBackgroundFileChange={handleBackgroundFileChange}
+      />
 
-      {/* 上传背景：选择来源 */}
-      <Modal
+      <BackgroundPickerModal
         isOpen={isBackgroundPickerOpen}
+        mode={backgroundPickerMode}
+        materials={backgroundMaterials}
+        isLoading={isLoadingBackgroundMaterials}
+        backgroundFileInputRef={backgroundFileInputRef}
         onClose={() => setIsBackgroundPickerOpen(false)}
-        title="上传背景图"
-        size="lg"
-      >
-        {backgroundPickerMode === 'menu' ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Button
-                variant="primary"
-                onClick={() => {
-                  if (backgroundFileInputRef.current) {
-                    backgroundFileInputRef.current.value = '';
-                    backgroundFileInputRef.current.click();
-                  }
-                }}
-              >
-                从本地上传
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={async () => {
-                  setBackgroundPickerMode('material');
-                  await loadBackgroundMaterials();
-                }}
-              >
-                从素材库选择
-              </Button>
-            </div>
-            <p className="text-sm text-gray-500">
-              选择素材库图片时会自动转换为 base64，确保导出 HTML/PPTX 无需额外上传。
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium text-gray-700">选择背景图</div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setBackgroundPickerMode('menu');
-                }}
-              >
-                返回
-              </Button>
-            </div>
-            {isLoadingBackgroundMaterials ? (
-              <div className="text-center text-sm text-gray-400 py-8">加载中...</div>
-            ) : backgroundMaterials.length === 0 ? (
-              <div className="text-center text-sm text-gray-400 py-8">暂无素材</div>
-            ) : (
-              <div className="grid grid-cols-4 gap-3 max-h-80 overflow-y-auto pr-1">
-                {backgroundMaterials.map((material) => (
-                  <button
-                    key={material.id}
-                    type="button"
-                    onClick={() => handleSelectBackgroundMaterial(material)}
-                    className="relative group aspect-video rounded border border-gray-200 overflow-hidden"
-                  >
-                    <img
-                      src={getImageUrl(material.url)}
-                      alt={material.filename}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </Modal>
+        onBack={() => setBackgroundPickerMode('menu')}
+        onPickLocal={() => {
+          if (backgroundFileInputRef.current) {
+            backgroundFileInputRef.current.value = '';
+            backgroundFileInputRef.current.click();
+          }
+        }}
+        onOpenMaterialLibrary={async () => {
+          setBackgroundPickerMode('material');
+          await loadBackgroundMaterials();
+        }}
+        onSelectMaterial={handleSelectBackgroundMaterial}
+      />
 
       <ToastContainer />
       {ConfirmDialog}
 
-      {/* 模板选择 Modal */}
-      <Modal
+      <TemplatePickerModal
         isOpen={isTemplateModalOpen}
+        isUploadingTemplate={isUploadingTemplate}
+        selectedTemplateId={selectedTemplateId}
+        projectId={projectId || null}
         onClose={() => setIsTemplateModalOpen(false)}
-        title="更换模板"
-        size="lg"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600 mb-4">
-            选择一个新的模板将应用到后续PPT页面生成（不影响已经生成的页面）。你可以选择已有模板或上传新模板。
-          </p>
-          <TemplateSelector
-            onSelect={handleTemplateSelect}
-            selectedTemplateId={selectedTemplateId}
-            showUpload={false} // 在预览页面上传的模板直接应用到项目，不上传到用户模板库
-            projectId={projectId || null}
-          />
-          {isUploadingTemplate && (
-            <div className="text-center py-2 text-sm text-gray-500">
-              正在上传模板...
-            </div>
-          )}
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button
-              variant="ghost"
-              onClick={() => setIsTemplateModalOpen(false)}
-              disabled={isUploadingTemplate}
-            >
-              关闭
-            </Button>
-          </div>
-        </div>
-      </Modal>
-      {/* 素材生成模态组件（可复用模块，这里只是示例挂载） */}
+        onSelect={handleTemplateSelect}
+      />
+
       {projectId && (
-        <>
-          <MaterialGeneratorModal
-            projectId={projectId}
-            isOpen={isMaterialModalOpen}
-            onClose={() => setIsMaterialModalOpen(false)}
-          />
-          {/* 素材选择器 */}
-          <MaterialSelector
-            projectId={projectId}
-            isOpen={isMaterialSelectorOpen}
-            onClose={() => setIsMaterialSelectorOpen(false)}
-            onSelect={handleSelectMaterials}
-            multiple={true}
-          />
-          {/* 项目设置模态框 */}
-          <ProjectSettingsModal
-            isOpen={isProjectSettingsOpen}
-            onClose={() => setIsProjectSettingsOpen(false)}
-            extraRequirements={extraRequirements}
-            templateStyle={templateStyle}
-            onExtraRequirementsChange={(value) => {
-              isEditingRequirements.current = true;
-              setExtraRequirements(value);
-            }}
-            onTemplateStyleChange={(value) => {
-              isEditingTemplateStyle.current = true;
-              setTemplateStyle(value);
-            }}
-            onSaveExtraRequirements={handleSaveExtraRequirements}
-            onSaveTemplateStyle={handleSaveTemplateStyle}
-            isSavingRequirements={isSavingRequirements}
-            isSavingTemplateStyle={isSavingTemplateStyle}
-            // 导出设置
-            exportExtractorMethod={exportExtractorMethod}
-            exportInpaintMethod={exportInpaintMethod}
-            onExportExtractorMethodChange={setExportExtractorMethod}
-            onExportInpaintMethodChange={setExportInpaintMethod}
-            onSaveExportSettings={handleSaveExportSettings}
-            isSavingExportSettings={isSavingExportSettings}
-          />
-        </>
+        <ProjectAuxiliaryModals
+          projectId={projectId}
+          isMaterialModalOpen={isMaterialModalOpen}
+          isMaterialSelectorOpen={isMaterialSelectorOpen}
+          isProjectSettingsOpen={isProjectSettingsOpen}
+          extraRequirements={extraRequirements}
+          templateStyle={templateStyle}
+          exportExtractorMethod={exportExtractorMethod}
+          exportInpaintMethod={exportInpaintMethod}
+          isSavingRequirements={isSavingRequirements}
+          isSavingTemplateStyle={isSavingTemplateStyle}
+          isSavingExportSettings={isSavingExportSettings}
+          onCloseMaterialModal={() => setIsMaterialModalOpen(false)}
+          onCloseMaterialSelector={() => setIsMaterialSelectorOpen(false)}
+          onCloseProjectSettings={() => setIsProjectSettingsOpen(false)}
+          onSelectMaterials={handleSelectMaterials}
+          onExtraRequirementsChange={(value) => {
+            isEditingRequirements.current = true;
+            setExtraRequirements(value);
+          }}
+          onTemplateStyleChange={(value) => {
+            isEditingTemplateStyle.current = true;
+            setTemplateStyle(value);
+          }}
+          onSaveExtraRequirements={handleSaveExtraRequirements}
+          onSaveTemplateStyle={handleSaveTemplateStyle}
+          onExportExtractorMethodChange={setExportExtractorMethod}
+          onExportInpaintMethodChange={setExportInpaintMethod}
+          onSaveExportSettings={handleSaveExportSettings}
+        />
       )}
 
-      {/* HTML 在线链接显示弹窗 */}
-      <Modal
+      <HtmlUrlModal
         isOpen={showHtmlUrlModal}
+        uploadedHtmlUrl={uploadedHtmlUrl}
         onClose={() => setShowHtmlUrlModal(false)}
-        title="获取在线链接"
-        size="md"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-            HTML 文件已上传至服务器，您可以通过以下链接访问：
-          </p>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={uploadedHtmlUrl || ''}
-              readOnly
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 text-gray-700"
-            />
-            <Button
-              variant="primary"
-              onClick={handleCopyUrl}
-              className="flex-shrink-0"
-            >
-              复制链接
-            </Button>
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              variant="ghost"
-              onClick={() => setShowHtmlUrlModal(false)}
-            >
-              关闭
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                if (uploadedHtmlUrl) {
-                  window.open(uploadedHtmlUrl, '_blank');
-                }
-              }}
-            >
-              打开链接
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        onCopyUrl={handleCopyUrl}
+      />
 
     </div>
   );

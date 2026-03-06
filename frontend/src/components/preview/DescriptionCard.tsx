@@ -224,8 +224,8 @@ export const DescriptionCard: React.FC<DescriptionCardProps> = ({
   };
 
   const text = getDescriptionText(page.description_content);
-  const htmlModelSummary = getHtmlModelSummary(page.html_model);
-  const hasHtmlModel = isHtmlMode && page.html_model && Object.keys(page.html_model).length > 0;
+  const htmlModelSummary = getHtmlModelSummary(page.html_model as unknown as Record<string, unknown> | undefined);
+  const hasHtmlModel = isHtmlMode && !!page.html_model && Object.keys(page.html_model as unknown as Record<string, unknown>).length > 0;
 
 
   const [isEditing, setIsEditing] = useState(false);

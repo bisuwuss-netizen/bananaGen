@@ -33,6 +33,19 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
+    Application lifecycle management.
+    
+    Shutdown: cleanup database connections
+    """
+    logger.info("🍌 Banana Slides (FastAPI) starting up...")
+    logger.info(f"  Database: {settings.sqlalchemy_database_url.split('@')[-1]}")
+    logger.info(f"  AI Provider: {settings.ai_provider_format}")
+    logger.info(f"  Text Model: {settings.text_model}")
+    logger.info(f"  Image Model: {settings.image_model}")
+    logger.info(f"  Upload Folder: {settings.upload_folder}")
+
+    # Ensure upload directory exists
     os.makedirs(settings.upload_folder, exist_ok=True)
     logger.info(
         f"Banana Slides (FastAPI) starting | port={settings.port} "
@@ -45,7 +58,44 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Banana Slides", version="2.0.0", lifespan=lifespan)
 setup_middleware(app)
 
-# Static files
+
+# ── Register Routers ─────────────────────────────────────────────
+
+from api.routes.projects import router as projects_router
+from api.routes.tasks import router as tasks_router
+from api.routes.pages import router as pages_router
+from api.routes.generation import router as generation_router
+from api.routes.refinement import router as refinement_router
+from api.routes.export import router as export_router
+from api.routes.files import router as files_router
+from api.routes.materials import router as materials_router
+from api.routes.templates import router as templates_router
+from api.routes.settings import router as settings_router
+from api.routes.reference_files import router as reference_files_router
+from api.routes.html_renderer import router as html_renderer_router
+from api.routes.preset_styles import router as preset_styles_router
+from api.routes.user_templates import router as user_templates_router
+from api.routes.html_images import router as html_images_router
+
+app.include_router(projects_router)
+app.include_router(tasks_router)
+app.include_router(pages_router)
+app.include_router(generation_router)
+app.include_router(refinement_router)
+app.include_router(export_router)
+app.include_router(files_router)
+app.include_router(materials_router)
+app.include_router(templates_router)
+app.include_router(settings_router)
+app.include_router(reference_files_router)
+app.include_router(html_renderer_router)
+app.include_router(preset_styles_router)
+app.include_router(user_templates_router)
+app.include_router(html_images_router)
+
+
+# ── Static Files (uploads) ──────────────────────────────────────
+
 uploads_path = Path(settings.upload_folder)
 uploads_path.mkdir(parents=True, exist_ok=True)
 app.mount("/files", StaticFiles(directory=str(uploads_path)), name="files")

@@ -12,6 +12,7 @@ import requests
 from typing import Optional, List
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from PIL import Image
+from services.runtime_state import get_config_value
 # from markitdown import MarkItDown  # 临时注释用于测试
 
 logger = logging.getLogger(__name__)
@@ -32,19 +33,7 @@ def _get_ai_provider_format(provider_format: str = None) -> str:
     if provider_format:
         return provider_format.lower()
     
-    # Try to get from Flask app config first (database settings)
-    try:
-        from flask import current_app
-        if current_app and hasattr(current_app, 'config'):
-            config_value = current_app.config.get('AI_PROVIDER_FORMAT')
-            if config_value:
-                return str(config_value).lower()
-    except RuntimeError:
-        # Not in Flask application context
-        pass
-    
-    # Fallback to environment variable
-    return os.getenv('AI_PROVIDER_FORMAT', 'gemini').lower()
+    return str(get_config_value('AI_PROVIDER_FORMAT', os.getenv('AI_PROVIDER_FORMAT', 'gemini'))).lower()
 
 
 class FileParserService:
@@ -708,4 +697,3 @@ class FileParserService:
         except Exception as e:
             logger.warning(f"Failed to generate caption for {image_url}: {str(e)}")
             return ""  # Return empty string on failure
-

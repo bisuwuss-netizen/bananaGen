@@ -76,5 +76,36 @@ export const getImageUrl = (path?: string, timestamp?: string | number): string 
   return url;
 };
 
-export default apiClient;
+interface TaskWebSocketCallbacks<T> {
+  onMessage: (payload: T) => void;
+  onError?: (event: Event) => void;
+  onClose?: (event: CloseEvent) => void;
+}
 
+export const openTaskWebSocket = <T>(
+  projectId: string,
+  taskId: string,
+  callbacks: TaskWebSocketCallbacks<T>
+): WebSocket => {
+  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  const url = `${protocol}://${window.location.host}/api/projects/${encodeURIComponent(projectId)}/tasks/${encodeURIComponent(taskId)}/ws`;
+  const socket = new WebSocket(url);
+
+  socket.onmessage = (event) => {
+    try {
+      callbacks.onMessage(JSON.parse(event.data) as T);
+    } catch (error) {
+      console.error('Failed to parse task websocket payload:', error);
+    }
+  };
+  socket.onerror = (event) => {
+    callbacks.onError?.(event);
+  };
+  socket.onclose = (event) => {
+    callbacks.onClose?.(event);
+  };
+
+  return socket;
+};
+
+export default apiClient;

@@ -163,3 +163,56 @@ class GenAIImageProvider(ImageProvider):
             error_detail = f"Error generating image with GenAI: {type(e).__name__}: {str(e)}"
             logger.error(error_detail, exc_info=True)
             raise Exception(error_detail) from e
+
+    async def generate_image_async(
+        self,
+        prompt: str,
+        ref_images: Optional[List[Image.Image]] = None,
+        aspect_ratio: str = "16:9",
+        resolution: str = "2K",
+        enable_thinking: bool = True
+    ) -> Optional[Image.Image]:
+        """
+        Generate image using Google GenAI async client.
+        """
+        try:
+            contents = []
+            if ref_images:
+                contents.extend(ref_images)
+            contents.append(prompt)
+
+            config_params = {
+                'response_modalities': ['TEXT', 'IMAGE'],
+                'image_config': types.ImageConfig(
+                    aspect_ratio=aspect_ratio,
+                    image_size=resolution
+                )
+            }
+            if enable_thinking:
+                config_params['thinking_config'] = types.ThinkingConfig(
+                    include_thoughts=True
+                )
+
+            response = await self.client.aio.models.generate_content(
+                model=self.model,
+                contents=contents,
+                config=types.GenerateContentConfig(**config_params)
+            )
+
+            last_image = None
+            for part in response.parts:
+                try:
+                    image = part.as_image()
+                    if image:
+                        last_image = image
+                except Exception:
+                    logger.debug("Async image extraction skipped non-image part", exc_info=True)
+
+            if last_image:
+                return last_image
+
+            raise ValueError("No image found in API response.")
+        except Exception as e:
+            error_detail = f"Error generating image with GenAI: {type(e).__name__}: {str(e)}"
+            logger.error(error_detail, exc_info=True)
+            raise Exception(error_detail) from e

@@ -481,9 +481,10 @@ banana-slides/
 │   ├── Dockerfile
 │   └── nginx.conf              # Nginx配置
 │
-├── backend/                    # Flask后端应用
-│   ├── app.py                  # Flask应用入口
-│   ├── config.py               # 配置文件
+├── backend/                    # FastAPI 后端应用
+│   ├── app_fastapi.py          # FastAPI 应用入口
+│   ├── config.py               # 兼容配置
+│   ├── config_fastapi.py       # FastAPI 运行时配置
 │   ├── models/                 # 数据库模型
 │   │   ├── project.py          # Project模型
 │   │   ├── page.py             # Page模型（幻灯片页）
@@ -493,25 +494,20 @@ banana-slides/
 │   │   ├── reference_file.py   # ReferenceFile模型（参考文件）
 │   │   ├── page_image_version.py # PageImageVersion模型（页面版本）
 │   ├── services/               # 服务层
-│   │   ├── ai_service.py       # AI生成服务（Gemini集成）
+│   │   ├── ai/                 # AI 领域服务
+│   │   ├── prompts/            # Prompt 模块
+│   │   ├── tasks/              # 后台任务模块
 │   │   ├── file_service.py     # 文件管理服务
 │   │   ├── file_parser_service.py # 文件解析服务
 │   │   ├── export_service.py   # PPTX/PDF导出服务
-│   │   ├── task_manager.py     # 异步任务管理
-│   │   ├── prompts.py          # AI提示词模板
-│   ├── controllers/            # API控制器
-│   │   ├── project_controller.py      # 项目管理
-│   │   ├── page_controller.py         # 页面管理
-│   │   ├── material_controller.py     # 素材管理
-│   │   ├── template_controller.py     # 模板管理
-│   │   ├── reference_file_controller.py # 参考文件管理
-│   │   ├── export_controller.py       # 导出功能
-│   │   └── file_controller.py         # 文件上传
+│   │   ├── task_manager.py     # 兼容任务入口
+│   │   └── runtime_state.py    # Runtime config / sync ORM 兼容层
+│   ├── api/                    # FastAPI 路由
+│   │   └── routes/
 │   ├── utils/                  # 工具函数
 │   │   ├── response.py         # 统一响应格式
 │   │   ├── validators.py       # 数据验证
 │   │   └── path_utils.py       # 路径处理
-│   ├── instance/               # SQLite数据库（自动生成）
 │   ├── exports/                # 导出文件目录
 │   ├── Dockerfile
 │   └── README.md

@@ -28,6 +28,7 @@ Environment Variables:
 import os
 import logging
 from typing import Dict, Any
+from services.runtime_state import get_config_value
 
 from .text import TextProvider, GenAITextProvider, OpenAITextProvider
 from .image import (
@@ -59,50 +60,18 @@ def get_provider_format() -> str:
     Returns:
         "gemini", "openai", or "vertex"
     """
-    # Try to get from Flask app config first (database settings)
-    try:
-        from flask import current_app
-        if current_app and hasattr(current_app, 'config'):
-            config_value = current_app.config.get('AI_PROVIDER_FORMAT')
-            if config_value:
-                return str(config_value).lower()
-    except RuntimeError:
-        # Not in Flask application context
-        pass
-    
-    # Fallback to environment variable
-    return os.getenv('AI_PROVIDER_FORMAT', 'gemini').lower()
+    return str(get_config_value('AI_PROVIDER_FORMAT', os.getenv('AI_PROVIDER_FORMAT', 'gemini'))).lower()
 
 
 def _get_config_value(key: str, default: str = None) -> str:
     """
     Helper to get config value with priority: app.config > env var > default
     """
-    try:
-        from flask import current_app
-        if current_app and hasattr(current_app, 'config'):
-            # Check if key exists in config (even if value is empty string)
-            # This allows database settings to override env vars even with empty values
-            if key in current_app.config:
-                config_value = current_app.config.get(key)
-                # Return the value even if it's empty string (user explicitly set it)
-                if config_value is not None:
-                    logger.debug(f"[CONFIG] Using {key} from app.config")
-                    return str(config_value)
-            else:
-                logger.debug(f"[CONFIG] Key {key} not found in app.config, checking env var")
-    except RuntimeError as e:
-        # Not in Flask application context, fallback to env var
-        logger.debug(f"[CONFIG] Not in Flask context for {key}: {e}")
-    # Fallback to environment variable or default
-    env_value = os.getenv(key)
-    if env_value is not None:
-        logger.debug(f"[CONFIG] Using {key} from environment")
-        return env_value
+    config_value = get_config_value(key, None)
+    if config_value is not None:
+        return str(config_value)
     if default is not None:
-        logger.debug(f"[CONFIG] Using {key} default: {default}")
         return default
-    logger.debug(f"[CONFIG] No value found for {key}, returning None")
     return None
 
 

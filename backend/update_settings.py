@@ -1,20 +1,14 @@
-
-import os
-import sys
-
-# Ensure we can import app code
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-from app import app, db
+from models import db
 from models.settings import Settings
 from config import Config
+from services.runtime_state import runtime_context
 
 def update_settings():
     """
     Update database settings from environment variables/Config.
     Reference: .env file -> Config class -> database Settings
     """
-    with app.app_context():
+    with runtime_context():
         settings = Settings.get_settings()
         if not settings:
             print("No existing settings found. Creating new.")

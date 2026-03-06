@@ -126,7 +126,7 @@ src/
 
 ```bash
 cd ../backend
-python app.py
+uv run python app_fastapi.py
 ```
 
 ## 浏览器支持
@@ -135,4 +135,3 @@ python app.py
 - Firefox
 - Safari
 - Edge
-

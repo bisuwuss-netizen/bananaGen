@@ -1,5 +1,5 @@
 @echo off
-REM Banana Slides Backend Startup Script for Windows
+REM Banana Slides FastAPI Startup Script for Windows
 
 echo ╔══════════════════════════════════════╗
 echo ║   🍌 Banana Slides API Server 🍌   ║
@@ -14,21 +14,8 @@ if not exist .env (
     echo.
 )
 
-REM Check if virtual environment exists
-if not exist venv (
-    echo 📦 Creating virtual environment...
-    python -m venv venv
-    echo ✅ Virtual environment created.
-    echo.
-)
-
-REM Activate virtual environment
-echo 🔄 Activating virtual environment...
-call venv\Scripts\activate.bat
-
-REM Install dependencies
-echo 📥 Installing dependencies...
-pip install -r requirements.txt
+echo 📥 Installing dependencies with uv...
+uv sync
 
 REM Create instance folder if not exists
 if not exist instance mkdir instance
@@ -41,5 +28,4 @@ echo 🚀 Starting server...
 echo.
 
 REM Run the application
-python app.py
-
+uv run python app_fastapi.py

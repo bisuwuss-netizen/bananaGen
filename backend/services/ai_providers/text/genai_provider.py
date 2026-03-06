@@ -86,6 +86,19 @@ class GenAITextProvider(TextProvider):
             ),
         )
         return response.text
+
+    async def generate_text_async(self, prompt: str, thinking_budget: int = 1000) -> str:
+        """
+        Generate text using Google GenAI async client.
+        """
+        response = await self.client.aio.models.generate_content(
+            model=self.model,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                thinking_config=types.ThinkingConfig(thinking_budget=thinking_budget),
+            ),
+        )
+        return response.text
     
     @retry(
         stop=stop_after_attempt(get_config().GENAI_MAX_RETRIES + 1),
@@ -112,6 +125,24 @@ class GenAITextProvider(TextProvider):
         contents = [img, prompt]
         
         response = self.client.models.generate_content(
+            model=self.model,
+            contents=contents,
+            config=types.GenerateContentConfig(
+                thinking_config=types.ThinkingConfig(thinking_budget=thinking_budget),
+            ),
+        )
+        return response.text
+
+    async def generate_with_image_async(self, prompt: str, image_path: str, thinking_budget: int = 1000) -> str:
+        """
+        Generate text with image input using Google GenAI async client.
+        """
+        from PIL import Image
+
+        img = Image.open(image_path)
+        contents = [img, prompt]
+
+        response = await self.client.aio.models.generate_content(
             model=self.model,
             contents=contents,
             config=types.GenerateContentConfig(

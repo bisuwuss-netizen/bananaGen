@@ -19,11 +19,12 @@ Usage:
 """
 
 import logging
+import asyncio
 from threading import Lock
 from typing import Optional
-from flask import current_app, has_app_context
 from .ai_service import AIService
 from .ai_providers import get_text_provider, get_image_provider, TextProvider, ImageProvider
+from .runtime_state import get_config_value
 
 logger = logging.getLogger(__name__)
 
@@ -106,16 +107,8 @@ def get_ai_service(force_new: bool = False) -> AIService:
             if _ai_service_instance is None:
                 logger.info("Initializing AIService singleton with provider caching")
                 
-                # Get model names from Flask config or use defaults
-                from config import get_config
-                config = get_config()
-                
-                if has_app_context() and current_app and hasattr(current_app, "config"):
-                    text_model = current_app.config.get("TEXT_MODEL", config.TEXT_MODEL)
-                    image_model = current_app.config.get("IMAGE_MODEL", config.IMAGE_MODEL)
-                else:
-                    text_model = config.TEXT_MODEL
-                    image_model = config.IMAGE_MODEL
+                text_model = get_config_value("TEXT_MODEL")
+                image_model = get_config_value("IMAGE_MODEL")
                 
                 # Get cached providers
                 text_provider = _get_cached_text_provider(text_model)
@@ -130,6 +123,11 @@ def get_ai_service(force_new: bool = False) -> AIService:
                 logger.info(f"AIService singleton created with models: text={text_model}, image={image_model}")
     
     return _ai_service_instance
+
+
+async def get_ai_service_async(force_new: bool = False) -> AIService:
+    """Async-friendly singleton access for FastAPI routes."""
+    return get_ai_service(force_new)
 
 
 def clear_ai_service_cache():

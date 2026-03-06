@@ -198,7 +198,7 @@ class MinerUElementExtractor(ElementExtractor):
     
     def _parse_image(self, image_path: str, depth: int) -> Optional[str]:
         """解析图片，返回MinerU结果目录"""
-        from services.export_service import ExportService
+        from services.presentation.export_service import ExportService
         
         # 转换为PDF
         with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_pdf:

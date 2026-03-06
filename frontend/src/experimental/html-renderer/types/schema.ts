@@ -104,7 +104,8 @@ export type LayoutId =
   | 'edu_timeline_steps'
   | 'edu_logic_flow'
   | 'edu_data_board'
-  | 'edu_summary';
+  | 'edu_summary'
+  | 'edu_qa_case';
 
 // 布局Model联合类型
 export type LayoutModel =
@@ -149,7 +150,8 @@ export type LayoutModel =
   | EduTimelineStepsModel
   | EduLogicFlowModel
   | EduDataBoardModel
-  | EduSummaryModel;
+  | EduSummaryModel
+  | EduQACaseModel;
 
 // ==================== 各布局Model定义 ====================
 
@@ -690,5 +692,18 @@ export interface EduSummaryModel {
     points: string[];
   }[];
   closing?: string;
+  background_image?: string;
+}
+
+export interface EduQACaseModel {
+  title: string;
+  subtitle?: string;
+  variant?: string; // 'a' 为问答卡片, 'b' 为案例看板
+  items: {
+    label: string;      // 如 "Q", "A", "背景", "挑战" 等
+    content: string;    // 内容正文
+    icon?: string;      // 可选图标
+    color?: string;     // 强调色
+  }[];
   background_image?: string;
 }

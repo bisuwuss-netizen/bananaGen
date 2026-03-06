@@ -15,10 +15,9 @@ import re
 from hashlib import md5
 from typing import Any, Dict, Iterable, List
 
-from flask import current_app
-
 from services.ai_providers import get_text_provider
 from services.ai_service_manager import get_ai_service
+from services.runtime_state import get_config_value
 
 logger = logging.getLogger(__name__)
 
@@ -610,12 +609,7 @@ def _chunk(items: List[Dict[str, Any]], size: int) -> Iterable[List[Dict[str, An
 
 
 def _get_cfg(key: str, default: Any) -> Any:
-    try:
-        if key in current_app.config:
-            return current_app.config.get(key, default)
-    except RuntimeError:
-        pass
-    return default
+    return get_config_value(key, default)
 
 
 def _as_bool(value: Any, default: bool = False) -> bool:

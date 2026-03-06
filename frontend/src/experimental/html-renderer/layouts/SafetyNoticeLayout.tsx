@@ -6,7 +6,6 @@
 import React from 'react';
 import { SafetyNoticeModel, ThemeConfig } from '../types/schema';
 import {
-  toCSS,
   getBaseSlideStyle,
   getTitleStyle,
   getCardStyle,
@@ -16,6 +15,9 @@ interface SafetyNoticeLayoutProps {
   model: SafetyNoticeModel;
   theme: ThemeConfig;
 }
+
+const asStyle = (styles: Record<string, string | number | undefined>): React.CSSProperties =>
+  styles as React.CSSProperties;
 
 export const SafetyNoticeLayout: React.FC<SafetyNoticeLayoutProps> = ({ model, theme }) => {
   const { title, warnings, summary, background_image } = model;
@@ -31,9 +33,9 @@ export const SafetyNoticeLayout: React.FC<SafetyNoticeLayoutProps> = ({ model, t
       : {}),
   };
 
-  const titleStyle = toCSS({ ...getTitleStyle(theme), textShadow: '0 1px 2px rgba(0,0,0,0.1)' });
+  const titleStyle = asStyle({ ...getTitleStyle(theme), textShadow: '0 1px 2px rgba(0,0,0,0.1)' });
 
-  const warningsContainerStyle = toCSS({
+  const warningsContainerStyle = asStyle({
     marginTop: '40px',
     display: 'flex',
     flexDirection: 'column',
@@ -73,7 +75,7 @@ export const SafetyNoticeLayout: React.FC<SafetyNoticeLayoutProps> = ({ model, t
         {warnings.map((warning, index) => {
           const config = getLevelConfig(warning.level);
           const baseCardStyle = getCardStyle(theme);
-          const warningCardStyle = toCSS({
+          const warningCardStyle = asStyle({
             ...baseCardStyle,
             backgroundColor: config.bgColor,
             borderLeft: `6px solid ${config.color}`,
@@ -83,7 +85,7 @@ export const SafetyNoticeLayout: React.FC<SafetyNoticeLayoutProps> = ({ model, t
             gap: '16px',
           });
 
-          const iconContainerStyle = toCSS({
+          const iconContainerStyle = asStyle({
             width: '56px',
             height: '56px',
             borderRadius: '50%',
@@ -96,11 +98,11 @@ export const SafetyNoticeLayout: React.FC<SafetyNoticeLayoutProps> = ({ model, t
             flexShrink: '0',
           });
 
-          const contentStyle = toCSS({
+          const contentStyle = asStyle({
             flex: '1',
           });
 
-          const levelBadgeStyle = toCSS({
+          const levelBadgeStyle = asStyle({
             display: 'inline-block',
             padding: '4px 12px',
             borderRadius: '12px',
@@ -111,7 +113,7 @@ export const SafetyNoticeLayout: React.FC<SafetyNoticeLayoutProps> = ({ model, t
             marginBottom: '8px',
           });
 
-          const warningTextStyle = toCSS({
+          const warningTextStyle = asStyle({
             fontSize: theme.sizes.bodySize,
             color: theme.colors.text,
             lineHeight: '1.6',

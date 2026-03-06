@@ -1,3 +1,8 @@
+import type {
+  LayoutId as HtmlLayoutId,
+  LayoutModel,
+} from '@/experimental/html-renderer/types/schema';
+
 // 页面状态
 export type PageStatus = 'DRAFT' | 'DESCRIPTION_GENERATED' | 'GENERATING' | 'COMPLETED' | 'FAILED';
 
@@ -8,70 +13,7 @@ export type ProjectStatus = 'DRAFT' | 'OUTLINE_GENERATED' | 'DESCRIPTIONS_GENERA
 export type RenderMode = 'image' | 'html';
 
 // HTML布局ID类型
-export type LayoutId =
-  | 'cover'           // 封面页
-  | 'toc'             // 目录页
-  | 'title_content'   // 标题+正文
-  | 'title_bullets'   // 标题+要点
-  | 'two_column'      // 左右双栏
-  | 'process_steps'   // 流程步骤
-  | 'ending'          // 结束页
-  | 'section_title'   // 章节标题页
-  | 'image_full'      // 全图页
-  | 'quote'           // 引用页
-  // Academic scheme
-  | 'cover_academic'
-  | 'toc_academic'
-  | 'learning_objectives'
-  | 'key_concepts'
-  | 'theory_explanation'
-  | 'case_study'
-  | 'comparison_table'
-  | 'diagram_illustration'
-  | 'key_takeaways'
-  | 'ending_academic'
-  // Interactive scheme
-  | 'cover_interactive'
-  | 'agenda_interactive'
-  | 'warmup_question'
-  | 'poll_interactive'
-  | 'story_narrative'
-  | 'group_activity'
-  | 'mind_map'
-  | 'quiz_check'
-  | 'discussion_prompt'
-  | 'ending_interactive'
-  // Visual scheme
-  | 'cover_visual'
-  | 'timeline_navigation'
-  | 'hero_image'
-  | 'gallery_grid'
-  | 'before_after'
-  | 'infographic'
-  | 'split_screen'
-  | 'video_placeholder'
-  | 'portfolio_showcase'
-  | 'ending_visual'
-  // Practical scheme
-  | 'cover_practical'
-  | 'checklist_practical'
-  | 'safety_notice'
-  | 'equipment_intro'
-  | 'step_by_step'
-  | 'detail_zoom'
-  | 'common_mistakes'
-  | 'tip_trick'
-  | 'practice_exercise'
-  | 'ending_practical'
-  // Edu dark scheme
-  | 'edu_cover'
-  | 'edu_toc'
-  | 'edu_tri_compare'
-  | 'edu_core_hub'
-  | 'edu_timeline_steps'
-  | 'edu_logic_flow'
-  | 'edu_data_board'
-  | 'edu_summary';
+export type LayoutId = HtmlLayoutId;
 
 // 大纲内容
 export interface OutlineContent {
@@ -118,7 +60,7 @@ export interface Page {
   outline_content: OutlineContent;
   description_content?: DescriptionContent;
   layout_id?: LayoutId;  // HTML模式下的布局ID
-  html_model?: Record<string, unknown>;  // HTML模式下的结构化数据
+  html_model?: LayoutModel;  // HTML模式下的结构化数据
   generated_image_url?: string; // 后端返回 generated_image_url
   generated_image_path?: string; // 前端使用的别名
   status: PageStatus;
@@ -157,7 +99,7 @@ export interface Project {
 }
 
 // 任务状态
-export type TaskStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+export type TaskStatus = 'PENDING' | 'PROCESSING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
 
 // 任务信息
 export interface Task {

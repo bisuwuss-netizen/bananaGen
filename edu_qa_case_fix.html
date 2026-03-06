@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduQACaseLayout 比例修复版预览</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #020617;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+            color: #fff;
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+            background: #000;
+            overflow: hidden;
+            position: relative;
+        }
+        .glass {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .highlight { color: #06b6d3; font-weight: 700; }
+    </style>
+</head>
+<body>
+
+    <h2 style="color:#06b6d3">比例修复预览 (适配 1280x720)</h2>
+
+    <div class="slide-container">
+        <!-- Variant B 比例优化 -->
+        <section style="width:1280px;height:720px;padding:44px 72px;box-sizing:border-box;position:relative;overflow:hidden;font-family:sans-serif;background:radial-gradient(circle at 15% 15%, rgba(6,182,212,0.12) 0%, transparent 50%), radial-gradient(circle at 85% 85%, rgba(59,130,246,0.15) 0%, transparent 50%), linear-gradient(135deg, #0b1120 0%, #051937 100%);display:flex;flex-direction:column;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid rgba(6,182,212,0.2);padding-bottom:20px;margin-bottom:32px;flex-shrink:0;">
+                <div style="display:flex;align-items:center;">
+                    <div style="width:10px;height:10px;border-radius:50%;margin-right:18px;background:#06b6d3;box-shadow:0 0 15px #06b6d3;"></div>
+                    <h2 style="margin:0;color:#ffffff;font-size:44px;font-weight:700;">教学创新案例分析</h2>
+                </div>
+                <div style="color:#93c5fd;font-size:18px;letter-spacing:3px;text-transform:uppercase;opacity:0.7;">CASE STUDY SCALE FIX</div>
+            </div>
+            
+            <div style="flex-grow:1;display:flex;flex-direction:column;justify-content:center;min-height:0;">
+                <div style="display:grid;grid-template-columns:1.25fr 1fr;grid-template-rows:auto auto;gap:24px;height:100%;max-height:520px;">
+                    <!-- Item 1 (Featured) - 压缩内边距与字号 -->
+                    <div class="glass" style="grid-row:span 2;background:rgba(15, 23, 42, 0.45);border:1px solid rgba(255,255,255,0.06);border-radius:24px;padding:40px 36px;display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,0.45);justify-content:center;">
+                        <div style="position:absolute;top:0;left:15%;right:15%;height:1.2px;background:linear-gradient(90deg,transparent,rgba(6,182,211,0.4),transparent);z-index:5;"></div>
+                        <div style="position:absolute;bottom:-30px;right:-30px;font-size:120px;opacity:0.06;color:#06b6d4;transform:rotate(-20deg);z-index:1;">◈</div>
+                        <div style="display:flex;flex-direction:column;gap:4px;z-index:2;">
+                            <div style="font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:4px;">BACKGROUND</div>
+                            <div style="font-size:30px;font-weight:800;color:#06b6d4;display:flex;align-items:center;gap:12px;">
+                                <div style="width:5px;height:26px;background:#06b6d4;border-radius:2px;"></div>
+                                项目背景
+                            </div>
+                        </div>
+                        <div style="font-size:24px;color:#d1d5db;line-height:1.5;z-index:2;">某学院实训面临套数不足、成本高及安全风险等痛点。传统的“纯看式”教学难以满足复杂工种的实操需求，亟需<span class="highlight">数字化</span>手段解决本质矛盾。内容已针对单页 PPT 进行了<span class="highlight">比例优化</span>。</div>
+                    </div>
+                    <!-- Item 2 -->
+                    <div class="glass" style="background:rgba(15, 23, 42, 0.65);border:1px solid rgba(255,255,255,0.06);border-radius:24px;padding:24px 32px;display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,0.45);">
+                        <div style="position:absolute;top:0;left:15%;right:15%;height:1.2px;background:linear-gradient(90deg,transparent,rgba(59,130,246,0.4),transparent);z-index:5;"></div>
+                        <div style="position:absolute;bottom:-30px;right:-30px;font-size:100px;opacity:0.05;color:#3b82f6;transform:rotate(-15deg);z-index:1;">✦</div>
+                        <div style="display:flex;flex-direction:column;gap:4px;z-index:2;">
+                            <div style="font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:4px;">ACTIONS</div>
+                            <div style="font-size:24px;font-weight:800;color:#3b82f6;">核心行动</div>
+                        </div>
+                        <div style="font-size:20px;color:#d1d5db;line-height:1.5;z-index:2;">引入“VR仿真 + AI导师”联动作业系统。通过 1:1 <span class="highlight">极致</span>数字孪生还原工业环境，提供即时警示。</div>
+                    </div>
+                    <!-- Item 3 -->
+                    <div class="glass" style="background:rgba(15, 23, 42, 0.65);border:1px solid rgba(255,255,255,0.06);border-radius:24px;padding:24px 32px;display:flex;flex-direction:column;gap:14px;position:relative;overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,0.45);">
+                        <div style="position:absolute;top:0;left:15%;right:15%;height:1.2px;background:linear-gradient(90deg,transparent,rgba(16,185,129,0.4),transparent);z-index:5;"></div>
+                        <div style="position:absolute;bottom:-30px;right:-30px;font-size:100px;opacity:0.05;color:#10b981;transform:rotate(-20deg);z-index:1;">⦿</div>
+                        <div style="display:flex;flex-direction:column;gap:4px;z-index:2;">
+                            <div style="font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:4px;">RESULTS</div>
+                            <div style="font-size:24px;font-weight:800;color:#10b981;">关键成效</div>
+                        </div>
+                        <div style="font-size:20px;color:#d1d5db;line-height:1.5;z-index:2;">实训成本降低 65%。通过率提升至 94%，实现<span class="highlight">零安全事故</span>。</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+</body>
+</html>
