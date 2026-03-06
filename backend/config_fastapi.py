@@ -51,11 +51,7 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:3000"
 
     # --- AI Provider ---
-    ai_provider_format: str = "gemini"
-    google_api_key: str = ""
-    google_api_base: str = ""
-    genai_timeout: float = 300.0
-    genai_max_retries: int = 2
+    ai_provider_format: str = "openai"
 
     # --- OpenAI Format ---
     openai_api_key: str = ""
@@ -67,18 +63,10 @@ class Settings(BaseSettings):
     dashscope_api_key: str = ""
     dashscope_api_base: str = "https://dashscope.aliyuncs.com/api/v1"
 
-    # --- Vertex AI ---
-    vertex_project_id: str = ""
-    vertex_location: str = "us-central1"
-
     # --- Model Names ---
-    text_model: str = "gemini-3-flash-preview"
+    text_model: str = "gpt-4.1-mini"
     image_model: str = "wanx-v1"
-    image_caption_model: str = "gemini-3-flash-preview"
-
-    # --- MinerU ---
-    mineru_token: str = ""
-    mineru_api_base: str = "https://mineru.net"
+    image_caption_model: str = "gpt-4.1-mini"
 
     # --- Concurrency ---
     max_description_workers: int = 5
@@ -114,7 +102,7 @@ class Settings(BaseSettings):
     volcengine_inpainting_max_retries: int = 3
 
     # --- Inpainting ---
-    inpainting_provider: str = "gemini"
+    inpainting_provider: str = "volcengine"
 
     # --- Baidu OCR ---
     baidu_ocr_api_key: str = ""

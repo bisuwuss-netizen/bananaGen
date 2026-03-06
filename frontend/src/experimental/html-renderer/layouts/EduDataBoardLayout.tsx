@@ -110,14 +110,9 @@ function deepSpaceBg(theme: ThemeConfig, backgroundImage?: string): string {
 }
 
 export const EduDataBoardLayout: React.FC<EduDataBoardLayoutProps> = ({ model, theme }) => {
-  const variant = String((model as any).variant || 'a').toLowerCase();
   const data = normalizeModel(model);
   const variant = String((model as LooseEduDataBoardModel).variant || 'a').toLowerCase();
   const glass = glassStyle(theme);
-
-  if (variant === 'b') {
-    return <EduDataBoardVariantB data={data} theme={theme} />;
-  }
 
   if (variant === 'b') {
     return <EduDataBoardVariantB data={data} theme={theme} />;
@@ -474,34 +469,6 @@ function renderEduDataBoardVariantBHTML(data: EduDataBoardModel, theme: ThemeCon
     }
     </div>
   </div>
-</section>`;
-}
-
-function renderEduDataBoardVariantBHTML(data: EduDataBoardModel, theme: ThemeConfig): string {
-  const background = data.background_image
-    ? `linear-gradient(rgba(6,12,28,0.9), rgba(6,12,28,0.9)), url(${data.background_image}) center/cover no-repeat`
-    : '#0b1120';
-  const subtitleHTML = data.subtitle ? `<div style="color:#34d399;font-size:20px;font-weight:700;">${data.subtitle}</div>` : '';
-  const cardsHTML = data.metrics.slice(0, 3).map((metric, i) => {
-    const barW = data.bars[i]?.current || 70;
-    return `<div style="border-radius:16px;border:1px solid ${BAR_COLORS[i]}55;background:linear-gradient(180deg,${BAR_COLORS[i]}22,rgba(0,0,0,0));padding:28px 24px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;box-sizing:border-box;">
-      <div style="font-size:56px;color:${BAR_COLORS[i]};font-weight:900;margin-bottom:12px;">${metric.value}</div>
-      <div style="color:#e2e8f0;font-size:22px;font-weight:700;margin-bottom:8px;">${metric.label}</div>
-      ${metric.note ? `<div style="color:#94a3b8;font-size:16px;">${metric.note}</div>` : ''}
-      <div style="width:80%;height:6px;border-radius:3px;background:rgba(255,255,255,0.08);margin-top:16px;"><div style="width:${barW}%;height:100%;border-radius:3px;background:${BAR_COLORS[i]};"></div></div>
-    </div>`;
-  }).join('');
-  const insightHTML = data.insight ? `<div style="position:absolute;bottom:20px;left:76px;right:76px;color:#94a3b8;font-size:16px;text-align:center;">${data.insight}</div>` : '';
-  return `<section style="width:1280px;height:720px;padding:56px 76px;box-sizing:border-box;position:relative;overflow:hidden;font-family:${theme.fonts.body};background:${background};">
-  <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid rgba(6,182,212,0.32);padding-bottom:16px;margin-bottom:24px;">
-    <div style="display:flex;align-items:center;">
-      <div style="width:8px;height:40px;border-radius:4px;margin-right:18px;background:#06b6d4;"></div>
-      <h2 style="margin:0;color:#ffffff;font-size:40px;font-family:${theme.fonts.title};">${data.title}</h2>
-    </div>
-    ${subtitleHTML}
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;height:calc(100% - 110px);">${cardsHTML}</div>
-  ${insightHTML}
 </section>`;
 }
 

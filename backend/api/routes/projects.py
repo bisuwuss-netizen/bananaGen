@@ -8,7 +8,7 @@ import logging
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query, Cookie, HTTPException
-from sqlalchemy import select, desc, func
+from sqlalchemy import select, desc, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -28,16 +28,16 @@ router = APIRouter(prefix="/api/projects", tags=["projects"])
 def _resolve_user_id(
     user_id: str | None = Query(None),
     user_id_cookie: str | None = Cookie(None, alias="user_id"),
-) -> str:
-    """Resolve user_id from query param or cookie with safe fallback."""
-    return user_id or user_id_cookie or "1"
+) -> str | None:
+    """Resolve user_id from query param/cookie. Empty value means no user filter."""
+    return user_id or user_id_cookie or None
 
 
 @router.get("", response_model=SuccessResponse)
 async def list_projects(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    user_id: str = Depends(_resolve_user_id),
+    user_id: str | None = Depends(_resolve_user_id),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -45,17 +45,19 @@ async def list_projects(
     
     Original: project_controller.py list_projects() (lines 162-212)
     """
-    query = (
-        select(Project)
-        .where(Project.user_id == user_id)
-        .order_by(desc(Project.updated_at))
-        .offset(offset)
-        .limit(limit)
-    )
+    query = select(Project)
+    count_query = select(func.count(Project.id))
+
+    if user_id:
+        # Backward compatibility: include legacy rows that were created before user_id isolation.
+        user_filter = or_(Project.user_id == user_id, Project.user_id.is_(None))
+        query = query.where(user_filter)
+        count_query = count_query.where(user_filter)
+
+    query = query.order_by(desc(Project.updated_at)).offset(offset).limit(limit)
     result = await db.execute(query)
     projects = result.scalars().all()
 
-    count_query = select(func.count(Project.id)).where(Project.user_id == user_id)
     total = (await db.execute(count_query)).scalar() or 0
 
     return SuccessResponse(data={
@@ -69,7 +71,7 @@ async def list_projects(
 @router.post("", response_model=SuccessResponse, status_code=201)
 async def create_project(
     req: CreateProjectRequest,
-    user_id: str = Depends(_resolve_user_id),
+    user_id: str | None = Depends(_resolve_user_id),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -86,7 +88,7 @@ async def create_project(
         template_style=req.template_style,
         render_mode=req.render_mode,
         scheme_id=req.scheme_id,
-        user_id=user_id,
+        user_id=user_id or "1",
         status="DRAFT",
     )
     db.add(project)

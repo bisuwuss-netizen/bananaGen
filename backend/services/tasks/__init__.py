@@ -1,7 +1,6 @@
 """Task package facade for the FastAPI refactor."""
 
 from .description_task import generate_descriptions_task
-from .edit_task import edit_page_image_task
 from .export_task import export_editable_pptx_with_recursive_analysis_task
 from .image_task import (
     generate_images_task,
@@ -29,7 +28,6 @@ __all__ = [
     "_get_stale_timeout_seconds",
     "_safe_positive_int",
     "auto_fail_stale_task",
-    "edit_page_image_task",
     "export_editable_pptx_with_recursive_analysis_task",
     "generate_descriptions_task",
     "generate_images_task",

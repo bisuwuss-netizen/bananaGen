@@ -6,7 +6,7 @@
 
 - **框架**: FastAPI
 - **数据库**: MySQL + SQLAlchemy ORM
-- **AI服务**: Google Gemini API
+- **AI服务**: OpenAI Compatible API
 - **PPT处理**: python-pptx
 - **并发处理**: ThreadPoolExecutor
 - **包管理**: uv
@@ -66,8 +66,8 @@ cp .env.example .env
 编辑 `.env` 文件：
 
 ```env
-GOOGLE_API_KEY=your-google-api-key
-GOOGLE_API_BASE=https://generativelanguage.googleapis.com
+OPENAI_API_KEY=your-openai-api-key
+OPENAI_API_BASE=https://api.openai.com/v1
 
 # 火山引擎配置（可选，用于 Inpainting 图像消除功能）
 VOLCENGINE_ACCESS_KEY=your-volcengine-access-key
@@ -120,7 +120,6 @@ uv run python app_fastapi.py
 #### 图片生成
 - `POST /api/projects/{project_id}/generate/images` - 批量生成图片（异步）
 - `POST /api/projects/{project_id}/pages/{page_id}/generate/image` - 单页生成
-- `POST /api/projects/{project_id}/pages/{page_id}/edit/image` - 编辑图片
 
 #### 模板管理
 - `POST /api/projects/{project_id}/template` - 上传模板
@@ -137,7 +136,7 @@ uv run python app_fastapi.py
 
 ### 1. AI驱动的内容生成
 
-基于 Google Gemini API，支持：
+基于 OpenAI Compatible API，支持：
 - 自动生成PPT大纲
 - 并行生成页面描述
 - 根据参考模板生成图片
@@ -236,12 +235,9 @@ PENDING → PROCESSING → COMPLETED | FAILED
 
 ```python
 class AIService:
-    def __init__(self, api_key: str, model_type: str = 'gemini'):
-        if model_type == 'gemini':
-            # Gemini implementation
-        elif model_type == 'openai':
+    def __init__(self, api_key: str, model_type: str = 'openai'):
+        if model_type == 'openai':
             # OpenAI implementation
-        # ...
 ```
 
 #### 自定义提示词模板
@@ -303,8 +299,8 @@ curl -X POST http://localhost:5000/api/projects/{project_id}/generate/outline \
 
 ## 常见问题
 
-### Q: 数据库文件在哪里？
-A: 在 `backend/instance/database.db`，会自动创建。
+### Q: 数据库在哪里？
+A: 当前版本使用 MySQL。连接信息来自 `.env`（`DATABASE_URL` 或 `MYSQL_*`）。
 
 ### Q: 上传的文件存在哪里？
 A: 在 `uploads/{project_id}/` 目录下，按项目隔离。
@@ -312,11 +308,11 @@ A: 在 `uploads/{project_id}/` 目录下，按项目隔离。
 ### Q: 如何修改并发数？
 A: 推荐通过前端设置页修改（会同步到数据库并覆盖 `.env` 值）；也可以在 `.env` 文件中修改 `MAX_DESCRIPTION_WORKERS` 和 `MAX_IMAGE_WORKERS` 作为默认值，然后在设置页点击“重置为默认值”同步到 DB。
 
-### Q: 如何切换到其他AI模型 / 修改 MinerU 地址？
+### Q: 如何切换到其他AI模型？
 A: 从当前版本开始，推荐通过前端“系统设置”页面修改：  
-- 大模型提供商格式 / API Base / API Key  
+- API Base / API Key  
 - 文本模型 (`TEXT_MODEL`) / 图片模型 (`IMAGE_MODEL`)  
-- MinerU 地址 (`MINERU_API_BASE`) / 图片识别模型 (`IMAGE_CAPTION_MODEL`)  
+- 图片识别模型 (`IMAGE_CAPTION_MODEL`)  
 
 这些值会保存到 `settings` 表并覆盖 `.env` 中对应配置，点击“重置为默认值”会回到 `.env` 的默认值。
 

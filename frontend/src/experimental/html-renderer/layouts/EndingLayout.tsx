@@ -176,7 +176,6 @@ function renderEndingVariantB(model: EndingModel, theme: ThemeConfig): React.Rea
       { title: '数据反馈闭环', items: ['缩短预警到干预链路，形成持续迭代。'] },
     ];
   const headline = model.closing || model.subtitle || '构建可信赖、可持续优化的智慧教育新生态。';
-  const contact = model.contact;
   const titlePalette = ['#67e8f9', '#93c5fd', '#6ee7b7', '#fbbf24'];
 
   return (

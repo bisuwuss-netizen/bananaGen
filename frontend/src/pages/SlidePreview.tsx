@@ -814,14 +814,6 @@ export const SlidePreview: React.FC = () => {
             push('background_image');
           }
           break;
-        case 'edu_cover': {
-          const variant = String(model?.variant || 'a').toLowerCase();
-          // #region agent log
-          fetch('http://127.0.0.1:7249/ingest/f63d39ca-6fcd-4fcb-87bf-224f2267b8e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b939cf'},body:JSON.stringify({sessionId:'b939cf',location:'SlidePreview.tsx:buildHtmlImageSlots:edu_cover',message:'edu_cover slot build',data:{variant,hasHeroImage:!!model.hero_image,willPush:variant==='a'&&!model.hero_image},timestamp:Date.now()})}).catch(()=>{});
-          // #endregion
-          if (variant === 'a' && !model.hero_image) push('hero_image');
-          break;
-        }
         case 'image_full':
           if (!model.image_src) push('image_src');
           break;

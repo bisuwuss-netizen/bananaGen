@@ -143,7 +143,6 @@ export interface ApiResponse<T = any> {
 // 设置
 export interface Settings {
   id: number;
-  ai_provider_format: 'openai' | 'gemini';
   api_base_url?: string;
   api_key_length: number;
   image_resolution: string;
@@ -152,8 +151,6 @@ export interface Settings {
   max_image_workers: number;
   text_model?: string;
   image_model?: string;
-  mineru_api_base?: string;
-  mineru_token_length: number;
   image_caption_model?: string;
   output_language: 'zh' | 'en' | 'ja' | 'auto';
   created_at?: string;

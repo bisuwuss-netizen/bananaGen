@@ -1,6 +1,6 @@
 import inspect
 
-from services.tasks import description_task, edit_task, export_task, image_task, manager, utils
+from services.tasks import description_task, export_task, image_task, manager, utils
 
 
 def test_task_manager_helpers_cover_timeout_parsing():
@@ -20,9 +20,7 @@ def test_task_submodules_expose_expected_entrypoints():
     assert callable(image_task.generate_images_task)
     assert callable(image_task.generate_single_page_image_task)
     assert callable(image_task.generate_material_image_task)
-    assert callable(edit_task.edit_page_image_task)
     assert callable(export_task.export_editable_pptx_with_recursive_analysis_task)
 
     assert "task_id" in inspect.signature(description_task.generate_descriptions_task).parameters
     assert "project_id" in inspect.signature(image_task.generate_images_task).parameters
-    assert "page_id" in inspect.signature(edit_task.edit_page_image_task).parameters

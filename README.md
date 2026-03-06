@@ -52,12 +52,10 @@ cp .env.example .env
 
 至少配置这些项：
 
-- `SQLALCHEMY_DATABASE_URL`（指向本地 MySQL）
-- `AI_PROVIDER_FORMAT`
-- `GOOGLE_API_KEY` 或 `OPENAI_API_KEY`
+- `DATABASE_URL`（或 `MYSQL_HOST` / `MYSQL_PORT` / `MYSQL_USER` / `MYSQL_PASSWORD` / `MYSQL_DATABASE`）
+- `OPENAI_API_KEY`
 - `TEXT_MODEL`
 - `IMAGE_MODEL`
-- `MINERU_TOKEN`（如启用参考文件解析）
 
 ### 3. 安装依赖
 
@@ -121,9 +119,3 @@ docker compose up -d
 git status --short
 git ls-files | rg "(^|/)\\.cursor/|(^|/)node_modules/|(^|/)AGENTS?\\.md$|(^|/)\\.env($|\\.)"
 ```
-
-## 说明
-
-- 旧 `Flask` 控制器链路已下线为非主流程。
-- `backend/run.bat` 已移除，后端统一走 FastAPI 启动方式。
-- 本项目持续重构中，文档会按主分支现状迭代。

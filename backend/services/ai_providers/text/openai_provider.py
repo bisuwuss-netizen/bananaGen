@@ -10,9 +10,9 @@ logger = logging.getLogger(__name__)
 
 
 class OpenAITextProvider(TextProvider):
-    """Text generation using OpenAI SDK (compatible with Gemini via proxy)"""
+    """Text generation using OpenAI SDK."""
     
-    def __init__(self, api_key: str, api_base: str = None, model: str = "gemini-3-flash-preview"):
+    def __init__(self, api_key: str, api_base: str = None, model: str = "gpt-4.1-mini"):
         """
         Initialize OpenAI text provider
         

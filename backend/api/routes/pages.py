@@ -2,7 +2,7 @@
 import json
 import logging
 from datetime import datetime
-from typing import Any, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -225,11 +225,6 @@ class GeneratePageImageRequest(BaseModel):
     use_template: bool = True
     force_regenerate: bool = False
     language: str | None = None
-
-
-class EditPageImageRequest(BaseModel):
-    edit_instruction: str
-    context_images: Optional[dict[str, Any]] = None
 
 
 @router.post("/{project_id}/pages/{page_id}/generate/description", response_model=SuccessResponse)
@@ -468,79 +463,6 @@ async def generate_page_image(
         runtime_config=load_runtime_config(),
         extra_requirements=combined_requirements.strip() or None,
         language=language,
-    )
-
-    return SuccessResponse(data={"task_id": task.id, "page_id": page_id, "status": "PENDING"})
-
-
-@router.post("/{project_id}/pages/{page_id}/edit/image", response_model=SuccessResponse, status_code=202)
-async def edit_page_image(
-    project_id: str,
-    page_id: str,
-    req: EditPageImageRequest,
-    db: AsyncSession = Depends(get_db),
-):
-    page = await db.get(Page, page_id)
-    if not page or page.project_id != project_id:
-        raise HTTPException(404, "Page not found")
-
-    if not page.generated_image_path:
-        raise HTTPException(400, "Page must have generated image first")
-
-    project = await db.get(Project, project_id)
-    if not project:
-        raise HTTPException(404, "Project not found")
-
-    from services.ai_service_manager import get_ai_service
-    from services.tasks import edit_page_image_task, task_manager
-    from services.file_service import FileService
-
-    ai_service = get_ai_service()
-    file_service = FileService(app_settings.upload_folder)
-
-    original_description = None
-    desc_content = page.get_description_content()
-    if desc_content:
-        original_description = desc_content.get("text") or ""
-        if not original_description and desc_content.get("text_content"):
-            tc = desc_content["text_content"]
-            original_description = "\n".join(tc) if isinstance(tc, list) else str(tc)
-
-    additional_ref_images = []
-    ctx = req.context_images or {}
-    use_template = ctx.get("use_template", False)
-    if use_template:
-        template_path = file_service.get_template_path(project_id)
-        if template_path:
-            additional_ref_images.append(template_path)
-
-    desc_image_urls = ctx.get("desc_image_urls", [])
-    if isinstance(desc_image_urls, list):
-        additional_ref_images.extend(desc_image_urls)
-
-    task = Task(
-        project_id=project_id,
-        task_type="EDIT_PAGE_IMAGE",
-        status="PENDING",
-    )
-    task.set_progress({"total": 1, "completed": 0, "failed": 0})
-    db.add(task)
-    await db.flush()
-
-    task_manager.submit_task(
-        task.id,
-        edit_page_image_task,
-        project_id=project_id,
-        page_id=page_id,
-        edit_instruction=req.edit_instruction,
-        ai_service=ai_service,
-        file_service=file_service,
-        aspect_ratio=app_settings.default_aspect_ratio,
-        resolution=app_settings.default_resolution,
-        original_description=original_description,
-        additional_ref_images=additional_ref_images or None,
-        temp_dir=None,
-        runtime_config=load_runtime_config(),
     )
 
     return SuccessResponse(data={"task_id": task.id, "page_id": page_id, "status": "PENDING"})

@@ -102,11 +102,20 @@ function glassStyle(theme: ThemeConfig): React.CSSProperties {
   };
 }
 
+function deepSpaceBg(theme: ThemeConfig, backgroundImage?: string): string {
+  const base = theme.colors.background || '#020617';
+  const gradient = `radial-gradient(circle at 50% 0%, ${theme.colors.secondary} 0%, transparent 70%), linear-gradient(180deg, ${base} 0%, ${theme.colors.backgroundAlt} 100%)`;
+
+  if (!backgroundImage) return gradient;
+  return `linear-gradient(rgba(2,6,23,0.85), rgba(2,6,23,0.9)), url(${backgroundImage}) center/cover no-repeat`;
+}
+
 /* ==================== Variant A (Deep Space Core) ==================== */
 
 export const EduCoreHubLayout: React.FC<EduCoreHubLayoutProps> = ({ model, theme }) => {
   const data = normalizeModel(model);
   const variant = String((model as any).variant || 'a').toLowerCase();
+  const orbitSize = 320;
 
   if (variant === 'b') {
     return <EduCoreHubVariantB data={data} theme={theme} />;
@@ -289,7 +298,7 @@ export function renderEduCoreHubLayoutHTML(model: EduCoreHubModel, theme: ThemeC
     return renderEduCoreHubVariantBHTML(model, theme);
   }
   const data = normalizeModel(model as LooseEduCoreHubModel);
-  const variant = String(data.variant || 'a').toLowerCase();
+  const background = deepSpaceBg(theme, data.background_image);
 
   const slicedNodes = data.nodes.slice(0, 4);
   const nodesHTML = slicedNodes.map((node, index) => {

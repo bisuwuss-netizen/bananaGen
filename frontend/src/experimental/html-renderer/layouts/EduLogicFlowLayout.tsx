@@ -76,12 +76,7 @@ function deepSpaceBg(theme: ThemeConfig, backgroundImage?: string): string {
 export const EduLogicFlowLayout: React.FC<EduLogicFlowLayoutProps> = ({ model, theme }) => {
   const variant = String((model as any).variant || 'a').toLowerCase();
   const data = normalizeModel(model);
-  const variant = String(data.variant || 'a').toLowerCase();
   const glass = glassStyle(theme);
-
-  if (variant === 'b') {
-    return <EduLogicFlowVariantB data={data} theme={theme} />;
-  }
 
   if (variant === 'b') {
     return <EduLogicFlowVariantB data={data} theme={theme} />;
@@ -298,29 +293,6 @@ function renderEduLogicFlowVariantBHTML(data: EduLogicFlowModel, theme: ThemeCon
     <div style="position:absolute;left:50%;top:20px;bottom:20px;width:2px;background-image:linear-gradient(to bottom, ${gradientColors});transform:translateX(-50%);z-index:1;opacity:0.5;"></div>
     ${nodesHTML}
   </div>
-</section>`;
-}
-
-function renderEduLogicFlowVariantBHTML(data: EduLogicFlowModel, theme: ThemeConfig): string {
-  const background = data.background_image
-    ? `linear-gradient(rgba(8,14,32,0.88), rgba(8,14,32,0.9)), url(${data.background_image}) center/cover no-repeat`
-    : 'linear-gradient(135deg, #0f172a 0%, #0b1120 100%)';
-  const stagesHTML = data.stages.slice(0, 3).map((stage, i) => {
-    const c = FLOW_COLORS[i];
-    return `<div style="display:flex;align-items:center;gap:20px;padding:20px 28px;border-radius:16px;border:1px solid ${c}55;background:linear-gradient(90deg,${c}22,rgba(0,0,0,0));margin-left:${i * 60}px;">
-      <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,${c},${c}88);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">${ICONS[i]}</div>
-      <div>
-        <h3 style="margin:0;color:${c};font-size:26px;font-family:${theme.fonts.title};">${stage.title}</h3>
-        <p style="margin:6px 0 0;color:#cbd5e1;font-size:18px;line-height:1.5;">${stage.description}</p>
-      </div>
-    </div>`;
-  }).join('');
-  return `<section style="width:1280px;height:720px;padding:56px 76px;box-sizing:border-box;position:relative;overflow:hidden;font-family:${theme.fonts.body};background:${background};">
-  <div style="display:flex;align-items:flex-end;border-bottom:2px solid rgba(6,182,212,0.32);padding-bottom:18px;margin-bottom:44px;">
-    <div style="width:8px;height:40px;border-radius:4px;margin-right:18px;background:#06b6d4;"></div>
-    <h2 style="margin:0;color:#ffffff;font-size:42px;font-family:${theme.fonts.title};">${data.title}</h2>
-  </div>
-  <div style="display:flex;flex-direction:column;gap:20px;height:calc(100% - 120px);justify-content:center;">${stagesHTML}</div>
 </section>`;
 }
 

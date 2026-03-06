@@ -52,24 +52,16 @@ def get_sync_session():
 
 def _base_runtime_config() -> dict[str, Any]:
     return {
-        "AI_PROVIDER_FORMAT": fastapi_settings.ai_provider_format,
-        "GOOGLE_API_KEY": fastapi_settings.google_api_key,
-        "GOOGLE_API_BASE": fastapi_settings.google_api_base,
-        "GENAI_TIMEOUT": fastapi_settings.genai_timeout,
-        "GENAI_MAX_RETRIES": fastapi_settings.genai_max_retries,
+        "AI_PROVIDER_FORMAT": "openai",
         "OPENAI_API_KEY": fastapi_settings.openai_api_key,
         "OPENAI_API_BASE": fastapi_settings.openai_api_base,
         "OPENAI_TIMEOUT": fastapi_settings.openai_timeout,
         "OPENAI_MAX_RETRIES": fastapi_settings.openai_max_retries,
         "DASHSCOPE_API_KEY": fastapi_settings.dashscope_api_key,
         "DASHSCOPE_API_BASE": fastapi_settings.dashscope_api_base,
-        "VERTEX_PROJECT_ID": fastapi_settings.vertex_project_id,
-        "VERTEX_LOCATION": fastapi_settings.vertex_location,
         "TEXT_MODEL": fastapi_settings.text_model,
         "IMAGE_MODEL": fastapi_settings.image_model,
         "IMAGE_CAPTION_MODEL": fastapi_settings.image_caption_model,
-        "MINERU_TOKEN": fastapi_settings.mineru_token,
-        "MINERU_API_BASE": fastapi_settings.mineru_api_base,
         "MAX_DESCRIPTION_WORKERS": fastapi_settings.max_description_workers,
         "DESCRIPTION_BATCH_SIZE": fastapi_settings.description_batch_size,
         "MAX_IMAGE_WORKERS": fastapi_settings.max_image_workers,
@@ -112,13 +104,10 @@ def load_runtime_config() -> dict[str, Any]:
         return config
 
     if row:
-        if row.ai_provider_format:
-            config["AI_PROVIDER_FORMAT"] = row.ai_provider_format
+        config["AI_PROVIDER_FORMAT"] = "openai"
         if row.api_base_url is not None:
-            config["GOOGLE_API_BASE"] = row.api_base_url or ""
             config["OPENAI_API_BASE"] = row.api_base_url or ""
         if row.api_key is not None:
-            config["GOOGLE_API_KEY"] = row.api_key or ""
             config["OPENAI_API_KEY"] = row.api_key or ""
         if row.image_resolution:
             config["DEFAULT_RESOLUTION"] = row.image_resolution
@@ -132,10 +121,6 @@ def load_runtime_config() -> dict[str, Any]:
             config["TEXT_MODEL"] = row.text_model
         if row.image_model:
             config["IMAGE_MODEL"] = row.image_model
-        if row.mineru_api_base:
-            config["MINERU_API_BASE"] = row.mineru_api_base
-        if row.mineru_token:
-            config["MINERU_TOKEN"] = row.mineru_token
         if row.image_caption_model:
             config["IMAGE_CAPTION_MODEL"] = row.image_caption_model
         if row.output_language:

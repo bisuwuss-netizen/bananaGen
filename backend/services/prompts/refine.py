@@ -205,7 +205,7 @@ You are a helpful assistant that modifies PPT page descriptions based on user re
 ...
 其他页面素材（如果有请加上，包括markdown图片链接等）
 
-提示：如果参考文件中包含以 /files/ 开头的本地文件URL图片（例如 /files/mineru/xxx/image.png），请将这些图片以markdown格式输出，例如：![图片描述](/files/mineru/xxx/image.png)，而不是作为普通文本。
+提示：如果参考文件中包含以 /files/ 开头的本地文件URL图片（例如 /files/reference_files/xxx/image.png），请将这些图片以markdown格式输出，例如：![图片描述](/files/reference_files/xxx/image.png)，而不是作为普通文本。
 
 请返回一个 JSON 数组，每个元素是一个字符串，对应每个页面的修改后描述（按页面顺序）。
 
@@ -327,5 +327,4 @@ You are a helpful assistant that modifies PPT page structured content (html_mode
     final_prompt = files_xml + prompt
     logger.debug(f"[get_html_model_refinement_prompt] Final prompt:\n{final_prompt}")
     return final_prompt
-
 

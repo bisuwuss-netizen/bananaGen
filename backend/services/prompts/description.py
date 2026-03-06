@@ -80,7 +80,7 @@ def get_page_description_prompt(project_context: 'ProjectContext', outline: list
 
 其他页面素材（如果文件中存在请积极添加，包括markdown图片链接、公式、表格等）
 
-【关于图片】如果参考文件中包含以 /files/ 开头的本地文件URL图片（例如 /files/mineru/xxx/image.png），请将这些图片以markdown格式输出，例如：![图片描述](/files/mineru/xxx/image.png)。这些图片会被包含在PPT页面中。
+【关于图片】如果参考文件中包含以 /files/ 开头的本地文件URL图片（例如 /files/reference_files/xxx/image.png），请将这些图片以markdown格式输出，例如：![图片描述](/files/reference_files/xxx/image.png)。这些图片会被包含在PPT页面中。
 
 {get_language_instruction(language)}
 """)
@@ -220,5 +220,4 @@ Now split the description text into individual page descriptions. Return only th
     
     logger.debug(f"[get_description_split_prompt] Final prompt:\n{prompt}")
     return prompt
-
 

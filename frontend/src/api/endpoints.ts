@@ -272,53 +272,6 @@ export const generatePageImage = async (
 };
 
 /**
- * 编辑图片（自然语言修改）
- */
-export const editPageImage = async (
-  projectId: string,
-  pageId: string,
-  editPrompt: string,
-  contextImages?: {
-    useTemplate?: boolean;
-    descImageUrls?: string[];
-    uploadedFiles?: File[];
-  }
-): Promise<ApiResponse> => {
-  // 如果有上传的文件，使用 multipart/form-data
-  if (contextImages?.uploadedFiles && contextImages.uploadedFiles.length > 0) {
-    const formData = new FormData();
-    formData.append('edit_instruction', editPrompt);
-    formData.append('use_template', String(contextImages.useTemplate || false));
-    if (contextImages.descImageUrls && contextImages.descImageUrls.length > 0) {
-      formData.append('desc_image_urls', JSON.stringify(contextImages.descImageUrls));
-    }
-    // 添加上传的文件
-    contextImages.uploadedFiles.forEach((file) => {
-      formData.append('context_images', file);
-    });
-
-    const response = await apiClient.post<ApiResponse>(
-      `/api/projects/${projectId}/pages/${pageId}/edit/image`,
-      formData
-    );
-    return response.data;
-  } else {
-    // 使用 JSON
-    const response = await apiClient.post<ApiResponse>(
-      `/api/projects/${projectId}/pages/${pageId}/edit/image`,
-      {
-        edit_instruction: editPrompt,
-        context_images: {
-          use_template: contextImages?.useTemplate || false,
-          desc_image_urls: contextImages?.descImageUrls || [],
-        },
-      }
-    );
-    return response.data;
-  }
-};
-
-/**
  * 获取页面图片历史版本
  */
 export const getPageImageVersions = async (
@@ -899,10 +852,7 @@ export const getSettings = async (): Promise<ApiResponse<Settings>> => {
  * 更新系统设置
  */
 export const updateSettings = async (
-  data: Partial<Omit<Settings, 'id' | 'api_key_length' | 'mineru_token_length' | 'created_at' | 'updated_at'>> & {
-    api_key?: string;
-    mineru_token?: string;
-  }
+  data: Partial<Omit<Settings, 'id' | 'api_key_length' | 'created_at' | 'updated_at'>> & { api_key?: string }
 ): Promise<ApiResponse<Settings>> => {
   const response = await apiClient.put<ApiResponse<Settings>>('/api/settings', data);
   return response.data;

@@ -21,9 +21,6 @@ cp "$ENV_EXAMPLE" "$ENV_FILE"
 # Define list of configuration items to be replaced from environment variables/Secrets
 # Format: configuration item name
 REPLACEABLE_VARS=(
-  "AI_PROVIDER_FORMAT"
-  "GOOGLE_API_KEY"
-  "GOOGLE_API_BASE"
   "OPENAI_API_KEY"
   "OPENAI_API_BASE"
   "OPENAI_TIMEOUT"
@@ -31,14 +28,11 @@ REPLACEABLE_VARS=(
   "TEXT_MODEL"
   "IMAGE_MODEL"
   "LOG_LEVEL"
-  "FLASK_ENV"
   "SECRET_KEY"
   "PORT"
   "CORS_ORIGINS"
   "MAX_DESCRIPTION_WORKERS"
   "MAX_IMAGE_WORKERS"
-  "MINERU_TOKEN"
-  "MINERU_API_BASE"
   "IMAGE_CAPTION_MODEL"
   "OUTPUT_LANGUAGE"
 )
@@ -71,10 +65,10 @@ for var_name in "${REPLACEABLE_VARS[@]}"; do
   fi
 done
 
-# Special handling: If GOOGLE_API_KEY is not configured, use mock-api-key
-if [ -z "${GOOGLE_API_KEY}" ]; then
-  sed -i '/^GOOGLE_API_KEY=/s/your-api-key-here/mock-api-key/' "$ENV_FILE"
-  echo "Warning: GOOGLE_API_KEY using mock-api-key (not configured)"
+# Special handling: If OPENAI_API_KEY is not configured, use mock-api-key
+if [ -z "${OPENAI_API_KEY}" ]; then
+  sed -i '/^OPENAI_API_KEY=/s/your-api-key-here/mock-api-key/' "$ENV_FILE"
+  echo "Warning: OPENAI_API_KEY using mock-api-key (not configured)"
 fi
 
 echo ""
@@ -82,4 +76,3 @@ echo "Configuration complete:"
 echo "   Replaced: $replaced_count items"
 echo "   Using defaults: $skipped_count items"
 echo ""
-

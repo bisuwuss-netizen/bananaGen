@@ -81,7 +81,6 @@ function glassStyle(theme: ThemeConfig): React.CSSProperties {
 export const EduTocLayout: React.FC<EduTocLayoutProps> = ({ model, theme }) => {
   const variant = String((model as any).variant || 'a').toLowerCase();
   const data = normalizeModel(model);
-  const variant = String(data.variant || 'a').toLowerCase();
 
   if (variant === 'b') {
     return <EduTocVariantB data={data} theme={theme} />;
@@ -93,10 +92,6 @@ export const EduTocLayout: React.FC<EduTocLayoutProps> = ({ model, theme }) => {
   const padV = count <= 4 ? 24 : count <= 6 ? 16 : 12;
   const idxFont = count <= 4 ? 48 : 32;
   const txtFont = count <= 4 ? 24 : 20;
-
-  if (variant === 'b') {
-    return <EduTocVariantB data={data} theme={theme} />;
-  }
 
   const slideStyle: React.CSSProperties = {
     width: 1280,
@@ -219,13 +214,6 @@ const EduTocVariantB: React.FC<{ data: EduTocModel; theme: ThemeConfig }> = ({ d
 export function renderEduTocLayoutHTML(model: EduTocModel, theme: ThemeConfig): string {
   const variant = String((model as any).variant || 'a').toLowerCase();
   const data = normalizeModel(model as LooseEduTocModel);
-  if (variant === 'b') {
-    return renderEduTocVariantBHTML(data, theme);
-  }
-  const background = data.background_image
-    ? `linear-gradient(rgba(8,14,32,0.88), rgba(8,14,32,0.9)), url(${data.background_image}) center/cover no-repeat`
-    : 'linear-gradient(180deg, #0b1120 0%, #111827 100%)';
-
   if (variant === 'b') {
     return renderEduTocVariantBHTML(data, theme);
   }

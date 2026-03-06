@@ -27,7 +27,7 @@ class QwenImageProvider(ImageProvider):
 
     def __init__(self, api_key: str = None, api_base: str = None, model: str = "qwen-image-2.0-pro"):
         cfg = get_config()
-        self.api_key = api_key or cfg.DASHSCOPE_API_KEY or cfg.OPENAI_API_KEY or cfg.GOOGLE_API_KEY
+        self.api_key = api_key or cfg.DASHSCOPE_API_KEY or cfg.OPENAI_API_KEY
         self.api_base = self._normalize_api_base(
             api_base
             or cfg.DASHSCOPE_API_BASE
@@ -39,7 +39,7 @@ class QwenImageProvider(ImageProvider):
         self.max_retries = int(cfg.OPENAI_MAX_RETRIES or 2)
 
         if not self.api_key:
-            raise ValueError("DASHSCOPE_API_KEY / OPENAI_API_KEY / GOOGLE_API_KEY is required for qwen-image models")
+            raise ValueError("DASHSCOPE_API_KEY / OPENAI_API_KEY is required for qwen-image models")
 
         logger.info(f"Initialized Qwen image provider with model: {self.model}, base: {self.api_base}")
 

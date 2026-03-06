@@ -30,6 +30,7 @@ ARCHETYPE_BY_BASE_LAYOUT: Dict[str, str] = {
     "edu_logic_flow": "process_flow",
     "edu_data_board": "data_dashboard",
     "edu_summary": "summary_reflection",
+    "edu_qa_case": "qa_session",
 }
 
 VARIANT_POOLS_BY_BASE_LAYOUT: Dict[str, List[str]] = {
@@ -44,6 +45,7 @@ VARIANT_POOLS_BY_BASE_LAYOUT: Dict[str, List[str]] = {
     "edu_logic_flow": ["a", "b"],
     "edu_data_board": ["a", "b"],
     "edu_summary": ["a", "b"],
+    "edu_qa_case": ["a", "b", "c", "d"],
 }
 
 # capacity_profile: max content each variant can hold.
@@ -77,6 +79,12 @@ CAPACITY_PROFILES: Dict[str, Dict[str, Dict[str, Any]]] = {
         "a": {"max_items": 3, "max_chars_per_item": 200, "max_total_chars": 800},
         "b": {"max_items": 3, "max_chars_per_item": 200, "max_total_chars": 800},
     },
+    "edu_qa_case": {
+        "a": {"max_items": 4, "max_chars_per_item": 150, "max_total_chars": 600},
+        "b": {"max_items": 5, "max_chars_per_item": 150, "max_total_chars": 800},
+        "c": {"max_items": 4, "max_chars_per_item": 200, "max_total_chars": 800},
+        "d": {"max_items": 3, "max_chars_per_item": 200, "max_total_chars": 800},
+    },
     "title_bullets": {
         "a": {"max_items": 6, "max_chars_per_item": 80, "max_total_chars": 600},
         "b": {"max_items": 5, "max_chars_per_item": 100, "max_total_chars": 600},
@@ -93,6 +101,7 @@ FALLBACK_ORDER: Dict[str, List[str]] = {
     "edu_data_board": ["a", "b"],
     "edu_toc": ["a", "b"],
     "edu_summary": ["a", "b"],
+    "edu_qa_case": ["b", "c", "a", "d"],
     "title_bullets": ["a", "b"],
 }
 
@@ -239,6 +248,7 @@ def _estimate_content_size(page: Dict) -> Dict[str, int]:
         or model.get("items")
         or model.get("metrics")
         or model.get("steps")
+        or model.get("analysis")
         or []
     )
     item_count = len(items) if isinstance(items, list) else 0

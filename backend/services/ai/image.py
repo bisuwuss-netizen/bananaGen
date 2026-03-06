@@ -1,8 +1,10 @@
 import os
 import logging
 from typing import List, Dict, Optional, Union
+from pathlib import Path
 
 from PIL import Image
+from config_fastapi import settings as fastapi_settings
 
 logger = logging.getLogger(__name__)
 
@@ -67,13 +69,14 @@ class ImageMixin:
                                 ref_images.append(downloaded_img)
                             else:
                                 logger.warning(f"Failed to download image from URL: {ref_img}, skipping...")
-                        elif ref_img.startswith('/files/mineru/'):
-                            local_path = self._convert_mineru_path_to_local(ref_img)
-                            if local_path and os.path.exists(local_path):
+                        elif ref_img.startswith('/files/'):
+                            relative = ref_img[len('/files/'):].lstrip('/')
+                            local_path = Path(fastapi_settings.upload_folder) / relative
+                            if local_path.exists():
                                 ref_images.append(Image.open(local_path))
-                                logger.debug(f"Loaded MinerU image from local path: {local_path}")
+                                logger.debug(f"Loaded local file image: {local_path}")
                             else:
-                                logger.warning(f"MinerU image file not found (with prefix matching): {ref_img}, skipping...")
+                                logger.warning(f"Local file image not found: {ref_img}, skipping...")
                         else:
                             logger.warning(f"Invalid image reference: {ref_img}, skipping...")
 

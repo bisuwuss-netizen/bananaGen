@@ -43,19 +43,9 @@ export const TitleBulletsLayout: React.FC<TitleBulletsLayoutProps> = ({ model, t
   const { title, subtitle, bullets, image, background_image } = model;
   const hasImage = image && (image.src || image.src === '');
   const useSimpleBullets = shouldUseSimpleBullets(bullets as BulletItem[]);
-  const variant = String((model as any).variant || 'a').toLowerCase();
 
   if (variant === 'b') {
     return renderTitleBulletsVariantB(model, theme, onImageUpload);
-  }
-
-  if (variant === 'b') {
-    return (
-      <TitleBulletsVariantB
-        title={title} subtitle={subtitle} bullets={bullets as BulletItem[]}
-        keyTakeaway={model.keyTakeaway} background_image={background_image} theme={theme}
-      />
-    );
   }
 
   const slideStyle: React.CSSProperties = {
@@ -448,11 +438,6 @@ export function renderTitleBulletsLayoutHTML(model: TitleBulletsModel, theme: Th
   const { title, subtitle, bullets, image, keyTakeaway, background_image } = model;
   const hasImage = image && (image.src !== undefined);
   const useSimpleBullets = shouldUseSimpleBullets(bullets as BulletItem[]);
-  const variant = String((model as any).variant || 'a').toLowerCase();
-
-  if (variant === 'b') {
-    return renderTitleBulletsVariantBHTML(model, theme);
-  }
 
   const slideStyle = toInlineStyle({
     width: `${theme.sizes.slideWidth}px`,
@@ -848,40 +833,6 @@ function renderSimpleBulletLineHTML(bullet: BulletItem, theme: ThemeConfig): str
         ${bullet.description ? `<p style="${descriptionStyle}">${bullet.description}</p>` : ''}
       </div>
     </div>`;
-}
-
-function renderTitleBulletsVariantBHTML(model: TitleBulletsModel, theme: ThemeConfig): string {
-  const { title, subtitle, bullets, keyTakeaway, background_image } = model;
-  const slideStyle = toInlineStyle({
-    width: `${theme.sizes.slideWidth}px`, height: `${theme.sizes.slideHeight}px`,
-    position: 'relative', overflow: 'hidden', fontFamily: theme.fonts.body,
-    color: theme.colors.text, backgroundColor: theme.colors.background,
-    ...(background_image ? { backgroundImage: `url(${background_image})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}),
-    boxSizing: 'border-box', padding: theme.spacing.padding,
-  });
-  const titleStyle = toInlineStyle({ fontSize: theme.sizes.titleSize, fontWeight: 'bold', color: theme.colors.primary, margin: '0', lineHeight: '1.3', fontFamily: theme.fonts.title });
-  const subtitleStyle = toInlineStyle({ fontSize: theme.sizes.subtitleSize, color: theme.colors.textLight, margin: '0', marginTop: '12px', lineHeight: '1.4' });
-  const ktStyle = toInlineStyle({ marginTop: '24px', padding: '16px 20px', backgroundColor: theme.colors.backgroundAlt, borderRadius: theme.decorations?.borderRadius || '12px', borderLeft: `4px solid ${theme.colors.primary}`, fontSize: theme.sizes.bodySize, color: theme.colors.text, lineHeight: '1.5' });
-
-  const bulletsHTML = bullets.map((bullet, index) => {
-    const b = bullet as BulletItem;
-    return `<div style="display:flex;align-items:flex-start;gap:16px;">
-      <div style="width:36px;height:36px;border-radius:50%;background-color:${theme.colors.secondary};color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0;">${index + 1}</div>
-      <div style="flex:1;">
-        <p style="margin:0;font-size:20px;font-weight:600;color:${theme.colors.text};">${b.text}</p>
-        ${b.description ? `<p style="margin:4px 0 0;font-size:15px;color:${theme.colors.textLight};line-height:1.5;">${b.description}</p>` : ''}
-      </div>
-    </div>`;
-  }).join('\n    ');
-
-  return `<section style="${slideStyle}">
-  <h2 style="${titleStyle}">${title}</h2>
-  ${subtitle ? `<p style="${subtitleStyle}">${subtitle}</p>` : ''}
-  <div style="margin-top:32px;display:flex;flex-direction:column;gap:14px;">
-    ${bulletsHTML}
-  </div>
-  ${keyTakeaway ? `<div style="${ktStyle}"><strong>🎯 核心要点：</strong>${keyTakeaway}</div>` : ''}
-</section>`;
 }
 
 function parseStyle(styleString: string): React.CSSProperties {

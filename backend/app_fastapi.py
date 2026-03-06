@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
 _project_root = Path(__file__).parent.parent
-load_dotenv(dotenv_path=_project_root / ".env", override=True)
+load_dotenv(dotenv_path=_project_root / ".env", override=False)
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles

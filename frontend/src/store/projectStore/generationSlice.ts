@@ -176,30 +176,11 @@ export const createGenerationSlice: StateCreator<ProjectStore, [], [], ProjectGe
   },
 
   editPageImage: async (pageId, editPrompt, contextImages) => {
-    const { currentProject, pageGeneratingTasks } = get();
-    if (!currentProject || pageGeneratingTasks[pageId]) return;
-
-    set({ error: null });
-    try {
-      const response = await api.editPageImage(currentProject.id!, pageId, editPrompt, contextImages);
-      const taskId = response.data?.task_id;
-      if (taskId) {
-        set({
-          pageGeneratingTasks: { ...pageGeneratingTasks, [pageId]: taskId },
-        });
-        await get().syncProject();
-        get().pollImageTask(taskId, [pageId]);
-      } else {
-        await get().syncProject();
-      }
-    } catch (error: any) {
-      const nextTasks = { ...get().pageGeneratingTasks };
-      delete nextTasks[pageId];
-      set({
-        pageGeneratingTasks: nextTasks,
-        error: normalizeErrorMessage(error.message || '编辑图片失败'),
-      });
-      throw error;
-    }
+    void pageId;
+    void editPrompt;
+    void contextImages;
+    const message = '图片编辑功能已下线，请使用“重新生成此页”';
+    set({ error: message });
+    throw new Error(message);
   },
 });

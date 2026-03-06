@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import importlib
 import os
 import sys
 import tempfile
@@ -23,6 +24,7 @@ sys.path.insert(0, str(backend_path))
 
 os.environ.setdefault("TESTING", "true")
 os.environ.setdefault("USE_MOCK_AI", "true")
+os.environ.setdefault("OPENAI_API_KEY", "mock-api-key-for-testing")
 os.environ.setdefault("GOOGLE_API_KEY", "mock-api-key-for-testing")
 os.environ.setdefault("FLASK_ENV", "testing")
 
@@ -134,13 +136,30 @@ def _configure_test_database():
 
 
 @pytest.fixture(scope="session")
-def app():
-    from app_fastapi import app as fastapi_app
+def app(_configure_test_database):
+    import config_fastapi
+    import services.runtime_state
+    import app_fastapi
+
+    # Ensure singleton settings/engines are reloaded after DATABASE_URL is switched to *_test.
+    config_fastapi = importlib.reload(config_fastapi)
+    # Rebuild settings from current env (DATABASE_URL points to *_test in this fixture).
+    config_fastapi.settings = config_fastapi.Settings()
+    services.runtime_state = importlib.reload(services.runtime_state)
+    app_fastapi = importlib.reload(app_fastapi)
+    fastapi_app = app_fastapi.app
+
     from config_fastapi import settings
     from models import db
     from services.runtime_state import install_runtime_orm
 
-    engine = create_engine(settings.sqlalchemy_sync_url)
+    url = make_url(settings.sqlalchemy_sync_url)
+    if not (url.database and url.database.endswith("_test")):
+        raise RuntimeError(
+            f"Refusing to run tests against non-test database: {url.database}"
+        )
+
+    engine = create_engine(url.render_as_string(hide_password=False))
     install_runtime_orm()
     db.metadata.drop_all(bind=engine)
     db.metadata.create_all(bind=engine)
@@ -156,7 +175,13 @@ def client(app):
     from config_fastapi import settings
     from models import db
 
-    engine = create_engine(settings.sqlalchemy_sync_url)
+    url = make_url(settings.sqlalchemy_sync_url)
+    if not (url.database and url.database.endswith("_test")):
+        raise RuntimeError(
+            f"Refusing to clean tables on non-test database: {url.database}"
+        )
+
+    engine = create_engine(url.render_as_string(hide_password=False))
     with engine.begin() as connection:
         for table in reversed(db.metadata.sorted_tables):
             connection.execute(table.delete())

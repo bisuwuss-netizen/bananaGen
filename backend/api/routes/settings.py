@@ -16,7 +16,6 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 
 class UpdateSettingsRequest(BaseModel):
-    ai_provider_format: Optional[str] = None
     api_base_url: Optional[str] = None
     api_key: Optional[str] = None
     image_resolution: Optional[str] = None
@@ -25,8 +24,6 @@ class UpdateSettingsRequest(BaseModel):
     max_image_workers: Optional[int] = None
     text_model: Optional[str] = None
     image_model: Optional[str] = None
-    mineru_api_base: Optional[str] = None
-    mineru_token: Optional[str] = None
     image_caption_model: Optional[str] = None
     output_language: Optional[str] = None
 
@@ -48,7 +45,6 @@ async def get_settings(db: AsyncSession = Depends(get_db)):
         from config import Config
         s = Settings(
             id=1,
-            ai_provider_format=Config.AI_PROVIDER_FORMAT,
             image_resolution=Config.DEFAULT_RESOLUTION,
             image_aspect_ratio=Config.DEFAULT_ASPECT_RATIO,
             max_description_workers=Config.MAX_DESCRIPTION_WORKERS,
@@ -73,11 +69,6 @@ async def update_settings(
     s = result.scalar_one_or_none()
     if not s:
         raise HTTPException(404, "Settings not found")
-
-    if req.ai_provider_format is not None:
-        if req.ai_provider_format not in ("openai", "gemini"):
-            raise HTTPException(400, "ai_provider_format must be 'openai' or 'gemini'")
-        s.ai_provider_format = req.ai_provider_format
 
     if req.api_base_url is not None:
         v = req.api_base_url.strip()
@@ -108,10 +99,6 @@ async def update_settings(
         s.text_model = req.text_model.strip() or None
     if req.image_model is not None:
         s.image_model = req.image_model.strip() or None
-    if req.mineru_api_base is not None:
-        s.mineru_api_base = req.mineru_api_base.strip() or None
-    if req.mineru_token is not None:
-        s.mineru_token = req.mineru_token
     if req.image_caption_model is not None:
         s.image_caption_model = req.image_caption_model.strip() or None
 
@@ -136,18 +123,12 @@ async def reset_settings(db: AsyncSession = Depends(get_db)):
     if not s:
         raise HTTPException(404, "Settings not found")
 
-    s.ai_provider_format = Config.AI_PROVIDER_FORMAT
-    if (Config.AI_PROVIDER_FORMAT or "").lower() == "openai":
-        s.api_base_url = Config.OPENAI_API_BASE or None
-        s.api_key = Config.OPENAI_API_KEY or None
-    else:
-        s.api_base_url = Config.GOOGLE_API_BASE or None
-        s.api_key = Config.GOOGLE_API_KEY or None
+    s.ai_provider_format = "openai"
+    s.api_base_url = Config.OPENAI_API_BASE or None
+    s.api_key = Config.OPENAI_API_KEY or None
 
     s.text_model = Config.TEXT_MODEL
     s.image_model = Config.IMAGE_MODEL
-    s.mineru_api_base = Config.MINERU_API_BASE
-    s.mineru_token = Config.MINERU_TOKEN
     s.image_caption_model = Config.IMAGE_CAPTION_MODEL
     s.output_language = "zh"
     s.image_resolution = Config.DEFAULT_RESOLUTION

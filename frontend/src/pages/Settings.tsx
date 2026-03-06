@@ -31,14 +31,11 @@ interface SectionConfig {
 
 // 初始表单数据
 const initialFormData = {
-  ai_provider_format: 'gemini' as 'openai' | 'gemini',
   api_base_url: '',
   api_key: '',
   text_model: '',
   image_model: '',
   image_caption_model: '',
-  mineru_api_base: '',
-  mineru_token: '',
   image_resolution: '2K',
   image_aspect_ratio: '16:9',
   max_description_workers: 5,
@@ -52,16 +49,6 @@ const settingsSections: SectionConfig[] = [
     title: '大模型 API 配置',
     icon: <Key size={20} />,
     fields: [
-      {
-        key: 'ai_provider_format',
-        label: 'AI 提供商格式',
-        type: 'buttons',
-        description: '选择 API 请求格式，影响后端如何构造和发送请求。保存设置后生效。',
-        options: [
-          { value: 'openai', label: 'OpenAI 格式' },
-          { value: 'gemini', label: 'Gemini 格式' },
-        ],
-      },
       {
         key: 'api_base_url',
         label: 'API Base URL',
@@ -88,7 +75,7 @@ const settingsSections: SectionConfig[] = [
         key: 'text_model',
         label: '文本大模型',
         type: 'text',
-        placeholder: '留空使用环境变量配置 (如: gemini-2.0-flash-exp)',
+        placeholder: '留空使用环境变量配置 (如: gpt-4.1-mini)',
         description: '用于生成大纲、描述等文本内容的模型名称',
       },
       {
@@ -102,30 +89,8 @@ const settingsSections: SectionConfig[] = [
         key: 'image_caption_model',
         label: '图片识别模型',
         type: 'text',
-        placeholder: '留空使用环境变量配置 (如: gemini-2.0-flash-exp)',
+        placeholder: '留空使用环境变量配置 (如: gpt-4.1-mini)',
         description: '用于识别参考文件中的图片并生成描述',
-      },
-    ],
-  },
-  {
-    title: 'MinerU 配置',
-    icon: <FileText size={20} />,
-    fields: [
-      {
-        key: 'mineru_api_base',
-        label: 'MinerU API Base',
-        type: 'text',
-        placeholder: '留空使用环境变量配置 (如: https://mineru.net)',
-        description: 'MinerU 服务地址，用于解析参考文件',
-      },
-      {
-        key: 'mineru_token',
-        label: 'MinerU Token',
-        type: 'password',
-        placeholder: '输入新的 MinerU Token',
-        sensitiveField: true,
-        lengthKey: 'mineru_token_length',
-        description: '留空则保持当前设置不变，输入新值则更新',
       },
     ],
   },
@@ -204,7 +169,6 @@ export const Settings: React.FC = () => {
       if (response.data) {
         setSettings(response.data);
         setFormData({
-          ai_provider_format: response.data.ai_provider_format || 'gemini',
           api_base_url: response.data.api_base_url || '',
           api_key: '',
           image_resolution: response.data.image_resolution || '2K',
@@ -213,8 +177,6 @@ export const Settings: React.FC = () => {
           max_image_workers: response.data.max_image_workers || 8,
           text_model: response.data.text_model || '',
           image_model: response.data.image_model || '',
-          mineru_api_base: response.data.mineru_api_base || '',
-          mineru_token: '',
           image_caption_model: response.data.image_caption_model || '',
           output_language: response.data.output_language || 'zh',
         });
@@ -233,7 +195,7 @@ export const Settings: React.FC = () => {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const { api_key, mineru_token, ...otherData } = formData;
+      const { api_key, ...otherData } = formData;
       const payload: Parameters<typeof api.updateSettings>[0] = {
         ...otherData,
       };
@@ -242,15 +204,11 @@ export const Settings: React.FC = () => {
         payload.api_key = api_key;
       }
 
-      if (mineru_token) {
-        payload.mineru_token = mineru_token;
-      }
-
       const response = await api.updateSettings(payload);
       if (response.data) {
         setSettings(response.data);
         show({ message: '设置保存成功', type: 'success' });
-        setFormData(prev => ({ ...prev, api_key: '', mineru_token: '' }));
+        setFormData(prev => ({ ...prev, api_key: '' }));
       }
     } catch (error: any) {
       console.error('保存设置失败:', error);
@@ -273,7 +231,6 @@ export const Settings: React.FC = () => {
           if (response.data) {
             setSettings(response.data);
             setFormData({
-              ai_provider_format: response.data.ai_provider_format || 'gemini',
               api_base_url: response.data.api_base_url || '',
               api_key: '',
               image_resolution: response.data.image_resolution || '2K',
@@ -282,8 +239,6 @@ export const Settings: React.FC = () => {
               max_image_workers: response.data.max_image_workers || 8,
               text_model: response.data.text_model || '',
               image_model: response.data.image_model || '',
-              mineru_api_base: response.data.mineru_api_base || '',
-              mineru_token: '',
               image_caption_model: response.data.image_caption_model || '',
               output_language: response.data.output_language || 'zh',
             });

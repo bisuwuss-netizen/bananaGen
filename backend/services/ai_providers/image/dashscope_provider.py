@@ -36,7 +36,7 @@ class DashScopeImageProvider(ImageProvider):
             model: 模型名称 (wanx-v1 或 wanx2.1-t2i-turbo 等)
         """
         config = get_config()
-        self.api_key = api_key or config.DASHSCOPE_API_KEY or config.OPENAI_API_KEY or config.GOOGLE_API_KEY
+        self.api_key = api_key or config.DASHSCOPE_API_KEY or config.OPENAI_API_KEY
         # 图片生成 API 必须使用原生 API 格式，不能使用 OpenAI 兼容格式
         # 强制使用原生 DashScope API 基地址，即使传入了 compatible-mode 格式的地址
         # compatible-mode 用于文本/对话 API，图片生成只支持原生格式

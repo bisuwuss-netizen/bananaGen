@@ -50,14 +50,10 @@ def _parse_file_async(file_id: str, file_path: str, filename: str):
             db.session.commit()
 
             parser = FileParserService(
-                mineru_token=config["MINERU_TOKEN"],
-                mineru_api_base=config["MINERU_API_BASE"],
-                google_api_key=config.get("GOOGLE_API_KEY", ""),
-                google_api_base=config.get("GOOGLE_API_BASE", ""),
                 openai_api_key=config.get("OPENAI_API_KEY", ""),
                 openai_api_base=config.get("OPENAI_API_BASE", ""),
                 image_caption_model=config["IMAGE_CAPTION_MODEL"],
-                provider_format=config.get("AI_PROVIDER_FORMAT", "gemini"),
+                provider_format="openai",
             )
             batch_id, markdown_content, extract_id, error_message, failed_count = parser.parse_file(
                 file_path, filename

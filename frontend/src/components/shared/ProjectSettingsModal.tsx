@@ -32,12 +32,7 @@ const EXTRACTOR_METHOD_OPTIONS: { value: ExportExtractorMethod; label: string; d
   { 
     value: 'hybrid', 
     label: '混合提取（推荐）', 
-    description: 'MinerU版面分析 + 百度高精度OCR，文字识别更精确' 
-  },
-  { 
-    value: 'mineru', 
-    label: 'MinerU提取', 
-    description: '仅使用MinerU进行版面分析和文字识别' 
+    description: '版面分析 + 高精度OCR，文字识别更精确' 
   },
 ];
 
@@ -52,7 +47,7 @@ const INPAINT_METHOD_OPTIONS: { value: ExportInpaintMethod; label: string; descr
   { 
     value: 'generative', 
     label: '生成式获取', 
-    description: '使用生成式大模型（如Gemini）直接生成背景，背景质量高但有遗留元素的可能',
+    description: '使用生成式大模型直接生成背景，背景质量高但有遗留元素的可能',
     usesAI: true 
   },
   { 
@@ -301,7 +296,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                   <div className="bg-amber-100 rounded-md p-3 flex items-start gap-2">
                     <AlertTriangle size={16} className="text-amber-700 flex-shrink-0 mt-0.5" />
                     <p className="text-xs text-amber-900">
-                      <strong>成本提示：</strong>标有「使用文生图模型」的选项会调用AI图片生成API（如Gemini），
+                      <strong>成本提示：</strong>标有「使用文生图模型」的选项会调用AI图片生成API，
                       每页会产生额外的API调用费用。如果需要控制成本，可选择「百度修复」方式。
                     </p>
                   </div>
@@ -338,4 +333,3 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
     </div>
   );
 };
-

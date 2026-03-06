@@ -3,14 +3,12 @@ Inpainting 服务
 提供基于多种 provider 的图像区域消除和背景重新生成功能
 支持的 provider:
 - volcengine: 火山引擎 Inpainting
-- gemini: Google Gemini 2.5 Flash Image Preview
 """
 import logging
 from typing import List, Tuple, Union, Optional
 from PIL import Image
 
 from services.ai_providers.image.volcengine_inpainting_provider import VolcengineInpaintingProvider
-from services.ai_providers.image.gemini_inpainting_provider import GeminiInpaintingProvider
 from utils.mask_utils import (
     create_mask_from_bboxes,
     create_inverse_mask_from_bboxes,
@@ -34,7 +32,6 @@ class InpaintingService:
     
     支持的 provider:
     - volcengine: 火山引擎 Inpainting
-    - gemini: Google Gemini 2.5 Flash Image Preview
     """
     
     def __init__(self, provider=None, provider_type: str = "volcengine"):
@@ -43,41 +40,26 @@ class InpaintingService:
         
         Args:
             provider: Inpainting 提供者实例，如果为 None 则从配置创建
-            provider_type: Provider 类型 ('volcengine' 或 'gemini')
+            provider_type: Provider 类型（当前仅支持 'volcengine'）
         """
         if provider is None:
             config = get_config()
-            
-            if provider_type == "gemini":
-                # 使用 Gemini Inpainting Provider
-                api_key = config.GOOGLE_API_KEY
-                api_base = config.GOOGLE_API_BASE
-                timeout = config.GENAI_TIMEOUT
-                
-                if not api_key:
-                    raise ValueError("Google API Key 未配置")
-                
-                self.provider = GeminiInpaintingProvider(
-                    api_key=api_key,
-                    api_base=api_base,
-                    timeout=timeout
-                )
-                self.provider_type = "gemini"
-            else:
-                # 使用火山引擎 Inpainting Provider（默认）
-                access_key = config.VOLCENGINE_ACCESS_KEY
-                secret_key = config.VOLCENGINE_SECRET_KEY
-                timeout = config.VOLCENGINE_INPAINTING_TIMEOUT
-                
-                if not access_key or not secret_key:
-                    raise ValueError("火山引擎 Access Key 和 Secret Key 未配置")
-                
-                self.provider = VolcengineInpaintingProvider(
-                    access_key=access_key,
-                    secret_key=secret_key,
-                    timeout=timeout
-                )
-                self.provider_type = "volcengine"
+            if provider_type != "volcengine":
+                raise ValueError(f"Unsupported inpainting provider: {provider_type}")
+
+            access_key = config.VOLCENGINE_ACCESS_KEY
+            secret_key = config.VOLCENGINE_SECRET_KEY
+            timeout = config.VOLCENGINE_INPAINTING_TIMEOUT
+
+            if not access_key or not secret_key:
+                raise ValueError("火山引擎 Access Key 和 Secret Key 未配置")
+
+            self.provider = VolcengineInpaintingProvider(
+                access_key=access_key,
+                secret_key=secret_key,
+                timeout=timeout
+            )
+            self.provider_type = "volcengine"
         else:
             self.provider = provider
             self.provider_type = provider_type
@@ -271,8 +253,7 @@ def get_inpainting_service(provider_type: str = None) -> InpaintingService:
     获取 InpaintingService 实例（单例模式，每种 provider 一个实例）
     
     Args:
-        provider_type: Provider 类型 ('volcengine', 'gemini')，
-                      如果为 None 则从配置读取
+        provider_type: Provider 类型（默认 volcengine）
     
     Returns:
         InpaintingService 实例
@@ -282,7 +263,7 @@ def get_inpainting_service(provider_type: str = None) -> InpaintingService:
     # 从配置读取默认 provider
     if provider_type is None:
         config = get_config()
-        provider_type = getattr(config, 'INPAINTING_PROVIDER', 'gemini')  # 默认使用 gemini
+        provider_type = getattr(config, 'INPAINTING_PROVIDER', 'volcengine')
     
     # 获取或创建对应的实例
     if provider_type not in _inpainting_service_instances:
@@ -331,4 +312,3 @@ def regenerate_background(
     """
     service = get_inpainting_service()
     return service.regenerate_background(image, foreground_bboxes, **kwargs)
-

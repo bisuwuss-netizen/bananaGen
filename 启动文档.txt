@@ -10,6 +10,9 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 在项目根目录下运行：
 uv sync
 
+初始化数据库（MySQL）：
+uv run alembic -c backend/alembic.ini upgrade head
+
 前端启动：
 cd frontend
 npm install
@@ -17,4 +20,4 @@ npm run dev
 
 后端启动：
 cd backend
-uv run alembic upgrade head && uv run python app.py
+uv run uvicorn app_fastapi:app --host 0.0.0.0 --port 5000 --reload
