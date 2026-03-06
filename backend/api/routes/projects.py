@@ -93,7 +93,7 @@ async def create_project(
     await db.flush()
 
     logger.info(f"Created project {project.id} (type={req.creation_type}, mode={req.render_mode})")
-    return SuccessResponse(data={"project_id": project.id})
+    return SuccessResponse(data={"project_id": project.id, "status": project.status})
 
 
 @router.get("/{project_id}", response_model=SuccessResponse)
