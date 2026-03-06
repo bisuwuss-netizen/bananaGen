@@ -1,6 +1,6 @@
 """Unit tests for cross-project quality guard logic."""
 
-from services.ppt_quality_guard import (
+from services.presentation.ppt_quality_guard import (
     apply_outline_quality_guard,
     apply_page_model_quality_guard,
 )

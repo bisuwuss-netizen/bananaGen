@@ -2,6 +2,7 @@
 File Service - handles all file operations
 """
 import os
+import shutil
 import uuid
 from pathlib import Path
 from typing import Optional
@@ -68,7 +69,14 @@ class FileService:
         filename = f"template.{ext}"
         
         filepath = template_dir / filename
-        file.save(str(filepath))
+        if hasattr(file, "save"):
+            file.save(str(filepath))
+        elif hasattr(file, "file"):
+            file.file.seek(0)
+            with filepath.open("wb") as output_file:
+                shutil.copyfileobj(file.file, output_file)
+        else:
+            raise TypeError("Unsupported template upload object")
         
         # Return relative path
         return filepath.relative_to(self.upload_folder).as_posix()

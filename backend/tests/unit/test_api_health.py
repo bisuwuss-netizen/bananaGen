@@ -14,8 +14,8 @@ class TestHealthEndpoint:
         
         assert response.status_code == 200
         data = response.get_json()
-        assert data['status'] == 'ok'
-        assert 'message' in data
+        assert data['status'] == 'healthy'
+        assert data['engine'] == 'fastapi'
     
     def test_health_check_response_format(self, client):
         """测试健康检查响应格式"""
@@ -24,5 +24,5 @@ class TestHealthEndpoint:
         data = response.get_json()
         assert isinstance(data, dict)
         assert 'status' in data
-        assert 'message' in data
-
+        assert 'version' in data
+        assert 'engine' in data

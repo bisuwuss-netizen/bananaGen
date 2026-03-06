@@ -17,16 +17,17 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from PIL import Image, ImageDraw
+from dotenv import load_dotenv
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 BACKEND_DIR = PROJECT_ROOT / "backend"
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from app import create_app
 from models import Page, Project
 from services.ai_providers import get_image_provider
 from services.image_prompt_optimizer import optimize_html_image_slots
+from services.runtime_state import get_config_value, runtime_context
 
 
 TARGET_SCHEMES = ["tech_blue", "academic", "interactive", "visual", "practical", "modern"]
@@ -224,11 +225,10 @@ def build_grid(results: List[SchemeRun], out_path: Path) -> Path:
 
 
 def run(output_base: Path) -> Dict[str, Any]:
-    app = create_app()
-    with app.app_context():
-        image_model = app.config.get("IMAGE_MODEL")
-        aspect_ratio = app.config.get("DEFAULT_ASPECT_RATIO", "16:9")
-        resolution = app.config.get("DEFAULT_RESOLUTION", "2K")
+    with runtime_context():
+        image_model = get_config_value("IMAGE_MODEL")
+        aspect_ratio = get_config_value("DEFAULT_ASPECT_RATIO", "16:9")
+        resolution = get_config_value("DEFAULT_RESOLUTION", "2K")
         provider = get_image_provider(model=image_model)
 
         seed_project = get_latest_seed_project()
@@ -333,6 +333,10 @@ def run(output_base: Path) -> Dict[str, Any]:
 
 
 def main() -> None:
+    env_path = PROJECT_ROOT / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     out = PROJECT_ROOT / "uploads" / "ab_tests" / f"bg_6_schemes_{ts}"
     result = run(out)
@@ -341,4 +345,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

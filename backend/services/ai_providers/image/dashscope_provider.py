@@ -4,7 +4,9 @@ DashScope (阿里云百炼) Image Provider
 """
 import logging
 import time
+import asyncio
 import base64
+import httpx
 import requests
 from typing import Optional, List
 from PIL import Image
@@ -263,3 +265,111 @@ class DashScopeImageProvider(ImageProvider):
         except Exception as e:
             logger.error(f"Download image failed: {e}")
             return None
+
+    async def _download_image_async(self, url: str) -> Optional[Image.Image]:
+        """异步下载图片并返回 PIL Image"""
+        try:
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+                response = await client.get(url)
+            if response.status_code != 200:
+                logger.error(f"Download image failed: {response.status_code}")
+                return None
+            image = Image.open(BytesIO(response.content))
+            image.load()
+            return image
+        except Exception as e:
+            logger.error(f"Async download image failed: {e}")
+            return None
+
+    async def _create_task_async(
+        self,
+        prompt: str,
+        size: str,
+        ref_images: Optional[List[Image.Image]] = None
+    ) -> Optional[str]:
+        """异步创建图片生成任务"""
+        url = f"{self.api_base}/services/aigc/text2image/image-synthesis"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "X-DashScope-Async": "enable"
+        }
+        payload = {
+            "model": self.model,
+            "input": {"prompt": prompt},
+            "parameters": {"size": size, "n": 1, "style": "<auto>"}
+        }
+        if ref_images and len(ref_images) > 0:
+            ref_img = ref_images[0]
+            buffered = BytesIO()
+            ref_img.save(buffered, format="PNG")
+            img_base64 = base64.b64encode(buffered.getvalue()).decode()
+            payload["input"]["ref_img"] = f"data:image/png;base64,{img_base64}"
+
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            response = await client.post(url, headers=headers, json=payload)
+
+        if response.status_code != 200:
+            logger.error(f"Create task failed: {response.status_code} - {response.text}")
+            return None
+        result = response.json()
+        return result.get("output", {}).get("task_id")
+
+    async def _poll_task_result_async(self, task_id: str, max_wait: int = 120) -> Optional[str]:
+        """异步轮询任务结果"""
+        url = f"{self.api_base}/tasks/{task_id}"
+        headers = {"Authorization": f"Bearer {self.api_key}"}
+        start_time = time.time()
+
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            while time.time() - start_time < max_wait:
+                try:
+                    response = await client.get(url, headers=headers)
+                    if response.status_code != 200:
+                        logger.warning(f"Poll task failed: {response.status_code}")
+                        await asyncio.sleep(2)
+                        continue
+
+                    result = response.json()
+                    output = result.get("output", {})
+                    task_status = output.get("task_status")
+
+                    if task_status == "SUCCEEDED":
+                        results = output.get("results", [])
+                        if results and len(results) > 0:
+                            return results[0].get("url")
+                        return None
+                    if task_status == "FAILED":
+                        logger.error(f"Task failed: {output.get('message', 'Unknown error')}")
+                        return None
+
+                    await asyncio.sleep(2)
+                except Exception as e:
+                    logger.error(f"Poll task request failed: {e}")
+                    await asyncio.sleep(2)
+
+        logger.error(f"Task timeout after {max_wait} seconds")
+        return None
+
+    async def generate_image_async(
+        self,
+        prompt: str,
+        ref_images: Optional[List[Image.Image]] = None,
+        aspect_ratio: str = "16:9",
+        resolution: str = "2K",
+        **kwargs
+    ) -> Optional[Image.Image]:
+        """异步使用 DashScope 生成图片"""
+        try:
+            size = self._aspect_ratio_to_size(aspect_ratio, resolution)
+            task_id = await self._create_task_async(prompt, size, ref_images)
+            if not task_id:
+                raise ValueError("Failed to create image generation task")
+            image_url = await self._poll_task_result_async(task_id)
+            if not image_url:
+                raise ValueError("Failed to get image from task")
+            return await self._download_image_async(image_url)
+        except Exception as e:
+            error_detail = f"Error generating image with DashScope: {type(e).__name__}: {str(e)}"
+            logger.error(error_detail, exc_info=True)
+            raise Exception(error_detail) from e

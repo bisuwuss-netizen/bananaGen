@@ -1,6 +1,6 @@
 """Unit tests for narrative continuity helpers."""
 
-from services.narrative_continuity import (
+from services.presentation.narrative_continuity import (
     NarrativeRuntimeTracker,
     apply_template_capacity,
     enrich_outline_with_narrative_contract,

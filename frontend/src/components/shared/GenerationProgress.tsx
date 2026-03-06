@@ -1,0 +1,83 @@
+import React from 'react';
+import { Loader2 } from 'lucide-react';
+
+interface GenerationProgressProps {
+  total: number;
+  completed: number;
+  currentPage?: string;
+  stage?: string;
+  label?: string;
+}
+
+export const GenerationProgress: React.FC<GenerationProgressProps> = ({
+  total,
+  completed,
+  currentPage,
+  stage,
+  label = '正在生成页面内容',
+}) => {
+  const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const isComplete = completed >= total && total > 0;
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9990,
+      background: 'rgba(0,0,0,0.78)', backdropFilter: 'blur(12px)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      color: '#fff', fontFamily: 'system-ui, -apple-system, sans-serif',
+    }}>
+      {/* Spinner */}
+      <div style={{ marginBottom: 28, position: 'relative' }}>
+        <Loader2 size={48} className="animate-spin" style={{ color: '#06b6d4' }} />
+      </div>
+
+      {/* Title */}
+      <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, letterSpacing: 1 }}>
+        {label}
+      </div>
+
+      {/* Counter */}
+      <div style={{ fontSize: 40, fontWeight: 900, color: '#06b6d4', marginBottom: 6, fontVariantNumeric: 'tabular-nums' }}>
+        {completed}<span style={{ color: '#475569', fontSize: 24 }}>/{total}</span>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{
+        width: 320, height: 6, borderRadius: 3, background: '#1e293b',
+        overflow: 'hidden', marginBottom: 20,
+      }}>
+        <div style={{
+          height: '100%', borderRadius: 3,
+          background: isComplete
+            ? 'linear-gradient(90deg, #10b981, #34d399)'
+            : 'linear-gradient(90deg, #06b6d4, #3b82f6)',
+          width: `${percent}%`,
+          transition: 'width 0.5s ease-out',
+        }} />
+      </div>
+
+      {/* Current page name */}
+      {currentPage && !isComplete && (
+        <div style={{
+          fontSize: 14, color: '#94a3b8', maxWidth: 400, textAlign: 'center',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          正在处理：{currentPage}
+        </div>
+      )}
+
+      {/* Stage info */}
+      {stage && !isComplete && (
+        <div style={{ fontSize: 12, color: '#64748b', marginTop: 8 }}>
+          {stage === 'generating' ? '内容生成中' : stage === 'rewriting' ? '质量优化中' : stage}
+        </div>
+      )}
+
+      {isComplete && (
+        <div style={{ fontSize: 14, color: '#6ee7b7' }}>
+          全部完成，正在加载预览...
+        </div>
+      )}
+    </div>
+  );
+};

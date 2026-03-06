@@ -42,7 +42,7 @@ export const DetailEditor: React.FC = () => {
 
 
   const redirectHomepage = () => {
-    window.redirect_homepage({
+    window.redirect_homepage?.({
       request: '',
       persistent: false,
       onSuccess: function(response) {

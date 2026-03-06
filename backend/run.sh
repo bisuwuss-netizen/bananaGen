@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Banana Slides Backend Startup Script
+# Banana Slides FastAPI Startup Script
 
 echo "╔══════════════════════════════════════╗"
 echo "║   🍌 Banana Slides API Server 🍌   ║"
@@ -15,21 +15,8 @@ if [ ! -f .env ]; then
     echo ""
 fi
 
-# Check if virtual environment exists
-if [ ! -d "venv" ]; then
-    echo "📦 Creating virtual environment..."
-    python3 -m venv venv
-    echo "✅ Virtual environment created."
-    echo ""
-fi
-
-# Activate virtual environment
-echo "🔄 Activating virtual environment..."
-source venv/bin/activate
-
-# Install dependencies
-echo "📥 Installing dependencies..."
-pip install -r requirements.txt
+echo "📥 Installing dependencies with uv..."
+uv sync
 
 # Create instance folder if not exists
 mkdir -p instance
@@ -42,5 +29,4 @@ echo "🚀 Starting server..."
 echo ""
 
 # Run the application
-python app.py
-
+uv run python app_fastapi.py

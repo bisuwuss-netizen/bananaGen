@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 async def generate_descriptions_task(
     task_id: str,
     project_id: str,
-    ai_service_unused,
+    ai_service,
     project_context,
     outline: List[Dict],
     max_workers: int = 5,
@@ -43,6 +43,10 @@ async def generate_descriptions_task(
     generation_mode: str = "fast",
 ):
     """Background task for generating page descriptions."""
+    from services.ai.base import ProjectContext as _PC
+    if isinstance(project_context, dict):
+        project_context = _PC(project_context)
+
     resolved_runtime_config = runtime_config or load_runtime_config()
     from services.ai_service_manager import get_ai_service_async
 

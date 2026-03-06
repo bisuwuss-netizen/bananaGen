@@ -6,7 +6,6 @@
 import React from 'react';
 import { WarmupQuestionModel, ThemeConfig } from '../types/schema';
 import {
-  toInlineStyle,
   getBaseSlideStyle,
   getTitleStyle,
   getCardStyle,
@@ -16,6 +15,9 @@ interface WarmupQuestionLayoutProps {
   model: WarmupQuestionModel;
   theme: ThemeConfig;
 }
+
+const asStyle = (styles: Record<string, string | number | undefined>): React.CSSProperties =>
+  styles as React.CSSProperties;
 
 export const WarmupQuestionLayout: React.FC<WarmupQuestionLayoutProps> = ({ model, theme }) => {
   const { question, thinkTime, hints, background_image } = model;
@@ -35,7 +37,7 @@ export const WarmupQuestionLayout: React.FC<WarmupQuestionLayoutProps> = ({ mode
     justifyContent: 'center',
   };
 
-  const iconContainerStyle = toInlineStyle({
+  const iconContainerStyle = asStyle({
     width: '120px',
     height: '120px',
     borderRadius: '50%',
@@ -49,7 +51,7 @@ export const WarmupQuestionLayout: React.FC<WarmupQuestionLayoutProps> = ({ mode
     boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
   });
 
-  const questionStyle = toInlineStyle({
+  const questionStyle = asStyle({
     ...getTitleStyle(theme),
     fontSize: '36px',
     textAlign: 'center',
@@ -58,7 +60,7 @@ export const WarmupQuestionLayout: React.FC<WarmupQuestionLayoutProps> = ({ mode
     marginBottom: '40px',
   });
 
-  const thinkTimeBadgeStyle = toInlineStyle({
+  const thinkTimeBadgeStyle = asStyle({
     display: 'inline-flex',
     alignItems: 'center',
     gap: '8px',
@@ -72,7 +74,7 @@ export const WarmupQuestionLayout: React.FC<WarmupQuestionLayoutProps> = ({ mode
     marginBottom: '40px',
   });
 
-  const hintsContainerStyle = toInlineStyle({
+  const hintsContainerStyle = asStyle({
     display: 'flex',
     flexDirection: 'column',
     gap: '16px',
@@ -113,7 +115,7 @@ export const WarmupQuestionLayout: React.FC<WarmupQuestionLayoutProps> = ({ mode
           </div>
           {hints.map((hint, index) => {
             const baseCardStyle = getCardStyle(theme);
-            const hintCardStyle = toInlineStyle({
+            const hintCardStyle = asStyle({
               ...baseCardStyle,
               padding: '16px 20px',
               display: 'flex',
@@ -122,7 +124,7 @@ export const WarmupQuestionLayout: React.FC<WarmupQuestionLayoutProps> = ({ mode
               backgroundColor: theme.colors.backgroundAlt,
             });
 
-            const hintNumberStyle = toInlineStyle({
+            const hintNumberStyle = asStyle({
               width: '32px',
               height: '32px',
               borderRadius: '50%',
@@ -136,7 +138,7 @@ export const WarmupQuestionLayout: React.FC<WarmupQuestionLayoutProps> = ({ mode
               flexShrink: '0',
             });
 
-            const hintTextStyle = toInlineStyle({
+            const hintTextStyle = asStyle({
               fontSize: theme.sizes.bodySize,
               color: theme.colors.text,
               lineHeight: '1.5',

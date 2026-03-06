@@ -20,8 +20,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from config_fastapi import settings, PROJECT_ROOT
-from deps import init_db, close_db
+from config_fastapi import settings
+from deps import close_db
 from api.middleware import setup_middleware
 
 
@@ -41,7 +41,6 @@ async def lifespan(app: FastAPI):
     """
     Application lifecycle management.
     
-    Startup: initialize database, load settings
     Shutdown: cleanup database connections
     """
     logger.info("🍌 Banana Slides (FastAPI) starting up...")
@@ -78,18 +77,35 @@ setup_middleware(app)
 
 from api.routes.projects import router as projects_router
 from api.routes.tasks import router as tasks_router
+from api.routes.pages import router as pages_router
+from api.routes.generation import router as generation_router
+from api.routes.refinement import router as refinement_router
+from api.routes.export import router as export_router
+from api.routes.files import router as files_router
+from api.routes.materials import router as materials_router
+from api.routes.templates import router as templates_router
+from api.routes.settings import router as settings_router
+from api.routes.reference_files import router as reference_files_router
+from api.routes.html_renderer import router as html_renderer_router
+from api.routes.preset_styles import router as preset_styles_router
+from api.routes.user_templates import router as user_templates_router
+from api.routes.html_images import router as html_images_router
 
 app.include_router(projects_router)
 app.include_router(tasks_router)
-
-# TODO: Add remaining routers as they are migrated:
-# from api.routes.pages import router as pages_router
-# from api.routes.generation import router as generation_router
-# from api.routes.export import router as export_router
-# from api.routes.files import router as files_router
-# from api.routes.materials import router as materials_router
-# from api.routes.templates import router as templates_router
-# from api.routes.settings import router as settings_router
+app.include_router(pages_router)
+app.include_router(generation_router)
+app.include_router(refinement_router)
+app.include_router(export_router)
+app.include_router(files_router)
+app.include_router(materials_router)
+app.include_router(templates_router)
+app.include_router(settings_router)
+app.include_router(reference_files_router)
+app.include_router(html_renderer_router)
+app.include_router(preset_styles_router)
+app.include_router(user_templates_router)
+app.include_router(html_images_router)
 
 
 # ── Static Files (uploads) ──────────────────────────────────────

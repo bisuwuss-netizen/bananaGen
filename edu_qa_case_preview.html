@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduQACaseLayout 效果预览</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 40px;
+            background: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 60px;
+            color: #fff;
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+        h1 {
+            margin-bottom: 20px;
+            color: #06b6d4;
+        }
+        .slide-container {
+            border: 1px solid #333;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            background: #000;
+        }
+        .label-tag {
+            background: #333;
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: inline-block;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div>
+        <div class="label-tag">变体 A：智能问答卡片 (Q&A Focus)</div>
+        <div class="slide-container">
+            <!-- Variant A HTML Start -->
+            <section style="width:1280px;height:720px;padding:56px 76px;box-sizing:border-box;position:relative;overflow:hidden;font-family:sans-serif;background:linear-gradient(180deg, #0b1120 0%, #082f49 100%);display:flex;flex-direction:column;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid rgba(6,182,212,0.3);padding-bottom:16px;margin-bottom:32px;flex-shrink:0;">
+                    <div style="display:flex;align-items:center;">
+                        <div style="width:8px;height:40px;border-radius:4px;margin-right:18px;background:#06b6d4;"></div>
+                        <h2 style="margin:0;color:#ffffff;font-size:40px;">核心问答解析</h2>
+                    </div>
+                    <div style="color:#93c5fd;font-size:22px;">深入理解 Q&A 交互逻辑</div>
+                </div>
+                <div style="flex-grow:1;display:flex;flex-direction:column;justify-content:center;">
+                    <div style="display:flex;flex-direction:column;gap:24px;max-width:1000px;margin:0 auto;width:100%;">
+                        <!-- Question -->
+                        <div style="align-self:flex-start;max-width:85%;display:flex;gap:16px;flex-direction:row;">
+                            <div style="width:60px;height:60px;border-radius:50%;background:#06b6d4;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:900;flex-shrink:0;box-shadow:0 0 20px #06b6d466;">Q</div>
+                            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:20px 28px;color:#e2e8f0;font-size:24px;line-height:1.5;box-shadow:0 4px 12px rgba(0,0,0,0.2);">为什么我们需要为问答页面设计专门的布局？</div>
+                        </div>
+                        <!-- Answer -->
+                        <div style="align-self:flex-end;max-width:85%;display:flex;gap:16px;flex-direction:row-reverse;">
+                            <div style="width:60px;height:60px;border-radius:50%;background:#10b981;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:900;flex-shrink:0;box-shadow:0 0 20px #10b98166;">A</div>
+                            <div style="background:rgba(6,182,212,0.1);border:1px solid rgba(6,182,212,0.3);border-radius:20px;padding:20px 28px;color:#e2e8f0;font-size:24px;line-height:1.5;box-shadow:0 4px 12px rgba(0,0,0,0.2);">因为传统的列表布局无法体现问答的互动感，通过左右对齐的卡片设计，可以更直观地引导读者的视线，提升阅读体验。</div>
+                        </div>
+                        <!-- Question 2 -->
+                        <div style="align-self:flex-start;max-width:85%;display:flex;gap:16px;flex-direction:row;">
+                            <div style="width:60px;height:60px;border-radius:50%;background:#06b6d4;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:900;flex-shrink:0;box-shadow:0 0 20px #06b6d466;">Q</div>
+                            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:20px 28px;color:#e2e8f0;font-size:24px;line-height:1.5;box-shadow:0 4px 12px rgba(0,0,0,0.2);">这套布局支持长文本吗？</div>
+                        </div>
+                        <!-- Answer 2 -->
+                        <div style="align-self:flex-end;max-width:85%;display:flex;gap:16px;flex-direction:row-reverse;">
+                            <div style="width:60px;height:60px;border-radius:50%;background:#10b981;display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;font-weight:900;flex-shrink:0;box-shadow:0 0 20px #10b98166;">A</div>
+                            <div style="background:rgba(6,182,212,0.1);border:1px solid rgba(6,182,212,0.3);border-radius:20px;padding:20px 28px;color:#e2e8f0;font-size:24px;line-height:1.5;box-shadow:0 4px 12px rgba(0,0,0,0.2);">是的，我们采用了自适应容器设计，文字内容会自动换行。相比金字塔布局，这里有更充裕的纵向与横向空间，甚至可以承载数百字的详细解释。</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- Variant A HTML End -->
+        </div>
+    </div>
+
+    <div>
+        <div class="label-tag">变体 B：结构化案例看板 (Case Study Focus)</div>
+        <div class="slide-container">
+            <!-- Variant B HTML Start -->
+            <section style="width:1280px;height:720px;padding:56px 76px;box-sizing:border-box;position:relative;overflow:hidden;font-family:sans-serif;background:linear-gradient(180deg, #0b1120 0%, #082f49 100%);display:flex;flex-direction:column;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid rgba(6,182,212,0.3);padding-bottom:16px;margin-bottom:32px;flex-shrink:0;">
+                    <div style="display:flex;align-items:center;">
+                        <div style="width:8px;height:40px;border-radius:4px;margin-right:18px;background:#06b6d4;"></div>
+                        <h2 style="margin:0;color:#ffffff;font-size:40px;">教学创新案例分析</h2>
+                    </div>
+                    <div style="color:#93c5fd;font-size:22px;">某职教学院数字化实训项目</div>
+                </div>
+                <div style="flex-grow:1;display:flex;flex-direction:column;justify-content:center;">
+                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:24px;height:100%;">
+                        <!-- Case Item 1 -->
+                        <div style="background:rgba(15,23,42,0.6);border-left:6px solid #06b6d4;border-radius:12px;padding:32px;display:flex;flex-direction:column;gap:12px;">
+                            <div style="font-size:20px;font-weight:900;color:#06b6d4;text-transform:uppercase;letter-spacing:2px;">项目背景 BACKGROUND</div>
+                            <div style="font-size:22px;color:#cbd5e1;line-height:1.6;">某职教学院在大型机械实训中面临设备套数不足、维护成本高以及初学者操作安全风险大等核心痛点。</div>
+                        </div>
+                        <!-- Case Item 2 -->
+                        <div style="background:rgba(15,23,42,0.6);border-left:6px solid #3b82f6;border-radius:12px;padding:32px;display:flex;flex-direction:column;gap:12px;">
+                            <div style="font-size:20px;font-weight:900;color:#3b82f6;text-transform:uppercase;letter-spacing:2px;">核心行动 ACTIONS</div>
+                            <div style="font-size:22px;color:#cbd5e1;line-height:1.6;">引入“VR仿真 + AI导师”联动作业系统。通过 1:1 数字孪生还原工业环境，并利用 AI 实时监测操作流程，提供即时警示。</div>
+                        </div>
+                        <!-- Case Item 3 -->
+                        <div style="background:rgba(15,23,42,0.6);border-left:6px solid #10b981;border-radius:12px;padding:32px;display:flex;flex-direction:column;gap:12px;">
+                            <div style="font-size:20px;font-weight:900;color:#10b981;text-transform:uppercase;letter-spacing:2px;">关键成效 RESULTS</div>
+                            <div style="font-size:22px;color:#cbd5e1;line-height:1.6;">实训综合成本降低 65%。通过率由原来的 78% 提升至 94%，且在整个实训季度中实现了“零安全事故”的目标。</div>
+                        </div>
+                        <!-- Case Item 4 -->
+                        <div style="background:rgba(15,23,42,0.6);border-left:6px solid #f59e0b;border-radius:12px;padding:32px;display:flex;flex-direction:column;gap:12px;">
+                            <div style="font-size:20px;font-weight:900;color:#f59e0b;text-transform:uppercase;letter-spacing:2px;">推广价值 VALUE</div>
+                            <div style="font-size:22px;color:#cbd5e1;line-height:1.6;">该模式目前已推广至省内 12 所兄弟院校，成为职业教育数字化转型的典型样板案例，获国家级教学成果二等奖。</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- Variant B HTML End -->
+        </div>
+    </div>
+
+</body>
+</html>

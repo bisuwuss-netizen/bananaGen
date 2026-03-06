@@ -21,7 +21,7 @@ async def edit_page_image_task(
     project_id: str,
     page_id: str,
     edit_instruction: str,
-    ai_service_unused,
+    ai_service,
     file_service,
     aspect_ratio: str = "16:9",
     resolution: str = "2K",

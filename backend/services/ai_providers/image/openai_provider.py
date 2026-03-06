@@ -7,7 +7,8 @@ import re
 import requests
 from io import BytesIO
 from typing import Optional, List
-from openai import OpenAI
+import httpx
+from openai import AsyncOpenAI, OpenAI
 from PIL import Image
 from .base import ImageProvider
 from config import get_config
@@ -27,11 +28,19 @@ class OpenAIImageProvider(ImageProvider):
             api_base: API base URL (e.g., https://aihubmix.com/v1)
             model: Model name to use
         """
+        timeout = get_config().OPENAI_TIMEOUT
+        max_retries = get_config().OPENAI_MAX_RETRIES
         self.client = OpenAI(
             api_key=api_key,
             base_url=api_base,
-            timeout=get_config().OPENAI_TIMEOUT,  # set timeout from config
-            max_retries=get_config().OPENAI_MAX_RETRIES  # set max retries from config
+            timeout=timeout,
+            max_retries=max_retries,
+        )
+        self.async_client = AsyncOpenAI(
+            api_key=api_key,
+            base_url=api_base,
+            timeout=timeout,
+            max_retries=max_retries,
         )
         self.model = model
 
@@ -110,6 +119,62 @@ class OpenAIImageProvider(ImageProvider):
             image = Image.open(BytesIO(resp.content))
             image.load()
             return image
+
+        raise ValueError("Images API returned neither b64_json nor url")
+
+    async def _download_image_async(self, image_url: str) -> Image.Image:
+        async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
+            resp = await client.get(image_url)
+            resp.raise_for_status()
+        image = Image.open(BytesIO(resp.content))
+        image.load()
+        return image
+
+    async def _generate_via_images_api_async(self, prompt: str, aspect_ratio: str) -> Optional[Image.Image]:
+        """
+        Async Images API path using AsyncOpenAI.
+        """
+        size = self._aspect_ratio_to_size(aspect_ratio)
+        logger.info(f"Using async Images API for image generation, model={self.model}, size={size}")
+
+        response = None
+        last_error = None
+        for kwargs in (
+            {"response_format": "b64_json"},
+            {},
+        ):
+            try:
+                response = await self.async_client.images.generate(
+                    model=self.model,
+                    prompt=prompt,
+                    size=size,
+                    **kwargs
+                )
+                break
+            except Exception as e:
+                last_error = e
+                logger.warning(
+                    f"Async Images API call failed with args={kwargs}: {type(e).__name__}: {e}"
+                )
+
+        if response is None:
+            raise Exception(f"Async Images API generation failed: {last_error}")
+
+        data = self._get_field(response, "data")
+        if not data:
+            raise ValueError("Images API returned empty data")
+
+        first = data[0]
+        b64_json = self._get_field(first, "b64_json")
+        if b64_json:
+            image_data = base64.b64decode(b64_json)
+            image = Image.open(BytesIO(image_data))
+            image.load()
+            return image
+
+        image_url = self._get_field(first, "url")
+        if image_url:
+            return await self._download_image_async(image_url)
 
         raise ValueError("Images API returned neither b64_json nor url")
     
@@ -311,6 +376,94 @@ class OpenAIImageProvider(ImageProvider):
             
             raise ValueError("No valid multimodal response received from OpenAI API")
             
+        except Exception as e:
+            error_detail = f"Error generating image with OpenAI (model={self.model}): {type(e).__name__}: {str(e)}"
+            logger.error(error_detail, exc_info=True)
+            raise Exception(error_detail) from e
+
+    async def generate_image_async(
+        self,
+        prompt: str,
+        ref_images: Optional[List[Image.Image]] = None,
+        aspect_ratio: str = "16:9",
+        resolution: str = "2K"
+    ) -> Optional[Image.Image]:
+        """
+        Generate image using AsyncOpenAI SDK.
+        """
+        try:
+            if self._is_qwen_image_model():
+                if ref_images:
+                    logger.warning(
+                        f"Model {self.model} does not use reference images in Images API path; "
+                        f"received {len(ref_images)} references and ignored them."
+                    )
+                try:
+                    return await self._generate_via_images_api_async(prompt, aspect_ratio)
+                except Exception as images_api_error:
+                    logger.warning(
+                        f"Async Images API failed for model {self.model}, fallback to chat.completions: "
+                        f"{type(images_api_error).__name__}: {images_api_error}"
+                    )
+
+            content = []
+            if ref_images:
+                for ref_img in ref_images:
+                    base64_image = self._encode_image_to_base64(ref_img)
+                    content.append({
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{base64_image}"
+                        }
+                    })
+            content.append({"type": "text", "text": prompt})
+
+            response = await self.async_client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": f"aspect_ratio={aspect_ratio}"},
+                    {"role": "user", "content": content},
+                ],
+                modalities=["text", "image"]
+            )
+
+            message = response.choices[0].message
+            if hasattr(message, 'multi_mod_content') and message.multi_mod_content:
+                for part in message.multi_mod_content:
+                    if "inline_data" in part:
+                        image_data = base64.b64decode(part["inline_data"]["data"])
+                        image = Image.open(BytesIO(image_data))
+                        image.load()
+                        return image
+
+            if hasattr(message, 'content') and message.content:
+                if isinstance(message.content, list):
+                    for part in message.content:
+                        part_type = part.get('type') if isinstance(part, dict) else getattr(part, 'type', None)
+                        if part_type != 'image_url':
+                            continue
+                        image_url = part.get('image_url', {}).get('url', '') if isinstance(part, dict) else getattr(getattr(part, 'image_url', {}), 'url', '')
+                        if image_url.startswith('data:image'):
+                            image_data = base64.b64decode(image_url.split(',', 1)[1])
+                            image = Image.open(BytesIO(image_data))
+                            image.load()
+                            return image
+                elif isinstance(message.content, str):
+                    content_str = message.content
+                    markdown_match = re.findall(r'!\[.*?\]\((https?://[^\s\)]+)\)', content_str)
+                    if markdown_match:
+                        return await self._download_image_async(markdown_match[0])
+                    url_match = re.findall(r'(https?://[^\s\)\]]+\.(?:png|jpg|jpeg|gif|webp|bmp)(?:\?[^\s\)\]]*)?)', content_str, re.IGNORECASE)
+                    if url_match:
+                        return await self._download_image_async(url_match[0])
+                    base64_match = re.findall(r'data:image/[^;]+;base64,([A-Za-z0-9+/=]+)', content_str)
+                    if base64_match:
+                        image_data = base64.b64decode(base64_match[0])
+                        image = Image.open(BytesIO(image_data))
+                        image.load()
+                        return image
+
+            raise ValueError("No valid multimodal response received from OpenAI API")
         except Exception as e:
             error_detail = f"Error generating image with OpenAI (model={self.model}): {type(e).__name__}: {str(e)}"
             logger.error(error_detail, exc_info=True)

@@ -2,6 +2,17 @@
 from typing import List, Dict, Optional, Any
 import json
 from textwrap import dedent
+import logging
+
+from .utils import (
+    _format_reference_files_xml,
+    _truncate_prompt_text,
+    _build_compact_outline_context
+)
+from .language import get_language_instruction
+
+logger = logging.getLogger(__name__)
+
 
 def get_page_description_prompt(project_context: 'ProjectContext', outline: list,
                                 page_outline: dict, page_index: int,

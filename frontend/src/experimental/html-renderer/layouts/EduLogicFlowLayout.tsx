@@ -62,7 +62,12 @@ function normalizeModel(input: LooseEduLogicFlowModel): EduLogicFlowModel {
 const ICONS = ['📚', '💡', '📈'];
 
 export const EduLogicFlowLayout: React.FC<EduLogicFlowLayoutProps> = ({ model, theme }) => {
+  const variant = String((model as any).variant || 'a').toLowerCase();
   const data = normalizeModel(model);
+
+  if (variant === 'b') {
+    return <EduLogicFlowVariantB data={data} theme={theme} />;
+  }
 
   const slideStyle: React.CSSProperties = {
     width: 1280,
@@ -149,8 +154,55 @@ export const EduLogicFlowLayout: React.FC<EduLogicFlowLayoutProps> = ({ model, t
   );
 };
 
+const FLOW_COLORS = ['#06b6d4', '#3b82f6', '#10b981'];
+
+const EduLogicFlowVariantB: React.FC<{ data: EduLogicFlowModel; theme: ThemeConfig }> = ({ data, theme }) => {
+  const stages = data.stages.slice(0, 3);
+  const slideStyle: React.CSSProperties = {
+    width: 1280, height: 720, padding: '56px 76px', boxSizing: 'border-box',
+    position: 'relative', overflow: 'hidden', fontFamily: theme.fonts.body,
+    background: data.background_image
+      ? `linear-gradient(rgba(8,14,32,0.88), rgba(8,14,32,0.9)), url(${data.background_image}) center/cover no-repeat`
+      : 'linear-gradient(135deg, #0f172a 0%, #0b1120 100%)',
+  };
+  return (
+    <section style={slideStyle}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', borderBottom: '2px solid rgba(6,182,212,0.32)', paddingBottom: 18, marginBottom: 44 }}>
+        <div style={{ width: 8, height: 40, borderRadius: 4, marginRight: 18, background: '#06b6d4' }} />
+        <h2 style={{ margin: 0, color: '#ffffff', fontSize: 42, fontFamily: theme.fonts.title }}>{data.title}</h2>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, height: 'calc(100% - 120px)', justifyContent: 'center' }}>
+        {stages.map((stage, index) => (
+          <div key={index} style={{
+            display: 'flex', alignItems: 'center', gap: 20,
+            padding: '20px 28px', borderRadius: 16,
+            border: `1px solid ${FLOW_COLORS[index]}55`,
+            background: `linear-gradient(90deg, ${FLOW_COLORS[index]}22, rgba(0,0,0,0))`,
+            marginLeft: index * 60,
+          }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: '50%',
+              background: `linear-gradient(135deg, ${FLOW_COLORS[index]}, ${FLOW_COLORS[index]}88)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 28, flexShrink: 0,
+            }}>{ICONS[index]}</div>
+            <div>
+              <h3 style={{ margin: 0, color: FLOW_COLORS[index], fontSize: 26, fontFamily: theme.fonts.title }}>{stage.title}</h3>
+              <p style={{ margin: '6px 0 0', color: '#cbd5e1', fontSize: 18, lineHeight: 1.5 }}>{stage.description}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+};
+
 export function renderEduLogicFlowLayoutHTML(model: EduLogicFlowModel, theme: ThemeConfig): string {
+  const variant = String((model as any).variant || 'a').toLowerCase();
   const data = normalizeModel(model as LooseEduLogicFlowModel);
+  if (variant === 'b') {
+    return renderEduLogicFlowVariantBHTML(data, theme);
+  }
   const background = data.background_image
     ? `linear-gradient(rgba(8,14,32,0.88), rgba(8,14,32,0.9)), url(${data.background_image}) center/cover no-repeat`
     : 'linear-gradient(135deg, #0f172a 0%, #0b1120 100%)';
@@ -177,6 +229,29 @@ export function renderEduLogicFlowLayoutHTML(model: EduLogicFlowModel, theme: Th
     <h2 style="margin:0;color:#ffffff;font-size:42px;font-family:${theme.fonts.title};">${data.title}</h2>
   </div>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;height:calc(100% - 120px);">${stagesHTML}</div>
+</section>`;
+}
+
+function renderEduLogicFlowVariantBHTML(data: EduLogicFlowModel, theme: ThemeConfig): string {
+  const background = data.background_image
+    ? `linear-gradient(rgba(8,14,32,0.88), rgba(8,14,32,0.9)), url(${data.background_image}) center/cover no-repeat`
+    : 'linear-gradient(135deg, #0f172a 0%, #0b1120 100%)';
+  const stagesHTML = data.stages.slice(0, 3).map((stage, i) => {
+    const c = FLOW_COLORS[i];
+    return `<div style="display:flex;align-items:center;gap:20px;padding:20px 28px;border-radius:16px;border:1px solid ${c}55;background:linear-gradient(90deg,${c}22,rgba(0,0,0,0));margin-left:${i * 60}px;">
+      <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,${c},${c}88);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">${ICONS[i]}</div>
+      <div>
+        <h3 style="margin:0;color:${c};font-size:26px;font-family:${theme.fonts.title};">${stage.title}</h3>
+        <p style="margin:6px 0 0;color:#cbd5e1;font-size:18px;line-height:1.5;">${stage.description}</p>
+      </div>
+    </div>`;
+  }).join('');
+  return `<section style="width:1280px;height:720px;padding:56px 76px;box-sizing:border-box;position:relative;overflow:hidden;font-family:${theme.fonts.body};background:${background};">
+  <div style="display:flex;align-items:flex-end;border-bottom:2px solid rgba(6,182,212,0.32);padding-bottom:18px;margin-bottom:44px;">
+    <div style="width:8px;height:40px;border-radius:4px;margin-right:18px;background:#06b6d4;"></div>
+    <h2 style="margin:0;color:#ffffff;font-size:42px;font-family:${theme.fonts.title};">${data.title}</h2>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:20px;height:calc(100% - 120px);justify-content:center;">${stagesHTML}</div>
 </section>`;
 }
 

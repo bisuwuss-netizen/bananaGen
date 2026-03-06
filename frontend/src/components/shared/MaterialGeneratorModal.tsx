@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Image as ImageIcon, ImagePlus, Upload, X, FolderOpen } from 'lucide-react';
 import { Modal, Textarea, Button, useToast, MaterialSelector, Skeleton } from '@/components/shared';
-import { generateMaterialImage, getTaskStatus, listMaterials, deleteMaterial } from '@/api/endpoints';
-import { getImageUrl } from '@/api/client';
+import { generateMaterialImage, listMaterials, deleteMaterial } from '@/api/endpoints';
+import { getImageUrl, openTaskWebSocket } from '@/api/client';
 import { materialUrlToFile } from './MaterialSelector';
 import type { Material } from '@/api/endpoints';
 import type { Task } from '@/types';
@@ -106,14 +106,13 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
     }
   };
 
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const taskSocketRef = useRef<WebSocket | null>(null);
 
-  // 清理轮询
+  // 清理连接
   useEffect(() => {
     return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
+      taskSocketRef.current?.close();
+      taskSocketRef.current = null;
     };
   }, []);
 
@@ -144,109 +143,49 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
 
   const pollMaterialTask = async (taskId: string) => {
     const targetProjectId = projectId || 'global'; // 使用'global'作为Task的project_id
-    const pollIntervalMs = 2000;
-    const maxDurationMs = 10 * 60 * 1000; // 最多轮询10分钟，适配慢模型
-    const maxAttempts = Math.ceil(maxDurationMs / pollIntervalMs);
-    const startedAt = Date.now();
-    let attempts = 0;
-
-    const poll = async () => {
-      attempts++;
-      if (Date.now() - startedAt > maxDurationMs) {
-        show({ message: '素材生成超时，请稍后查看素材库', type: 'warning' });
-        loadMaterials();
-        setIsGenerating(false);
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-          pollingIntervalRef.current = null;
-        }
-        return;
-      }
-      try {
-        const response = await getTaskStatus(targetProjectId, taskId);
-        const task: Task = (response as any).data || (response as any);
-        if (!task || !task.status) {
-          if (attempts >= maxAttempts) {
-            show({ message: '任务状态异常，请稍后查看素材库', type: 'error' });
-            setIsGenerating(false);
-            if (pollingIntervalRef.current) {
-              clearInterval(pollingIntervalRef.current);
-              pollingIntervalRef.current = null;
+    await new Promise<void>((resolve) => {
+      taskSocketRef.current?.close();
+      taskSocketRef.current = openTaskWebSocket<Task>(targetProjectId, taskId, {
+        onMessage: (task) => {
+          if (task.status === 'COMPLETED') {
+            const progress = (task.progress || {}) as Record<string, any>;
+            const imageUrl = progress.image_url;
+            if (imageUrl) {
+              setPreviewUrl(getImageUrl(imageUrl));
+              show({
+                message: projectId ? '素材生成成功，已保存到历史素材库' : '素材生成成功，已保存到全局素材库',
+                type: 'success',
+              });
+              loadMaterials();
+            } else {
+              show({ message: '素材生成完成，但未找到图片地址', type: 'error' });
             }
-          }
-          return;
-        }
-
-        if (task.status === 'COMPLETED') {
-          // 任务完成，从progress中获取结果
-          const progress = task.progress || {};
-          const imageUrl = progress.image_url;
-          
-          if (imageUrl) {
-            setPreviewUrl(getImageUrl(imageUrl));
-            const message = projectId 
-              ? '素材生成成功，已保存到历史素材库' 
-              : '素材生成成功，已保存到全局素材库';
-            show({ message, type: 'success' });
-            loadMaterials();
-          } else {
-            show({ message: '素材生成完成，但未找到图片地址', type: 'error' });
-          }
-          
-          setIsGenerating(false);
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-            pollingIntervalRef.current = null;
-          }
-        } else if (task.status === 'FAILED') {
-          show({
-            message: task.error_message || '素材生成失败',
-            type: 'error',
-          });
-          setIsGenerating(false);
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-            pollingIntervalRef.current = null;
-          }
-        } else if (task.status === 'PENDING' || task.status === 'PROCESSING') {
-          // 继续轮询
-          if (attempts >= maxAttempts) {
-            show({ message: '素材生成超时，请稍后查看素材库', type: 'warning' });
-            loadMaterials();
             setIsGenerating(false);
-            if (pollingIntervalRef.current) {
-              clearInterval(pollingIntervalRef.current);
-              pollingIntervalRef.current = null;
-            }
+            taskSocketRef.current?.close();
+            taskSocketRef.current = null;
+            resolve();
+            return;
           }
-        }
-      } catch (error: any) {
-        console.error('轮询任务状态失败:', error);
-        const status = error?.response?.status;
-        if (status === 404 || status === 400) {
-          show({ message: '任务不存在或已失效，请重新生成', type: 'error' });
-          setIsGenerating(false);
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-            pollingIntervalRef.current = null;
-          }
-          return;
-        }
-        if (attempts >= maxAttempts) {
-          show({ message: '轮询任务状态失败，请稍后查看素材库', type: 'error' });
-          loadMaterials();
-          setIsGenerating(false);
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-            pollingIntervalRef.current = null;
-          }
-        }
-      }
-    };
 
-    // 立即执行一次，然后按固定间隔轮询
-    poll();
-    pollingIntervalRef.current = setInterval(poll, pollIntervalMs);
+          if (task.status === 'FAILED') {
+            show({ message: task.error_message || '素材生成失败', type: 'error' });
+            setIsGenerating(false);
+            taskSocketRef.current?.close();
+            taskSocketRef.current = null;
+            resolve();
+          }
+        },
+        onError: () => {
+          show({ message: '素材生成任务连接失败', type: 'error' });
+          setIsGenerating(false);
+          taskSocketRef.current = null;
+          resolve();
+        },
+        onClose: () => {
+          resolve();
+        },
+      });
+    });
   };
 
   const handleGenerate = async () => {
@@ -279,10 +218,8 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
   };
 
   const handleClose = () => {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
+    taskSocketRef.current?.close();
+    taskSocketRef.current = null;
     setIsGenerating(false);
     onClose();
   };
@@ -517,7 +454,7 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
       </div>
       {/* 素材选择器 */}
       <MaterialSelector
-        projectId={projectId}
+        projectId={projectId || undefined}
         isOpen={isMaterialSelectorOpen}
         onClose={() => setIsMaterialSelectorOpen(false)}
         onSelect={handleSelectMaterials}

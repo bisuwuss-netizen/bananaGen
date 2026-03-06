@@ -26,15 +26,17 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
+from dotenv import load_dotenv
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 BACKEND_DIR = PROJECT_ROOT / "backend"
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from app import create_app
 from models import Page, Project
 from services.ai_providers import get_image_provider
 from services.image_prompt_optimizer import optimize_html_image_slots
+from services.runtime_state import get_config_value, runtime_context
 
 
 def clean_text(value: Any) -> str:
@@ -169,8 +171,7 @@ def run_experiment(
     out_dir: Path,
     with_images: bool,
 ) -> Dict[str, Any]:
-    app = create_app()
-    with app.app_context():
+    with runtime_context() as runtime_config:
         project = Project.query.get(project_id)
         if not project:
             raise RuntimeError(f"project not found: {project_id}")
@@ -210,12 +211,12 @@ def run_experiment(
             },
         }
 
-        old_enabled = app.config.get("IMAGE_PROMPT_REWRITE_ENABLED", True)
+        old_enabled = runtime_config.get("IMAGE_PROMPT_REWRITE_ENABLED", True)
         try:
-            app.config["IMAGE_PROMPT_REWRITE_ENABLED"] = True
+            runtime_config["IMAGE_PROMPT_REWRITE_ENABLED"] = True
             prompt_b = optimize_html_image_slots([slot], project)[0]["prompt"]
         finally:
-            app.config["IMAGE_PROMPT_REWRITE_ENABLED"] = old_enabled
+            runtime_config["IMAGE_PROMPT_REWRITE_ENABLED"] = old_enabled
 
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / "prompt_a.txt").write_text(prompt_a, encoding="utf-8")
@@ -243,7 +244,7 @@ def run_experiment(
             "facts": facts,
             "prompt_a_len": len(prompt_a),
             "prompt_b_len": len(prompt_b),
-            "image_model": app.config.get("IMAGE_MODEL"),
+            "image_model": get_config_value("IMAGE_MODEL"),
             "with_images": with_images,
             "files": {
                 "prompt_a": str(out_dir / "prompt_a.txt"),
@@ -253,9 +254,9 @@ def run_experiment(
         }
 
         if with_images:
-            provider = get_image_provider(model=app.config.get("IMAGE_MODEL"))
-            aspect_ratio = app.config.get("DEFAULT_ASPECT_RATIO", "16:9")
-            resolution = app.config.get("DEFAULT_RESOLUTION", "2K")
+            provider = get_image_provider(model=get_config_value("IMAGE_MODEL"))
+            aspect_ratio = get_config_value("DEFAULT_ASPECT_RATIO", "16:9")
+            resolution = get_config_value("DEFAULT_RESOLUTION", "2K")
 
             img_a = provider.generate_image(prompt=prompt_a, aspect_ratio=aspect_ratio, resolution=resolution)
             img_b = provider.generate_image(prompt=prompt_b, aspect_ratio=aspect_ratio, resolution=resolution)
@@ -295,6 +296,10 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    env_path = PROJECT_ROOT / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+
     args = parse_args()
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     out_dir = Path(args.out_dir) / f"{args.project_id}_{args.page_index}_{ts}"

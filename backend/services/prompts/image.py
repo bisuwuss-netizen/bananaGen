@@ -2,6 +2,12 @@
 from typing import List, Dict, Optional, Any
 import json
 from textwrap import dedent
+import logging
+
+from .language import get_ppt_language_instruction
+
+logger = logging.getLogger(__name__)
+
 
 def get_image_generation_prompt(page_desc: str, outline_text: str, 
                                 current_section: str,

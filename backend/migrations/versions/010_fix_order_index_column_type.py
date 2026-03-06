@@ -43,11 +43,6 @@ def upgrade() -> None:
                                 existing_type=sa.String(255),
                                 type_=sa.Integer(),
                                 existing_nullable=False)
-    elif dialect == 'sqlite':
-        # SQLite is typeless / type-affinity based; INTEGER affinity
-        # already handles numeric sorting correctly in most cases.
-        # No action needed.
-        pass
     else:
         # For other dialects, try a safe alter
         try:

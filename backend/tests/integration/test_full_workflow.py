@@ -91,10 +91,11 @@ class TestAPIErrorHandling:
         assert response.status_code in [400, 415, 422]
     
     def test_missing_required_fields(self, client):
-        """测试缺少必需字段"""
+        """测试缺少字段时使用默认 creation_type 创建项目"""
         response = client.post('/api/projects', json={})
         
-        assert response.status_code in [400, 422]
+        data = assert_success_response(response, 201)
+        assert data['data']['status'] == 'DRAFT'
     
     def test_method_not_allowed(self, client):
         """测试不允许的HTTP方法"""
@@ -126,4 +127,3 @@ class TestConcurrentRequests:
         # 清理
         for pid in project_ids:
             client.delete(f'/api/projects/{pid}')
-

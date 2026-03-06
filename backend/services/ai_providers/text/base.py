@@ -1,6 +1,7 @@
 """
 Abstract base class for text generation providers
 """
+import asyncio
 from abc import ABC, abstractmethod
 
 
@@ -20,3 +21,16 @@ class TextProvider(ABC):
             Generated text content
         """
         pass
+
+    async def generate_text_async(self, prompt: str, thinking_budget: int = 1000) -> str:
+        """
+        Async text generation entrypoint.
+
+        Providers should override this with native async SDK calls. The default
+        implementation exists only as a compatibility fallback.
+        """
+        return await asyncio.to_thread(
+            self.generate_text,
+            prompt,
+            thinking_budget=thinking_budget,
+        )

@@ -5,10 +5,12 @@ Qwen-Image text-to-image is served by DashScope native endpoint:
 POST /api/v1/services/aigc/multimodal-generation/generation
 """
 import base64
+import asyncio
 import logging
 from io import BytesIO
 from typing import Optional, List
 
+import httpx
 import requests
 from PIL import Image
 
@@ -140,6 +142,21 @@ class QwenImageProvider(ImageProvider):
         image.load()
         return image
 
+    async def _download_image_async(self, image_url: str) -> Image.Image:
+        if image_url.startswith("data:image"):
+            b64 = image_url.split(",", 1)[1]
+            image_data = base64.b64decode(b64)
+            image = Image.open(BytesIO(image_data))
+            image.load()
+            return image
+
+        async with httpx.AsyncClient(timeout=min(self.timeout, 120), follow_redirects=True) as client:
+            response = await client.get(image_url)
+            response.raise_for_status()
+        image = Image.open(BytesIO(response.content))
+        image.load()
+        return image
+
     def generate_image(
         self,
         prompt: str,
@@ -198,5 +215,60 @@ class QwenImageProvider(ImageProvider):
                     f"Qwen image API attempt {attempt + 1}/{self.max_retries + 1} failed: "
                     f"{type(e).__name__}: {e}"
                 )
+
+        raise Exception(f"Error generating image with Qwen provider (model={self.model}): {last_error}")
+
+    async def generate_image_async(
+        self,
+        prompt: str,
+        ref_images: Optional[List[Image.Image]] = None,
+        aspect_ratio: str = "16:9",
+        resolution: str = "2K",
+    ) -> Optional[Image.Image]:
+        """
+        Async image generation through DashScope native qwen-image API.
+        """
+        if ref_images:
+            logger.warning(
+                f"{self.model} text-to-image path ignores reference images, received {len(ref_images)} refs."
+            )
+
+        url = f"{self.api_base}/services/aigc/multimodal-generation/generation"
+        size = self._size_for(aspect_ratio, resolution)
+        payload = self._build_payload(prompt=prompt, size=size)
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}",
+        }
+
+        last_error = None
+        async with httpx.AsyncClient(timeout=min(self.timeout, 180), follow_redirects=True) as client:
+            for attempt in range(self.max_retries + 1):
+                try:
+                    resp = await client.post(url, headers=headers, json=payload)
+                    if resp.status_code != 200:
+                        msg = resp.text
+                        try:
+                            err_json = resp.json()
+                            err_info = err_json.get("error") or {}
+                            if err_info:
+                                msg = f"{err_info.get('code')}: {err_info.get('message')}"
+                        except Exception:
+                            pass
+                        raise ValueError(f"Qwen image API failed: HTTP {resp.status_code}, {msg}")
+
+                    result = resp.json()
+                    image_url = self._extract_image_url(result)
+                    if not image_url:
+                        raise ValueError(f"No image URL found in response: {result}")
+                    return await self._download_image_async(image_url)
+                except Exception as e:
+                    last_error = e
+                    logger.warning(
+                        f"Qwen image API attempt {attempt + 1}/{self.max_retries + 1} failed: "
+                        f"{type(e).__name__}: {e}"
+                    )
+                    if attempt < self.max_retries:
+                        await asyncio.sleep(min(2 ** attempt, 5))
 
         raise Exception(f"Error generating image with Qwen provider (model={self.model}): {last_error}")

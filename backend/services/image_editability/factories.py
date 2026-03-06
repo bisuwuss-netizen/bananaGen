@@ -4,6 +4,7 @@
 import logging
 from typing import List, Optional, Any
 from pathlib import Path
+from services.runtime_state import get_config_value
 
 from .extractors import ElementExtractor, MinerUElementExtractor, BaiduOCRElementExtractor, BaiduAccurateOCRElementExtractor, ExtractorRegistry
 from .hybrid_extractor import HybridElementExtractor, create_hybrid_extractor
@@ -545,22 +546,12 @@ class ServiceConfig:
         if extractor_method is not None:
             use_hybrid_extractor = (extractor_method == 'hybrid')
             logger.info(f"extractor_method={extractor_method} -> use_hybrid_extractor={use_hybrid_extractor}")
-        # 自动从 Flask config 获取配置
-        from flask import current_app, has_app_context
-        
-        if has_app_context() and current_app:
-            if mineru_token is None:
-                mineru_token = current_app.config.get('MINERU_TOKEN')
-            if mineru_api_base is None:
-                mineru_api_base = current_app.config.get('MINERU_API_BASE', 'https://mineru.net')
-            if upload_folder is None:
-                upload_folder = current_app.config.get('UPLOAD_FOLDER', './uploads')
-        else:
-            # 回退到默认值
-            if mineru_api_base is None:
-                mineru_api_base = 'https://mineru.net'
-            if upload_folder is None:
-                upload_folder = './uploads'
+        if mineru_token is None:
+            mineru_token = get_config_value('MINERU_TOKEN')
+        if mineru_api_base is None:
+            mineru_api_base = get_config_value('MINERU_API_BASE', 'https://mineru.net')
+        if upload_folder is None:
+            upload_folder = get_config_value('UPLOAD_FOLDER', './uploads')
         
         # 验证必需配置
         if not mineru_token:
@@ -744,4 +735,3 @@ class TextAttributeExtractorFactory:
         logger.info("创建TextAttributeExtractorRegistry")
         
         return registry
-

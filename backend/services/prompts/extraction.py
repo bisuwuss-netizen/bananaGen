@@ -2,6 +2,10 @@
 from typing import List, Dict, Optional, Any
 import json
 from textwrap import dedent
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def get_text_attribute_extraction_prompt(content_hint: str = "") -> str:
     """
@@ -54,7 +58,7 @@ def get_text_attribute_extraction_prompt(content_hint: str = "") -> str:
 ```
 """.format(content_hint=content_hint)
     
-    # logger.debug(f"[get_text_attribute_extraction_prompt] Final prompt:\n{prompt}")
+    logger.debug(f"[get_text_attribute_extraction_prompt] Final prompt:\n{prompt}")
     return prompt
 
 
@@ -129,7 +133,7 @@ def get_batch_text_attribute_extraction_prompt(text_elements_json: str) -> str:
 ```
 """
     
-    # logger.debug(f"[get_batch_text_attribute_extraction_prompt] Final prompt:\n{prompt}")
+    logger.debug(f"[get_batch_text_attribute_extraction_prompt] Final prompt:\n{prompt}")
     return prompt
 
 

@@ -6,7 +6,6 @@
 import React from 'react';
 import { DetailZoomModel, ThemeConfig } from '../types/schema';
 import {
-  toInlineStyle,
   getBaseSlideStyle,
   getTitleStyle,
   getCardStyle,
@@ -16,6 +15,9 @@ interface DetailZoomLayoutProps {
   model: DetailZoomModel;
   theme: ThemeConfig;
 }
+
+const asStyle = (styles: Record<string, string | number | undefined>): React.CSSProperties =>
+  styles as React.CSSProperties;
 
 export const DetailZoomLayout: React.FC<DetailZoomLayoutProps> = ({ model, theme }) => {
   const { title, image_src, annotations, background_image } = model;
@@ -31,16 +33,16 @@ export const DetailZoomLayout: React.FC<DetailZoomLayoutProps> = ({ model, theme
       : {}),
   };
 
-  const titleStyle = toInlineStyle({ ...getTitleStyle(theme), textShadow: '0 1px 2px rgba(0,0,0,0.1)' });
+  const titleStyle = asStyle({ ...getTitleStyle(theme), textShadow: '0 1px 2px rgba(0,0,0,0.1)' });
 
-  const contentContainerStyle = toInlineStyle({
+  const contentContainerStyle = asStyle({
     marginTop: '36px',
     display: 'flex',
     gap: '30px',
     height: 'calc(100% - 140px)',
   });
 
-  const imageContainerStyle = toInlineStyle({
+  const imageContainerStyle = asStyle({
     flex: '1.2',
     position: 'relative',
     borderRadius: theme.decorations?.borderRadius || '12px',
@@ -48,13 +50,13 @@ export const DetailZoomLayout: React.FC<DetailZoomLayoutProps> = ({ model, theme
     backgroundColor: theme.colors.backgroundAlt,
   });
 
-  const imageStyle = toInlineStyle({
+  const imageStyle = asStyle({
     width: '100%',
     height: '100%',
     objectFit: 'contain',
   });
 
-  const annotationsListStyle = toInlineStyle({
+  const annotationsListStyle = asStyle({
     flex: '0.8',
     display: 'flex',
     flexDirection: 'column',
@@ -88,7 +90,7 @@ export const DetailZoomLayout: React.FC<DetailZoomLayoutProps> = ({ model, theme
 
           {/* 标注点 */}
           {annotations.map((annotation, index) => {
-            const markerStyle = toInlineStyle({
+            const markerStyle = asStyle({
               position: 'absolute',
               left: `${annotation.x}%`,
               top: `${annotation.y}%`,
@@ -140,7 +142,7 @@ export const DetailZoomLayout: React.FC<DetailZoomLayoutProps> = ({ model, theme
         <div style={annotationsListStyle}>
           {annotations.map((annotation, index) => {
             const baseCardStyle = getCardStyle(theme);
-            const annotationCardStyle = toInlineStyle({
+            const annotationCardStyle = asStyle({
               ...baseCardStyle,
               padding: '16px',
               display: 'flex',
@@ -148,7 +150,7 @@ export const DetailZoomLayout: React.FC<DetailZoomLayoutProps> = ({ model, theme
               alignItems: 'flex-start',
             });
 
-            const numberBadgeStyle = toInlineStyle({
+            const numberBadgeStyle = asStyle({
               width: '32px',
               height: '32px',
               borderRadius: '50%',
@@ -162,18 +164,18 @@ export const DetailZoomLayout: React.FC<DetailZoomLayoutProps> = ({ model, theme
               flexShrink: '0',
             });
 
-            const contentStyle = toInlineStyle({
+            const contentStyle = asStyle({
               flex: '1',
             });
 
-            const labelStyle = toInlineStyle({
+            const labelStyle = asStyle({
               fontSize: theme.sizes.bodySize,
               fontWeight: 'bold',
               color: theme.colors.text,
               marginBottom: '4px',
             });
 
-            const descStyle = toInlineStyle({
+            const descStyle = asStyle({
               fontSize: theme.sizes.smallSize,
               color: theme.colors.textLight,
               lineHeight: '1.5',

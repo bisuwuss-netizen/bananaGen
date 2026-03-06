@@ -4,8 +4,8 @@
 
 ## 技术栈
 
-- **框架**: Flask 3.0
-- **数据库**: SQLite + SQLAlchemy ORM
+- **框架**: FastAPI
+- **数据库**: MySQL + SQLAlchemy ORM
 - **AI服务**: Google Gemini API
 - **PPT处理**: python-pptx
 - **并发处理**: ThreadPoolExecutor
@@ -15,8 +15,9 @@
 
 ```
 backend/
-├── app.py                    # Flask应用入口
+├── app_fastapi.py            # FastAPI 应用入口
 ├── config.py                 # 配置文件
+├── config_fastapi.py         # FastAPI 运行时配置
 ├── models/                   # 数据库模型
 │   ├── __init__.py
 │   ├── project.py           # Project模型
@@ -24,22 +25,18 @@ backend/
 │   └── task.py              # Task模型
 ├── services/                 # 服务层
 │   ├── __init__.py
-│   ├── ai_service.py        # AI相关服务
+│   ├── ai/                  # AI 领域服务
+│   ├── prompts/             # Prompt 模块
 │   ├── file_service.py      # 文件管理服务
 │   ├── export_service.py    # 导出服务
-│   └── task_manager.py      # 异步任务管理
-├── controllers/              # 控制器层
-│   ├── __init__.py
-│   ├── project_controller.py
-│   ├── page_controller.py
-│   ├── template_controller.py
-│   ├── export_controller.py
-│   └── file_controller.py
+│   ├── tasks/               # 后台任务模块
+│   └── runtime_state.py     # FastAPI 运行时配置/同步 ORM 兼容层
+├── api/                      # FastAPI 路由层
+│   └── routes/
 ├── utils/                    # 工具函数
 │   ├── __init__.py
 │   ├── response.py          # 统一响应格式
 │   └── validators.py        # 数据验证
-├── instance/                 # 数据库文件目录（自动创建）
 ├── uploads/                  # 文件上传目录（自动创建）
 ├── .env.example             # 环境变量示例
 └── README.md                # 本文件
@@ -97,9 +94,9 @@ uv run alembic upgrade head
 使用 uv 运行：
 ```bash
 cd backend
-uv run python app.py
+uv run python app_fastapi.py
 ```
-服务将在 `http://localhost:5000` 启动。
+服务将在 `http://localhost:5000` 启动，接口文档位于 `http://localhost:5000/docs`。
 
 ## API文档
 
@@ -340,4 +337,3 @@ OFL 许可证允许自由使用、修改和分发该字体。
 ## 联系方式
 
 如有问题或建议，请通过 GitHub Issues 反馈。
-

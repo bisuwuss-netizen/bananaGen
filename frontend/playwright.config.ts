@@ -34,7 +34,7 @@ export default defineConfig({
   // 全局设置
   use: {
     // 基础URL
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://127.0.0.1:3000',
     
     // 截图设置
     screenshot: 'only-on-failure',
@@ -68,10 +68,9 @@ export default defineConfig({
   
   // 本地开发时启动服务
   webServer: process.env.CI ? undefined : {
-    command: 'cd .. && docker compose up -d && sleep 10',
-    url: 'http://localhost:3000',
+    command: 'npm run dev -- --host 127.0.0.1 --port 3000',
+    url: 'http://127.0.0.1:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },
 })
-

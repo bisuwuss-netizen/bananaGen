@@ -16,7 +16,6 @@ from schemas.generation import (
     GenerateOutlineRequest,
     GenerateDescriptionsRequest,
     GenerateImagesRequest,
-    GenerateHtmlImagesRequest,
 )
 from config_fastapi import settings as app_settings
 from services.runtime_state import load_runtime_config
@@ -165,19 +164,26 @@ async def generate_descriptions(
     project_context = ProjectContext(project, ref_content)
     outline = _reconstruct_outline(project.pages)
 
-    task_manager.submit_task(
-        task.id,
-        generate_descriptions_task,
-        project_id=project_id,
-        ai_service=ai_service,
-        project_context=project_context.to_dict(),
-        outline=outline,
-        max_workers=req.max_workers,
-        runtime_config=load_runtime_config(),
-        language=req.language or app_settings.output_language,
-        render_mode=project.render_mode or "image",
-        generation_mode=req.generation_mode,
-    )
+    try:
+        task_manager.submit_task(
+            task.id,
+            generate_descriptions_task,
+            project_id=project_id,
+            ai_service=ai_service,
+            project_context=project_context.to_dict(),
+            outline=outline,
+            max_workers=req.max_workers,
+            runtime_config=load_runtime_config(),
+            language=req.language or app_settings.output_language,
+            render_mode=project.render_mode or "image",
+            generation_mode=req.generation_mode,
+        )
+        logger.info("Task %s submitted successfully, active_tasks=%s", task.id, list(task_manager.active_tasks.keys()))
+    except Exception as e:
+        logger.error("Failed to submit task %s: %s", task.id, e, exc_info=True)
+        task.status = "FAILED"
+        task.error_message = f"Submit failed: {e}"
+        return SuccessResponse(data={"task_id": task.id, "status": "FAILED", "error": str(e)})
 
     return SuccessResponse(data={"task_id": task.id, "status": "PENDING"})
 
@@ -229,27 +235,5 @@ async def generate_images(
     return SuccessResponse(data={"task_id": task.id, "status": "PENDING"})
 
 
-@router.post("/{project_id}/generate/html-images", response_model=SuccessResponse, status_code=202)
-async def generate_html_images(
-    project_id: str,
-    req: GenerateHtmlImagesRequest,
-    db: AsyncSession = Depends(get_db),
-):
-    project = await db.get(Project, project_id)
-    if not project:
-        raise HTTPException(404, "Project not found")
-
-    if not req.slots:
-        raise HTTPException(400, "No image slots provided")
-
-    task = Task(
-        project_id=project_id,
-        task_type="GENERATE_HTML_IMAGES",
-        status="PENDING",
-    )
-    task.set_progress({"total": len(req.slots), "completed": 0, "failed": 0})
-    db.add(task)
-    await db.flush()
-
-    # TODO: Wire up html image generation background task
-    return SuccessResponse(data={"task_id": task.id, "status": "PENDING"})
+    # HTML image generation (SSE streaming) is handled by api/routes/html_images.py
+    # at POST /{project_id}/html-images/generate

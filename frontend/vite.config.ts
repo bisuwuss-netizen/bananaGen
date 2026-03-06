@@ -42,6 +42,7 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: backendUrl,
           changeOrigin: true,
+          ws: true,
         },
         // 文件服务代理到后端
         '/files': {

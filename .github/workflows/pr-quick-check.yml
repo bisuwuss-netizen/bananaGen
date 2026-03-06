@@ -94,7 +94,7 @@ jobs:
         run: |
           cd backend
           # Start in background
-          uv run python app.py &
+          uv run python app_fastapi.py &
           SERVER_PID=$!
           
           # Wait for startup
@@ -121,4 +121,3 @@ jobs:
         env:
           GOOGLE_API_KEY: mock-key-for-testing
           TESTING: true
-

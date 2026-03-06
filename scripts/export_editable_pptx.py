@@ -46,6 +46,8 @@ import logging
 from pathlib import Path
 from typing import List, Optional
 
+from dotenv import load_dotenv
+
 # 添加项目根目录到 Python 路径
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
@@ -60,20 +62,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def setup_flask_app():
-    """初始化 Flask 应用上下文（用于加载配置）"""
-    from dotenv import load_dotenv
-    
-    # 加载 .env 文件
+def setup_runtime_environment():
+    """加载脚本运行所需的环境变量。"""
     env_path = PROJECT_ROOT / '.env'
     if env_path.exists():
         load_dotenv(env_path)
         logger.info(f"已加载环境变量: {env_path}")
-    
-    # 创建 Flask 应用
-    from app import create_app
-    app = create_app()
-    return app
 
 
 def collect_image_paths(paths: List[str]) -> List[str]:
@@ -170,7 +164,7 @@ def export_editable_pptx(
         extract_text_styles: 是否提取文字样式（颜色、粗体等）
     """
     from services.image_editability import ImageEditabilityService
-    from services.export_service import ExportService
+    from services.presentation.export_service import ExportService
     from concurrent.futures import ThreadPoolExecutor, as_completed
     
     logger.info(f"开始处理 {len(image_paths)} 张图片...")
@@ -344,10 +338,11 @@ def main():
     for path in image_paths:
         logger.info(f"  - {path}")
     
-    # 初始化 Flask 应用
-    app = setup_flask_app()
-    
-    with app.app_context():
+    setup_runtime_environment()
+
+    from services.runtime_state import runtime_context
+
+    with runtime_context():
         try:
             export_editable_pptx(
                 image_paths=image_paths,
@@ -363,4 +358,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

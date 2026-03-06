@@ -11,10 +11,10 @@ class PresetStyle(db.Model):
     """
     __tablename__ = 'preset_styles'
     
-    id = db.Column(db.String(36), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(200), nullable=True)
     description = db.Column(db.Text, nullable=True)  # AI prompt description
-    preview_image = db.Column(db.String(500), nullable=True)
+    preview_image = db.Column(db.String(500), name='previewImage', nullable=True)
     status = db.Column(db.Integer, nullable=True, default=1)  # 1: enabled, 0: disabled
     
     def to_dict(self):

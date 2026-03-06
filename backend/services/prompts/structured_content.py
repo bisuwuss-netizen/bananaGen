@@ -2,6 +2,21 @@
 from typing import List, Dict, Optional, Any
 import json
 from textwrap import dedent
+import logging
+
+from .layouts import (
+    get_layout_types_description,
+    get_layout_scheme,
+    SCHEME_ROLE_LAYOUTS,
+    get_scheme_style_prompt,
+    get_layout_constraints,
+    resolve_layout_id,
+    LAYOUT_SCHEMAS
+)
+from .language import get_language_instruction
+
+logger = logging.getLogger(__name__)
+
 
 def get_structured_outline_prompt(topic: str, requirements: str = "", language: str = None, scheme_id: str = None) -> str:
     """

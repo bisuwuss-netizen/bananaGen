@@ -1,39 +1,37 @@
+"""Alembic environment configured for the FastAPI refactor branch."""
+
+from __future__ import annotations
+
 import os
 import sys
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import create_engine, pool
 
-# Add the backend directory to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app import create_app
+from config_fastapi import settings
 from models import db
+from services.runtime_state import install_runtime_orm
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
+
 config = context.config
 
-# Interpret the config file for Python logging.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# target_metadata is used for autogenerate support.
+install_runtime_orm()
 target_metadata = db.metadata
 
 
 def get_url() -> str:
-    """Get database URL from Flask application config."""
-    app = create_app()
-    return app.config["SQLALCHEMY_DATABASE_URI"]
+    return settings.sqlalchemy_sync_url
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode."""
-    url = get_url()
     context.configure(
-        url=url,
+        url=get_url(),
         target_metadata=target_metadata,
         literal_binds=True,
         compare_type=True,
@@ -44,11 +42,8 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode."""
-    app = create_app()
-    connectable = engine_from_config(
-        {"sqlalchemy.url": app.config["SQLALCHEMY_DATABASE_URI"]},
-        prefix="sqlalchemy.",
+    connectable = create_engine(
+        get_url(),
         poolclass=pool.NullPool,
     )
 
@@ -67,6 +62,3 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
-
-
-

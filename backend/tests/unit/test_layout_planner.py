@@ -5,7 +5,7 @@ Layout planner unit tests.
 import copy
 from collections import Counter
 
-from services.layout_planner import assign_layout_variants
+from services.presentation.layout_planner import assign_layout_variants
 
 
 def _make_outline(layout_ids):
@@ -49,7 +49,7 @@ def test_non_adjacent_pages_are_not_treated_as_run_length(monkeypatch):
             return 0 if ":a:" in value else 1
         return 0 if ":b:" in value else 1
 
-    monkeypatch.setattr("services.layout_planner._stable_rank", fake_rank)
+    monkeypatch.setattr("services.presentation.layout_planner._stable_rank", fake_rank)
 
     result = assign_layout_variants(copy.deepcopy(outline), max_variant_usage=10, max_run_length=1)
     variants = [result[idx]["layout_variant"] for idx in [0, 2, 4]]
