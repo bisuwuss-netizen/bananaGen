@@ -17,6 +17,7 @@ def test_fastapi_docs_and_core_routes_are_registered():
     paths = {route.path for route in app.routes}
 
     assert "/docs" in paths
+    assert "/api/home-characters/config" in paths
     assert "/api/projects" in paths
     assert "/api/html-renderer/health" in paths
     assert "/api/projects/{project_id}/tasks/{task_id}/ws" in paths

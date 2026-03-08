@@ -18,6 +18,7 @@ import { SchemeSelector } from '@/components/shared';
 import { listUserTemplates, type UserTemplate, uploadReferenceFile, type ReferenceFile, associateFileToProject, triggerFileParse, uploadMaterial, associateMaterialsToProject } from '@/api/endpoints';
 import { useProjectStore } from '@/store/useProjectStore';
 import { getPresetStyles, type PresetStyle } from '@/config/presetStyles';
+import { HomeCharactersPromptStage } from '@/features/home-characters';
 
 type CreationType = 'idea' | 'outline' | 'description';
 
@@ -44,6 +45,7 @@ export const Home: React.FC = () => {
   const [isLoadingPresetStyles, setIsLoadingPresetStyles] = useState(false);
   const [renderMode] = useState<'image' | 'html'>('html');
   const [activePresetPreview, setActivePresetPreview] = useState<PresetStyle | null>(null);
+  const [isPromptFocused, setIsPromptFocused] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const presetPreviewTriggerRef = useRef<HTMLButtonElement | null>(null);
@@ -643,7 +645,7 @@ export const Home: React.FC = () => {
         </div>*/}
 
         {/* 创建卡片 */}
-        <Card className="app-panel border-slate-200/50 p-4 duration-300 hover:shadow-lift md:p-10 transition-[box-shadow,border-color,background-color]">
+        <Card className="app-panel overflow-visible border-white/70 bg-white/95 p-4 shadow-[0_40px_120px_-56px_rgba(15,23,42,0.42)] duration-300 md:p-10 transition-[box-shadow,border-color,background-color]">
           {/* 选项卡 */}
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-6 md:mb-8">
             {(Object.keys(tabConfig) as CreationType[]).map((type) => {
@@ -678,45 +680,54 @@ export const Home: React.FC = () => {
           </div>
 
           {/* 输入区 - 带按钮 */}
-          <div className="relative mb-2 group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-banana-400 to-orange-400 rounded-lg opacity-0 group-hover:opacity-20 blur transition-opacity duration-300"></div>
-            <Textarea
-              ref={textareaRef}
-              placeholder={tabConfig[activeTab].placeholder}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              onPaste={handlePaste}
-              rows={activeTab === 'idea' ? 4 : 8}
-              className="relative pr-20 md:pr-28 pb-12 md:pb-14 text-sm md:text-base border-2 border-gray-200 focus:border-banana-400 transition-colors duration-200" // 为右下角按钮留空间
-            />
-
-            {/* 左下角：上传文件按钮（回形针图标） */}
-            <button
-              type="button"
-              onClick={handlePaperclipClick}
-              className="absolute left-2 md:left-3 bottom-2 md:bottom-3 z-10 p-1.5 md:p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors active:scale-95 touch-manipulation"
-              title="选择参考文件"
+          <div className="relative mb-4">
+            <HomeCharactersPromptStage
+              isPromptFocused={isPromptFocused}
+              hasPromptContent={Boolean(content.trim())}
             >
-              <Paperclip size={18} className="md:w-5 md:h-5" />
-            </button>
+              <div className="relative mb-2 group">
+                <div className="absolute -inset-3 rounded-[28px] bg-[radial-gradient(circle_at_top,rgba(245,146,22,0.18),transparent_65%)] opacity-70 blur-2xl transition-opacity duration-300 group-hover:opacity-100"></div>
+                <Textarea
+                  ref={textareaRef}
+                  placeholder={tabConfig[activeTab].placeholder}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  onFocus={() => setIsPromptFocused(true)}
+                  onBlur={() => setIsPromptFocused(false)}
+                  onPaste={handlePaste}
+                  rows={activeTab === 'idea' ? 4 : 8}
+                  className="relative min-h-[180px] rounded-[24px] pr-20 md:pr-28 pb-12 md:pb-14 text-sm md:text-base border-2 border-banana-200/80 bg-white/98 shadow-[0_26px_54px_-38px_rgba(245,146,22,0.45)] focus:border-banana-400 focus:shadow-[0_30px_60px_-36px_rgba(245,146,22,0.48)] transition-[border-color,box-shadow] duration-200"
+                />
 
-            {/* 右下角：开始生成按钮 */}
-            <div className="absolute right-2 md:right-3 bottom-2 md:bottom-3 z-10">
-              <Button
-                size="sm"
-                onClick={handleSubmit}
-                loading={isGlobalLoading}
-                disabled={
-                  !content.trim() || 
-                  referenceFiles.some(f => f.parse_status === 'pending' || f.parse_status === 'parsing')
-                }
-                className="text-xs md:text-sm px-3 md:px-4"
-              >
-                {referenceFiles.some(f => f.parse_status === 'pending' || f.parse_status === 'parsing')
-                  ? '解析中...'
-                  : '下一步'}
-              </Button>
-            </div>
+                {/* 左下角：上传文件按钮（回形针图标） */}
+                <button
+                  type="button"
+                  onClick={handlePaperclipClick}
+                  className="absolute left-3 md:left-4 bottom-3 md:bottom-4 z-10 p-1.5 md:p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors active:scale-95 touch-manipulation"
+                  title="选择参考文件"
+                >
+                  <Paperclip size={18} className="md:w-5 md:h-5" />
+                </button>
+
+                {/* 右下角：开始生成按钮 */}
+                <div className="absolute right-3 md:right-4 bottom-3 md:bottom-4 z-10">
+                  <Button
+                    size="sm"
+                    onClick={handleSubmit}
+                    loading={isGlobalLoading}
+                    disabled={
+                      !content.trim() ||
+                      referenceFiles.some(f => f.parse_status === 'pending' || f.parse_status === 'parsing')
+                    }
+                    className="rounded-xl text-xs md:text-sm px-3 md:px-4 shadow-sm"
+                  >
+                    {referenceFiles.some(f => f.parse_status === 'pending' || f.parse_status === 'parsing')
+                      ? '解析中...'
+                      : '下一步'}
+                  </Button>
+                </div>
+              </div>
+            </HomeCharactersPromptStage>
           </div>
 
           {/* 隐藏的文件输入 */}
@@ -859,7 +870,6 @@ export const Home: React.FC = () => {
               />
             )}
           </div>
-
         </Card>
       </main>
       <ToastContainer />
