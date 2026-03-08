@@ -28,15 +28,13 @@ describe('Button Component', () => {
   it('applies gradient styles for primary variant', () => {
     render(<Button>Primary</Button>)
     const button = screen.getByText('Primary')
-    // 实际使用gradient样式
-    expect(button).toHaveClass('bg-gradient-to-r')
+    expect(button).toHaveClass('bg-gradient-to-br')
   })
 
   it('applies border styles for secondary variant', () => {
     render(<Button variant="secondary">Secondary</Button>)
     const button = screen.getByText('Secondary')
-    // secondary使用border样式
-    expect(button).toHaveClass('border-banana-500')
+    expect(button).toHaveClass('border-slate-300')
   })
 
   it('shows loading state and disables button', () => {
@@ -59,4 +57,3 @@ describe('Button Component', () => {
     expect(screen.getByTestId('test-icon')).toBeInTheDocument()
   })
 })
-

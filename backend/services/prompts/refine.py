@@ -4,6 +4,7 @@ import json
 from textwrap import dedent
 import logging
 
+from services.ai.base import ProjectContext
 from .utils import _format_reference_files_xml
 from .layouts import (
     get_scheme_style_prompt,
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_outline_refinement_prompt(current_outline: List[Dict], user_requirement: str,
-                                   project_context: 'ProjectContext',
+                                   project_context: ProjectContext,
                                    previous_requirements: Optional[List[str]] = None,
                                    language: str = None) -> str:
     """
@@ -116,7 +117,7 @@ You are a helpful assistant that modifies PPT outlines based on user requirement
 
 
 def get_descriptions_refinement_prompt(current_descriptions: List[Dict], user_requirement: str,
-                                       project_context: 'ProjectContext',
+                                       project_context: ProjectContext,
                                        outline: List[Dict] = None,
                                        previous_requirements: Optional[List[str]] = None,
                                        language: str = None) -> str:
@@ -227,7 +228,7 @@ You are a helpful assistant that modifies PPT page descriptions based on user re
 
 
 def get_html_model_refinement_prompt(current_html_models: List[Dict], user_requirement: str,
-                                      project_context: 'ProjectContext',
+                                      project_context: ProjectContext,
                                       outline: List[Dict] = None,
                                       previous_requirements: Optional[List[str]] = None,
                                       language: str = None) -> str:
@@ -327,4 +328,3 @@ You are a helpful assistant that modifies PPT page structured content (html_mode
     final_prompt = files_xml + prompt
     logger.debug(f"[get_html_model_refinement_prompt] Final prompt:\n{final_prompt}")
     return final_prompt
-

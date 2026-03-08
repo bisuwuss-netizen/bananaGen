@@ -4,8 +4,8 @@ import { getThemeByScheme } from '@/experimental/html-renderer/themes';
 import {
   TwoColumnLayout,
   renderTwoColumnLayoutHTML,
-} from '@/experimental/html-renderer/layouts/TwoColumnLayout';
-import { renderTitleBulletsLayoutHTML } from '@/experimental/html-renderer/layouts/TitleBulletsLayout';
+} from '@/experimental/html-renderer/layouts/common';
+import { renderTitleBulletsLayoutHTML } from '@/experimental/html-renderer/layouts/common';
 
 describe('layout text coverage', () => {
   const theme = getThemeByScheme('tech_blue');

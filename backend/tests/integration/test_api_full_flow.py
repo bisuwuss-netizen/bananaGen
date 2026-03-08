@@ -24,15 +24,35 @@ from pathlib import Path
 from PIL import Image
 
 
-# Skip these tests if service is not running (for backend-integration-test stage)
-pytestmark = pytest.mark.skipif(
-    os.environ.get('SKIP_SERVICE_TESTS', '').lower() == 'true',
-    reason="Skipping tests that require running backend service"
-)
-
-
-BASE_URL = "http://localhost:5000"
+BASE_URL = os.environ.get("BANANA_TEST_BASE_URL", "http://127.0.0.1:5000")
 API_TIMEOUT = 180  # 3 minutes timeout for AI operations
+
+
+def _banana_service_available() -> bool:
+    """Only run service tests against a reachable Banana Slides backend."""
+    try:
+        response = requests.get(f"{BASE_URL}/health", timeout=2)
+        if not response.ok:
+            return False
+        payload = response.json()
+        return (
+            payload.get("status") == "healthy"
+            and payload.get("engine") == "fastapi"
+        )
+    except Exception:
+        return False
+
+
+pytestmark = [
+    pytest.mark.skipif(
+        os.environ.get('SKIP_SERVICE_TESTS', '').lower() == 'true',
+        reason="Skipping tests that require running backend service",
+    ),
+    pytest.mark.skipif(
+        not _banana_service_available(),
+        reason=f"Skipping tests that require Banana Slides backend at {BASE_URL}",
+    ),
+]
 
 
 def wait_for_project_status(project_id: str, expected_status: str, timeout: int = 180):

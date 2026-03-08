@@ -110,6 +110,22 @@ def _merge_refined_description(existing_content, refined_text: str, generated_at
     return payload
 
 
+def _prepare_refined_outline_pages(refined, *, render_mode: str, ai_service) -> list[dict]:
+    if render_mode == "html":
+        pages_data = refined.get("pages", []) if isinstance(refined, dict) else refined
+    else:
+        pages_data = ai_service.flatten_outline(refined) if isinstance(refined, dict) else refined
+
+    if not isinstance(pages_data, list):
+        raise HTTPException(502, "AI returned invalid outline payload type")
+    if not pages_data:
+        raise HTTPException(502, "AI returned empty outline result")
+    if not all(isinstance(page, dict) for page in pages_data):
+        raise HTTPException(502, "AI returned invalid outline page item")
+
+    return pages_data
+
+
 @router.post("/{project_id}/refine/outline", response_model=SuccessResponse)
 async def refine_outline(
     project_id: str,
@@ -139,10 +155,11 @@ async def refine_outline(
         render_mode=render_mode,
     )
 
-    if render_mode == "html":
-        pages_data = refined.get("pages", []) if isinstance(refined, dict) else refined
-    else:
-        pages_data = ai_service.flatten_outline(refined) if isinstance(refined, dict) else refined
+    pages_data = _prepare_refined_outline_pages(
+        refined,
+        render_mode=render_mode,
+        ai_service=ai_service,
+    )
 
     # Delete old pages
     for p in list(project.pages):
