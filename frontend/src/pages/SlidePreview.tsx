@@ -37,6 +37,10 @@ import { getPageImageVersions, setCurrentImageVersion, updateProject, updatePage
 import { fileToBase64 } from '@/experimental/html-renderer/utils/htmlExporter';
 import type { Page, ImageVersion, DescriptionContent, ExportExtractorMethod, ExportInpaintMethod, LayoutId } from '@/types';
 import { normalizeErrorMessage } from '@/utils';
+import {
+  collectHtmlImageSlotDescriptors,
+  sanitizeHtmlModelImageSources,
+} from '@/utils/htmlImageSlots';
 import { getScaleToFit, getWidthFitScale } from '@/utils/slideScale';
 // HTML渲染模式组件
 import { SlideRenderer } from '@/experimental/html-renderer/components/SlideRenderer';
@@ -321,83 +325,6 @@ export const SlidePreview: React.FC = () => {
     [],
   );
 
-  /**
-   * 根据布局类型判断页面的图片插槽数量
-   * 这个逻辑与 html-renderer/layouts 中的渲染逻辑保持一致
-   * 
-   * 支持图片插槽的布局：
-   * - image_full: 必须有1个图片 (image_src)
-   * - title_content / vocational_content: 可选1个配图 (image)
-   * - title_bullets: 可选1个配图 (image)
-   * - process_steps: 可选1个配图 (image)
-   * - two_column / vocational_comparison: 左右栏如果是image类型，各有1个图片 (left.image_src, right.image_src)
-   * - cover: 可选背景图 (background_image)
-   * 
-   * 不支持图片插槽的布局：
-   * - toc, section_title, quote, ending
-   */
-  const getPageImageSlotCount = useCallback((page: Page): number => {
-    if (!page) return 0;
-
-    // 非HTML模式：所有页面都需要生成图片（每页1张）
-    if (!isHtmlMode) return 1;
-
-    const layoutId = page.layout_id ? normalizeLayoutId(page.layout_id as LayoutId) : undefined;
-    const htmlModel = page.html_model as unknown as Record<string, unknown> | undefined;
-
-    // 这些布局类型没有图片插槽
-    const noImageLayouts = ['toc', 'section_title', 'quote', 'ending'];
-    if (layoutId && noImageLayouts.includes(layoutId)) {
-      return 0;
-    }
-
-    // edu_cover：hero_image 插槽
-    if (layoutId === 'edu_cover') {
-      const variant = resolveLayoutVariant(htmlModel);
-      return variant === 'a' ? 1 : 0;
-    }
-
-    // image_full 布局：必定有1个图片插槽
-    if (layoutId === 'image_full') {
-      return 1;
-    }
-
-    // two_column / vocational_comparison 布局：检查左右栏是否有图片类型
-    if ((layoutId === 'two_column' || layoutId === 'vocational_comparison') && htmlModel) {
-      let count = 0;
-      const left = htmlModel.left as unknown as Record<string, unknown> | undefined;
-      const right = htmlModel.right as unknown as Record<string, unknown> | undefined;
-      if (inferTwoColumnPartType(left) === 'image') count++;
-      if (inferTwoColumnPartType(right) === 'image') count++;
-      return count;
-    }
-
-    // title_content, vocational_content, title_bullets, process_steps 布局：
-    // 这些布局总是支持1个可选配图插槽
-    // 我们会在 convertPageToPayload 中自动添加默认的 image 字段
-    if (['title_content', 'vocational_content', 'title_bullets', 'process_steps'].includes(layoutId || '')) {
-      return shouldUseOptionalImageSlot(page, htmlModel) ? 1 : 0;
-    }
-
-    // cover 布局：有1个背景/封面图插槽
-    if (layoutId === 'cover') {
-      return 1;
-    }
-
-    return 0;
-  }, [inferTwoColumnPartType, isHtmlMode, resolveLayoutVariant, shouldUseOptionalImageSlot]);
-
-  // 辅助函数：判断页面是否有图片插槽
-  const pageHasImageSlot = useCallback((page: Page): boolean => {
-    return getPageImageSlotCount(page) > 0;
-  }, [getPageImageSlotCount]);
-
-  // 计算有图片插槽的页面
-  const _pagesNeedingImages = useMemo(() => {
-    if (!currentProject?.pages) return [];
-    return currentProject.pages.filter(p => pageHasImageSlot(p));
-  }, [currentProject?.pages, pageHasImageSlot]);
-
   // 将上传的图片写回到模型对应的插槽路径
   const applyUploadedImagesToModel = useCallback((pageId: string, model: Record<string, unknown>) => {
     const slots = htmlPageImages[pageId];
@@ -440,7 +367,7 @@ export const SlidePreview: React.FC = () => {
       console.log('[convertPageToPayload] Original layout_id:', page.layout_id);
       const layoutId = normalizeLayoutId(page.layout_id as LayoutId);
       console.log('[convertPageToPayload] Normalized layout_id:', layoutId);
-      let model = { ...page.html_model } as Record<string, unknown>;
+      let model = sanitizeHtmlModelImageSources(page.html_model) as unknown as Record<string, unknown>;
       const outlineContent = page.outline_content
         ? ({ ...page.outline_content } as Record<string, unknown>)
         : undefined;
@@ -644,7 +571,7 @@ export const SlidePreview: React.FC = () => {
     model.layout_variant = variantId;
 
     // 应用上传的图片到模型
-    model = applyUploadedImagesToModel(pageId, model);
+      model = applyUploadedImagesToModel(pageId, sanitizeHtmlModelImageSources(model));
 
     return {
       page_id: pageId,
@@ -710,6 +637,24 @@ export const SlidePreview: React.FC = () => {
         });
       }
 
+      if (Array.isArray(model?.items)) {
+        model.items.slice(0, 4).forEach((item: any) => {
+          const t1 = cleanText(item?.title);
+          const t2 = cleanText(item?.description);
+          if (t1) facts.push(t1);
+          if (t2) facts.push(t2);
+        });
+      }
+
+      if (Array.isArray(model?.annotations)) {
+        model.annotations.slice(0, 4).forEach((annotation: any) => {
+          const t1 = cleanText(annotation?.label);
+          const t2 = cleanText(annotation?.description);
+          if (t1) facts.push(t1);
+          if (t2) facts.push(t2);
+        });
+      }
+
       const descContent = page.description_content;
       if (typeof descContent === 'object' && descContent !== null) {
         const dc = descContent as any;
@@ -737,6 +682,12 @@ export const SlidePreview: React.FC = () => {
       }
       if (layoutId === 'vocational_content') {
         return '生成“案例/讲解配图”，用于支撑职业情境说明，突出具体对象、操作场景或案例证据。';
+      }
+      if (layoutId === 'detail_zoom') {
+        return '生成“细节放大主体图”，主体应便于叠加标注点，局部结构清楚，可支撑步骤拆解或局部讲解。';
+      }
+      if (layoutId === 'portfolio') {
+        return '生成“案例展示卡片图”，每张图都要对应一个独立案例场景，主体明确，便于网格化陈列。';
       }
       if (layoutId === 'title_bullets') {
         return '生成“要点解释图”，画面需对应页面要点，至少体现3个相关元素之间关系。';
@@ -827,42 +778,20 @@ export const SlidePreview: React.FC = () => {
         });
       };
 
-      switch (layoutId) {
-        case 'edu_cover':
-          if (!model.hero_image) {
-            push('hero_image');
-          }
-          break;
-        case 'cover':
-          if (!model.background_image) {
-            push('background_image');
-          }
-          break;
-        case 'image_full':
-          if (!model.image_src) push('image_src');
-          break;
-        case 'two_column':
-        case 'vocational_comparison': {
-          const left = model.left as unknown as Record<string, unknown> | undefined;
-          const right = model.right as unknown as Record<string, unknown> | undefined;
-          if (inferTwoColumnPartType(left) === 'image' && !left?.image_src) push('left.image_src');
-          if (inferTwoColumnPartType(right) === 'image' && !right?.image_src) push('right.image_src');
-          break;
-        }
-        case 'vocational_content':
-        case 'title_bullets':
-        case 'title_content':
-        case 'process_steps':
-          if (
-            shouldUseOptionalImageSlot(page, model) &&
-            (model.image?.src === '' || (model.image && !model.image.src))
-          ) {
-            push('image.src');
-          }
-          break;
-        default:
-          break;
-      }
+      const descriptors = collectHtmlImageSlotDescriptors(layoutId, model, {
+        optionalImageEnabled: shouldUseOptionalImageSlot(page, model),
+        inferTwoColumnPartType,
+        variantId: resolveLayoutVariant(
+          model,
+          typeof page.outline_content?.layout_variant === 'string'
+            ? page.outline_content.layout_variant
+            : undefined,
+        ),
+      });
+
+      descriptors
+        .filter((descriptor) => !descriptor.src)
+        .forEach((descriptor) => push(descriptor.slotPath));
     });
 
     return slots;
@@ -937,29 +866,27 @@ export const SlidePreview: React.FC = () => {
       const payload = convertPageToPayload(page, index);
       if (!payload) return sum;
       const model = payload.model as any;
-      switch (normalizeLayoutId(payload.layout_id as LayoutId)) {
-        case 'vocational_content':
-        case 'title_content':
-        case 'title_bullets':
-        case 'process_steps':
-          return sum + (shouldUseOptionalImageSlot(page, model) ? 1 : 0);
-        case 'image_full':
-          return sum + 1;
-        case 'edu_cover':
-        case 'cover':
-          return sum + 1;
-        case 'two_column':
-        case 'vocational_comparison': {
-          let count = 0;
-          if (inferTwoColumnPartType(model.left as Record<string, unknown> | undefined) === 'image') count += 1;
-          if (inferTwoColumnPartType(model.right as Record<string, unknown> | undefined) === 'image') count += 1;
-          return sum + count;
-        }
-        default:
-          return sum;
-      }
+      const layoutId = normalizeLayoutId(payload.layout_id as LayoutId);
+      const descriptors = collectHtmlImageSlotDescriptors(layoutId, model, {
+        optionalImageEnabled: shouldUseOptionalImageSlot(page, model),
+        inferTwoColumnPartType,
+        variantId: resolveLayoutVariant(
+          model,
+          typeof page.outline_content?.layout_variant === 'string'
+            ? page.outline_content.layout_variant
+            : undefined,
+        ),
+      });
+      return sum + descriptors.filter((descriptor) => !descriptor.src).length;
     }, 0);
-  }, [isHtmlMode, currentProject?.pages, convertPageToPayload, inferTwoColumnPartType, shouldUseOptionalImageSlot]);
+  }, [
+    isHtmlMode,
+    currentProject?.pages,
+    convertPageToPayload,
+    inferTwoColumnPartType,
+    resolveLayoutVariant,
+    shouldUseOptionalImageSlot,
+  ]);
 
   // 当前选中页面的PagePayload（用于HTML渲染）
   const selectedPagePayload = useMemo(() => {

@@ -1,0 +1,121 @@
+.home-characters-prompt-stage {
+  position: relative;
+  margin-bottom: 0.5rem;
+  padding: 1.72rem 0.15rem 0.35rem;
+  overflow: visible;
+}
+
+.home-characters-prompt-stage__glow {
+  position: absolute;
+  inset: 0.6rem 0.8rem 0.15rem 0.8rem;
+  border-radius: 30px;
+  background:
+    radial-gradient(70% 95% at 50% 18%, rgba(245, 146, 22, 0.08), transparent 72%),
+    radial-gradient(52% 90% at 50% 100%, rgba(162, 189, 206, 0.08), transparent 76%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.home-characters-prompt-stage__input-shell {
+  position: relative;
+  z-index: 10;
+  margin: 0 auto;
+  width: min(100%, calc(100% - 0.45rem));
+}
+
+.home-characters-feature {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  display: none;
+}
+
+.home-characters-feature__scene {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.home-characters-feature__scene::before {
+  content: '';
+  position: absolute;
+  inset: 0.45rem 1.45rem 0.25rem 1.45rem;
+  border-radius: 26px;
+  background:
+    radial-gradient(90% 140% at 50% 100%, rgba(245, 146, 22, 0.06), transparent 68%),
+    radial-gradient(60% 100% at 50% 0%, rgba(162, 189, 206, 0.1), transparent 72%);
+}
+
+.home-characters-feature__figure {
+  position: absolute;
+  transform-origin: bottom center;
+  border: 1.5px solid transparent;
+  transition:
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    height 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 200ms ease-out,
+    background-color 200ms ease-out,
+    box-shadow 200ms ease-out;
+  will-change: transform;
+}
+
+.home-characters-feature__eye-ball,
+.home-characters-feature__pupil-only,
+.home-characters-feature__eye-rest {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  transition:
+    left 120ms ease-out,
+    top 120ms ease-out,
+    transform 120ms ease-out,
+    height 140ms ease-out,
+    opacity 180ms ease-out;
+}
+
+.home-characters-feature__eye-ball {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.home-characters-feature__eye-pupil {
+  border-radius: 999px;
+  transition: transform 120ms ease-out;
+}
+
+.home-characters-feature__eye-rest {
+  border-radius: 999px;
+}
+
+.home-characters-feature__mouth {
+  position: absolute;
+  border-radius: 999px;
+  opacity: 0.82;
+}
+
+@media (min-width: 1024px) {
+  .home-characters-prompt-stage {
+    padding: 1.95rem 0.15rem 0.4rem;
+  }
+
+  .home-characters-prompt-stage__input-shell {
+    width: min(100%, calc(100% - 2.5rem));
+  }
+
+  .home-characters-feature {
+    display: block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-characters-feature__figure,
+  .home-characters-feature__eye-ball,
+  .home-characters-feature__pupil-only,
+  .home-characters-feature__eye-rest,
+  .home-characters-feature__eye-pupil {
+    transition: none !important;
+  }
+}

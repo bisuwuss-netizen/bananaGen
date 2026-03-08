@@ -355,12 +355,13 @@ async def generate_outline_task(
                     limit=None,
                     status="planning",
                 )
+                total_pages = len(pages_data)
                 await _set_task_progress(
                     session,
                     task,
-                    total=len(pages_data) if render_mode != "html" else 5,
-                    completed=0 if render_mode != "html" else 3,
-                    percent=42 if render_mode != "html" else 78,
+                    total=total_pages,
+                    completed=0,
+                    percent=42,
                     current_step="准备逐页写入",
                     messages=messages,
                     preview_cards=initial_queue_cards or preview_cards,
@@ -370,7 +371,7 @@ async def generate_outline_task(
                         "render_mode": render_mode,
                         "scheme_id": scheme_id,
                         "reference_count": reference_count,
-                        "estimated_total_pages": len(pages_data),
+                        "estimated_total_pages": total_pages,
                     },
                 )
 
@@ -380,53 +381,12 @@ async def generate_outline_task(
 
                 created_pages: list[Page] = []
 
-                if render_mode == "html":
-                    for idx, page_data in enumerate(pages_data):
-                        page = Page(
-                            project_id=project_id,
-                            order_index=idx,
-                            part=page_data.get("part") if isinstance(page_data, dict) else None,
-                            status="OUTLINE_GENERATED",
-                        )
-                        if isinstance(page_data, dict):
-                            page.layout_id = page_data.get("layout_id", "title_content")
-                            page.set_outline_content(page_data)
-                        session.add(page)
-                        created_pages.append(page)
-
-                    project.status = "OUTLINE_GENERATED"
-                    project.updated_at = datetime.utcnow()
-                    await session.flush()
-
-                    generated_preview_cards = _build_preview_cards_from_pages(pages_data)
-                    task.status = "COMPLETED"
-                    task.completed_at = datetime.utcnow()
-                    messages = _append_message(messages, f"大纲生成完成，已创建 {len(created_pages)} 页。")
-                    task.set_progress(
-                        {
-                            "total": 5,
-                            "completed": 5,
-                            "failed": 0,
-                            "percent": 100,
-                            "current_step": "大纲已生成",
-                            "messages": messages,
-                            "preview_cards": generated_preview_cards or preview_cards,
-                            "generated_cards": generated_preview_cards,
-                            "queued_cards": [],
-                            "render_mode": render_mode,
-                            "scheme_id": scheme_id,
-                            "reference_count": reference_count,
-                            "estimated_total_pages": len(pages_data),
-                        }
-                    )
-                    await session.commit()
-                    return
-
                 generated_pages: list[dict[str, Any]] = []
-                total_pages = len(pages_data)
 
                 for idx, page_stub in enumerate(pages_data):
-                    if project.creation_type == "outline" and project.outline_text:
+                    if render_mode == "html":
+                        page_data = dict(page_stub) if isinstance(page_stub, dict) else {}
+                    elif project.creation_type == "outline" and project.outline_text:
                         page_data = dict(page_stub)
                     else:
                         page_data = await ai_service.call_async(
@@ -446,6 +406,8 @@ async def generate_outline_task(
                         status="OUTLINE_GENERATED",
                     )
                     if isinstance(page_data, dict):
+                        if render_mode == "html":
+                            page.layout_id = page_data.get("layout_id", "title_content")
                         page.set_outline_content(page_data)
                     session.add(page)
                     created_pages.append(page)

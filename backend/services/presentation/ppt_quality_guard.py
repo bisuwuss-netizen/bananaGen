@@ -55,6 +55,11 @@ _PLACEHOLDER_TOKENS = {
     "", "...", "……", "待补充", "tbd", "todo", "n/a", "null", "none"
 }
 
+_PLACEHOLDER_IMAGE_URL_RE = re.compile(
+    r"^https?://(?:[\w-]+\.)*example\.(?:com|org|net)(?:[/?#:].*)?$",
+    re.IGNORECASE,
+)
+
 
 def apply_outline_quality_guard(
     outline: List[Dict[str, Any]],
@@ -258,6 +263,7 @@ def apply_page_model_quality_guard(
                 safe_model[side_key] = column
 
     # Final recursive pass for rich text fields.
+    _strip_placeholder_image_urls(safe_model)
     _sanitize_rich_text_fields(safe_model, page_title)
     return safe_model
 
@@ -827,6 +833,36 @@ def _contains_cjk(text: str) -> bool:
 def _looks_placeholder(value: Any) -> bool:
     text = _clean_short(value).lower()
     return text in _PLACEHOLDER_TOKENS
+
+
+def _looks_placeholder_image_url(value: Any) -> bool:
+    text = _clean_short(value)
+    if not text:
+        return False
+    return bool(_PLACEHOLDER_IMAGE_URL_RE.match(text))
+
+
+def _strip_placeholder_image_urls(node: Any, *, key: str | None = None, parent_key: str | None = None) -> Any:
+    if isinstance(node, list):
+        for index, item in enumerate(node):
+            node[index] = _strip_placeholder_image_urls(item)
+        return node
+
+    if isinstance(node, dict):
+        for child_key, child_value in list(node.items()):
+            node[child_key] = _strip_placeholder_image_urls(
+                child_value,
+                key=child_key,
+                parent_key=key,
+            )
+        return node
+
+    should_strip = key in {"background_image", "hero_image", "image_src"} or (
+        key == "src" and parent_key == "image"
+    )
+    if should_strip and _looks_placeholder_image_url(node):
+        return ""
+    return node
 
 
 def _ensure_sentence(value: Any, fallback: str) -> str:

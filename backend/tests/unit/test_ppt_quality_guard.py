@@ -98,6 +98,25 @@ def test_page_model_guard_completes_bullets_and_sentences():
     assert all(b["description"].endswith(("。", ".", "！", "?", "？", "!")) for b in bullets)
 
 
+def test_page_model_guard_strips_placeholder_image_urls():
+    guarded = apply_page_model_quality_guard(
+        layout_id="portfolio",
+        model={
+            "title": "案例展示",
+            "background_image": "https://example.com/bg.jpg",
+            "items": [
+                {"image_src": "https://example.com/item-1.png", "title": "案例一"},
+                {"image_src": "https://cdn.valid.com/item-2.png", "title": "案例二"},
+            ],
+        },
+        page_outline={"title": "案例展示", "has_image": True},
+    )
+
+    assert guarded["background_image"] == ""
+    assert guarded["items"][0]["image_src"] == ""
+    assert guarded["items"][1]["image_src"] == "https://cdn.valid.com/item-2.png"
+
+
 def test_outline_guard_preserves_part_structure_when_input_uses_parts():
     outline = [
         {
