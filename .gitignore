@@ -67,4 +67,5 @@ node_modules/
 .playwright-cli/
 frontend/.npm-cache/
 edu_qa_case_ultimate.html
+/tests/
 tests/html_previews/*.html
