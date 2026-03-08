@@ -33,10 +33,11 @@ import {
 import { useProjectStore } from '@/store/useProjectStore';
 import { useExportTasksStore, type ExportTaskType } from '@/store/useExportTasksStore';
 import { getImageUrl } from '@/api/client';
-import { getPageImageVersions, setCurrentImageVersion, updateProject, updatePage, uploadTemplate, exportPPTX as apiExportPPTX, exportPDF as apiExportPDF, exportEditablePPTX as apiExportEditablePPTX, generateHtmlImagesStreaming, type HtmlImageSlot, type HtmlImageSSEEvent } from '@/api/endpoints';
+import { getPageImageVersions, setCurrentImageVersion, updateProject, updatePage, uploadTemplate, exportPPTX as apiExportPPTX, exportPDF as apiExportPDF, exportEditablePPTX as apiExportEditablePPTX, generateHtmlImagesStreaming, generateLayoutPlan, type HtmlImageSlot, type HtmlImageSSEEvent } from '@/api/endpoints';
 import { fileToBase64 } from '@/experimental/html-renderer/utils/htmlExporter';
 import type { Page, ImageVersion, DescriptionContent, ExportExtractorMethod, ExportInpaintMethod, LayoutId } from '@/types';
 import { normalizeErrorMessage } from '@/utils';
+import { getScaleToFit, getWidthFitScale } from '@/utils/slideScale';
 // HTML渲染模式组件
 import { SlideRenderer } from '@/experimental/html-renderer/components/SlideRenderer';
 import { getThemeByScheme } from '@/experimental/html-renderer/themes';
@@ -45,7 +46,11 @@ import {
   generateHTMLDocument,
   downloadHTML,
 } from '@/experimental/html-renderer/utils/htmlExporter';
-import { renderLayoutHTML, normalizeLayoutId } from '@/experimental/html-renderer/layouts';
+import {
+  renderLayoutHTML,
+  normalizeLayoutId,
+  getLayoutDisplayName,
+} from '@/experimental/html-renderer/layouts';
 
 const VARIANT_POOLS: Record<string, { id: string; label: string }[]> = {
   title_bullets: [{ id: 'a', label: '要点列表' }, { id: 'b', label: '编号列表' }],
@@ -97,7 +102,7 @@ export const SlidePreview: React.FC = () => {
   const [showExportTasksPanel, setShowExportTasksPanel] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement | null>(null);
   const previewContainerRef = useRef<HTMLDivElement | null>(null);
-  const [previewScale, setPreviewScale] = useState(0.6); // 64rem/1280 的近似值，供不支持 calc(长度/长度) 的浏览器使用
+  const [previewScale, setPreviewScale] = useState(1); // 主预览按可用舞台尺寸自适应缩放
   const thumbnailContainerRef = useRef<HTMLDivElement | null>(null);
   const [thumbnailScale, setThumbnailScale] = useState(0.15); // 缩略图缩放，由 JS 测量容器宽度后更新
   // 多选导出相关状态（已移除多选功能）
@@ -126,6 +131,7 @@ export const SlidePreview: React.FC = () => {
   const isEditingRequirements = useRef(false); // 跟踪用户是否正在编辑额外要求
   const [templateStyle, setTemplateStyle] = useState<string>('');
   const [isSavingTemplateStyle, setIsSavingTemplateStyle] = useState(false);
+  const [isVariantUpdating, setIsVariantUpdating] = useState(false);
   const isEditingTemplateStyle = useRef(false); // 跟踪用户是否正在编辑风格描述
   const lastProjectId = useRef<string | null>(null); // 跟踪上一次的项目ID
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
@@ -304,16 +310,27 @@ export const SlidePreview: React.FC = () => {
     return !!(image && typeof image === 'object');
   }, []);
 
+  const resolveLayoutVariant = useCallback(
+    (
+      model: Record<string, unknown> | undefined,
+      fallback?: string,
+    ): string => {
+      const raw = (model?.layout_variant ?? model?.variant ?? fallback ?? 'a') as string;
+      return String(raw || 'a').trim().toLowerCase() || 'a';
+    },
+    [],
+  );
+
   /**
    * 根据布局类型判断页面的图片插槽数量
    * 这个逻辑与 html-renderer/layouts 中的渲染逻辑保持一致
    * 
    * 支持图片插槽的布局：
    * - image_full: 必须有1个图片 (image_src)
-   * - title_content: 可选1个配图 (image)
+   * - title_content / vocational_content: 可选1个配图 (image)
    * - title_bullets: 可选1个配图 (image)
    * - process_steps: 可选1个配图 (image)
-   * - two_column: 左右栏如果是image类型，各有1个图片 (left.image_src, right.image_src)
+   * - two_column / vocational_comparison: 左右栏如果是image类型，各有1个图片 (left.image_src, right.image_src)
    * - cover: 可选背景图 (background_image)
    * 
    * 不支持图片插槽的布局：
@@ -336,10 +353,7 @@ export const SlidePreview: React.FC = () => {
 
     // edu_cover：hero_image 插槽
     if (layoutId === 'edu_cover') {
-      const variant = String((htmlModel as any)?.variant || 'a').toLowerCase();
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/f63d39ca-6fcd-4fcb-87bf-224f2267b8e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b939cf'},body:JSON.stringify({sessionId:'b939cf',location:'SlidePreview.tsx:getPageImageSlotCount',message:'edu_cover slot count',data:{layoutId,variant,result:variant==='a'?1:0},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
+      const variant = resolveLayoutVariant(htmlModel);
       return variant === 'a' ? 1 : 0;
     }
 
@@ -348,8 +362,8 @@ export const SlidePreview: React.FC = () => {
       return 1;
     }
 
-    // two_column 布局：检查左右栏是否有图片类型
-    if (layoutId === 'two_column' && htmlModel) {
+    // two_column / vocational_comparison 布局：检查左右栏是否有图片类型
+    if ((layoutId === 'two_column' || layoutId === 'vocational_comparison') && htmlModel) {
       let count = 0;
       const left = htmlModel.left as unknown as Record<string, unknown> | undefined;
       const right = htmlModel.right as unknown as Record<string, unknown> | undefined;
@@ -358,10 +372,10 @@ export const SlidePreview: React.FC = () => {
       return count;
     }
 
-    // title_content, title_bullets, process_steps 布局：
+    // title_content, vocational_content, title_bullets, process_steps 布局：
     // 这些布局总是支持1个可选配图插槽
     // 我们会在 convertPageToPayload 中自动添加默认的 image 字段
-    if (['title_content', 'title_bullets', 'process_steps'].includes(layoutId || '')) {
+    if (['title_content', 'vocational_content', 'title_bullets', 'process_steps'].includes(layoutId || '')) {
       return shouldUseOptionalImageSlot(page, htmlModel) ? 1 : 0;
     }
 
@@ -370,13 +384,8 @@ export const SlidePreview: React.FC = () => {
       return 1;
     }
 
-    // edu_cover 布局：有1个封面图插槽 (hero_image)
-    if (layoutId === 'edu_cover') {
-      return 1;
-    }
-
     return 0;
-  }, [inferTwoColumnPartType, isHtmlMode, shouldUseOptionalImageSlot]);
+  }, [inferTwoColumnPartType, isHtmlMode, resolveLayoutVariant, shouldUseOptionalImageSlot]);
 
   // 辅助函数：判断页面是否有图片插槽
   const pageHasImageSlot = useCallback((page: Page): boolean => {
@@ -432,6 +441,15 @@ export const SlidePreview: React.FC = () => {
       const layoutId = normalizeLayoutId(page.layout_id as LayoutId);
       console.log('[convertPageToPayload] Normalized layout_id:', layoutId);
       let model = { ...page.html_model } as Record<string, unknown>;
+      const outlineContent = page.outline_content
+        ? ({ ...page.outline_content } as Record<string, unknown>)
+        : undefined;
+      const outlineVariant = typeof outlineContent?.layout_variant === 'string'
+        ? outlineContent.layout_variant
+        : undefined;
+      const variantId = resolveLayoutVariant(model, outlineVariant);
+      model.variant = variantId;
+      model.layout_variant = variantId;
 
       // 如果是章节页，使用计算好的章节编号映射（使编号按实际顺序递增）
       if (layoutId === 'section_title') {
@@ -440,17 +458,13 @@ export const SlidePreview: React.FC = () => {
           model.section_number = correctSectionNumber;
         }
       }
-
-      const outlineContent = page.outline_content
-        ? ({ ...page.outline_content } as Record<string, unknown>)
-        : undefined;
       const outlineHasImage = typeof outlineContent?.has_image === 'boolean'
         ? outlineContent.has_image
         : undefined;
 
       // 为支持图片的布局按需添加默认 image 字段（如果不存在）
       // 只有 outline 明确要求配图时才补占位，避免页面同质化为左文右图
-      const layoutsWithOptionalImage = ['title_content', 'title_bullets', 'process_steps'];
+      const layoutsWithOptionalImage = ['title_content', 'vocational_content', 'title_bullets', 'process_steps'];
       if (layoutsWithOptionalImage.includes(layoutId) && outlineHasImage === true && !('image' in model)) {
         const defaultWidth = layoutId === 'process_steps' ? '80%' : '45%';
         // 添加默认的image字段，src为空字符串会显示占位符
@@ -476,8 +490,8 @@ export const SlidePreview: React.FC = () => {
         model.image_alt = page.outline_content?.title || '图片';
       }
 
-      // two_column 布局：补齐左右栏 type 并标准化 bullets 字段
-      if (layoutId === 'two_column') {
+      // two_column / vocational_comparison 布局：补齐左右栏 type 并标准化 bullets 字段
+      if (layoutId === 'two_column' || layoutId === 'vocational_comparison') {
         const left = model.left as unknown as Record<string, unknown> | undefined;
         const right = model.right as unknown as Record<string, unknown> | undefined;
         model.left = normalizeTwoColumnPart(left);
@@ -622,6 +636,13 @@ export const SlidePreview: React.FC = () => {
       };
     }
 
+    const outlineVariant = typeof outlineRecord.layout_variant === 'string'
+      ? outlineRecord.layout_variant
+      : undefined;
+    const variantId = resolveLayoutVariant(model, outlineVariant);
+    model.variant = variantId;
+    model.layout_variant = variantId;
+
     // 应用上传的图片到模型
     model = applyUploadedImagesToModel(pageId, model);
 
@@ -631,7 +652,7 @@ export const SlidePreview: React.FC = () => {
       layout_id: layoutId,
       model: model as unknown as PagePayload['model'],
     };
-  }, [applyUploadedImagesToModel, normalizeTwoColumnPart, sectionNumberMap]);
+  }, [applyUploadedImagesToModel, normalizeTwoColumnPart, resolveLayoutVariant, sectionNumberMap]);
 
   // 根据页面与布局生成 HTML 模式图片插槽
   const buildHtmlImageSlots = useCallback((pages: Page[], onlyIndex?: number): HtmlImageSlot[] => {
@@ -714,10 +735,13 @@ export const SlidePreview: React.FC = () => {
       if (layoutId === 'process_steps') {
         return '生成“流程步骤图”，必须体现先后顺序与动作结果，含1个主体和3-4个流程节点。';
       }
+      if (layoutId === 'vocational_content') {
+        return '生成“案例/讲解配图”，用于支撑职业情境说明，突出具体对象、操作场景或案例证据。';
+      }
       if (layoutId === 'title_bullets') {
         return '生成“要点解释图”，画面需对应页面要点，至少体现3个相关元素之间关系。';
       }
-      if (layoutId === 'two_column') {
+      if (layoutId === 'two_column' || layoutId === 'vocational_comparison') {
         if (slotPath.startsWith('left')) {
           return '该图用于左栏，对应“左侧观点/方案”，与右栏形成对比。';
         }
@@ -729,7 +753,7 @@ export const SlidePreview: React.FC = () => {
       if (layoutId === 'image_full') {
         return '生成“整页核心场景图”，突出主题对象与关键情境。';
       }
-      if (layoutId === 'edu_cover' || layoutId === 'cover' || slotPath === 'hero_image' || slotPath === 'background_image') {
+      if (layoutId === 'cover' || slotPath === 'hero_image' || slotPath === 'background_image') {
         return '生成“封面辅助图”，强化主题识别，主体靠边，中心留白给标题，禁止文字/数字/Logo/水印。';
       }
       return '生成“概念解释图”，用于辅助理解，不是背景纹理图。';
@@ -817,13 +841,15 @@ export const SlidePreview: React.FC = () => {
         case 'image_full':
           if (!model.image_src) push('image_src');
           break;
-        case 'two_column': {
+        case 'two_column':
+        case 'vocational_comparison': {
           const left = model.left as unknown as Record<string, unknown> | undefined;
           const right = model.right as unknown as Record<string, unknown> | undefined;
           if (inferTwoColumnPartType(left) === 'image' && !left?.image_src) push('left.image_src');
           if (inferTwoColumnPartType(right) === 'image' && !right?.image_src) push('right.image_src');
           break;
         }
+        case 'vocational_content':
         case 'title_bullets':
         case 'title_content':
         case 'process_steps':
@@ -912,6 +938,7 @@ export const SlidePreview: React.FC = () => {
       if (!payload) return sum;
       const model = payload.model as any;
       switch (normalizeLayoutId(payload.layout_id as LayoutId)) {
+        case 'vocational_content':
         case 'title_content':
         case 'title_bullets':
         case 'process_steps':
@@ -921,7 +948,8 @@ export const SlidePreview: React.FC = () => {
         case 'edu_cover':
         case 'cover':
           return sum + 1;
-        case 'two_column': {
+        case 'two_column':
+        case 'vocational_comparison': {
           let count = 0;
           if (inferTwoColumnPartType(model.left as Record<string, unknown> | undefined) === 'image') count += 1;
           if (inferTwoColumnPartType(model.right as Record<string, unknown> | undefined) === 'image') count += 1;
@@ -939,27 +967,46 @@ export const SlidePreview: React.FC = () => {
     return convertPageToPayload(currentProject.pages[selectedIndex], selectedIndex);
   }, [isHtmlMode, currentProject?.pages, selectedIndex, convertPageToPayload]);
 
-  // 主预览区缩放：用 JS 测量容器宽度并计算 scale，兼容不支持 calc(长度/长度) 的浏览器（如 Chrome 122）
+  // 主预览区缩放：按可用舞台的宽高同时计算，确保窗口变化时始终保持比例适配
   useEffect(() => {
     const el = previewContainerRef.current;
     if (!el) return;
-    const update = () => setPreviewScale(el.getBoundingClientRect().width / 1280);
+    const update = () => {
+      const { width, height } = el.getBoundingClientRect();
+      const nextScale = getScaleToFit(
+        width,
+        height,
+        htmlTheme.sizes.slideWidth,
+        htmlTheme.sizes.slideHeight
+      );
+      if (nextScale > 0) {
+        setPreviewScale(nextScale);
+      }
+    };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [isHtmlMode, selectedPagePayload]);
+  }, [isHtmlMode, selectedPagePayload, htmlTheme.sizes.slideWidth, htmlTheme.sizes.slideHeight]);
 
-  // 缩略图缩放：用 JS 测量第一个缩略图容器宽度（同列等宽），兼容不支持 calc(长度/长度) 的浏览器
+  // 缩略图缩放：用 JS 测量第一个缩略图容器宽度（同列等宽），保持 16:9 等比例缩放
   useEffect(() => {
     const el = thumbnailContainerRef.current;
     if (!el) return;
-    const update = () => setThumbnailScale(el.getBoundingClientRect().width / 1280);
+    const update = () => {
+      const nextScale = getWidthFitScale(
+        el.getBoundingClientRect().width,
+        htmlTheme.sizes.slideWidth
+      );
+      if (nextScale > 0) {
+        setThumbnailScale(nextScale);
+      }
+    };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [isHtmlMode]);
+  }, [isHtmlMode, htmlTheme.sizes.slideWidth]);
 
   // 所有页面的PagePayload（用于HTML导出）
   const allPagesPayload = useMemo(() => {
@@ -1183,33 +1230,86 @@ export const SlidePreview: React.FC = () => {
     if (!currentProject?.pages) return 'a';
     const page = currentProject.pages[selectedIndex];
     const model = page?.html_model as Record<string, unknown> | undefined;
-    const variantId = String(model?.variant || 'a').toLowerCase();
+    const outlineVariant = typeof page?.outline_content?.layout_variant === 'string'
+      ? page.outline_content.layout_variant
+      : undefined;
+    const variantId = resolveLayoutVariant(model, outlineVariant);
     return variantId;
-  }, [currentProject?.pages, selectedIndex]);
+  }, [currentProject?.pages, resolveLayoutVariant, selectedIndex]);
 
   const handleVariantChange = useCallback(async (variantId: string) => {
     if (!currentProject?.pages || !projectId) return;
     const page = currentProject.pages[selectedIndex];
     if (!page?.id) return;
+    if (isVariantUpdating) return;
 
     const existingModel = (page.html_model || {}) as Record<string, unknown>;
-    const updatedModel = { ...existingModel, variant: variantId };
+    const currentVariant = resolveLayoutVariant(existingModel);
+    if (currentVariant === variantId) return;
+    const updatedModel = { ...existingModel, variant: variantId, layout_variant: variantId };
+    const targetPageId = page.id;
 
-    // Optimistic local update: immediately reflect variant in UI
-    const updatedPages = [...currentProject.pages];
-    updatedPages[selectedIndex] = { ...updatedPages[selectedIndex], html_model: updatedModel };
-    useProjectStore.setState({ currentProject: { ...currentProject, pages: updatedPages } });
+    setIsVariantUpdating(true);
+
+    // Optimistic local update: immediately reflect variant in UI (only current page)
+    useProjectStore.setState((state) => {
+      if (!state.currentProject) return state;
+      return {
+        currentProject: {
+          ...state.currentProject,
+          pages: state.currentProject.pages.map((p) =>
+            p.id === targetPageId
+              ? { ...p, html_model: updatedModel as any }
+              : p
+          ),
+        },
+      };
+    });
 
     try {
-      await updatePage(projectId, page.id, { html_model: updatedModel } as any);
-      syncProject(projectId).catch(() => {});
+      const response = await updatePage(projectId, targetPageId, { html_model: updatedModel } as any);
+      if (response.data) {
+        const serverPage = response.data as any;
+        useProjectStore.setState((state) => {
+          if (!state.currentProject) return state;
+          return {
+            currentProject: {
+              ...state.currentProject,
+              pages: state.currentProject.pages.map((p) =>
+                p.id === targetPageId
+                  ? {
+                      ...p,
+                      ...serverPage,
+                      id: serverPage.page_id || serverPage.id || p.id,
+                      generated_image_path: serverPage.generated_image_url || serverPage.generated_image_path || p.generated_image_path,
+                    }
+                  : p
+              ),
+            },
+          };
+        });
+      }
     } catch (error) {
       console.error('Failed to switch variant:', error);
-      // Revert optimistic update on failure
-      useProjectStore.setState({ currentProject });
+      // Revert optimistic update on failure (only target page)
+      useProjectStore.setState((state) => {
+        if (!state.currentProject) return state;
+        return {
+          currentProject: {
+            ...state.currentProject,
+            pages: state.currentProject.pages.map((p) =>
+              p.id === targetPageId
+                ? { ...p, html_model: existingModel as any }
+                : p
+            ),
+          },
+        };
+      });
       notify('切换变体失败', 'error');
+    } finally {
+      setIsVariantUpdating(false);
     }
-  }, [currentProject, selectedIndex, projectId, syncProject, notify]);
+  }, [currentProject, selectedIndex, projectId, notify, isVariantUpdating, resolveLayoutVariant]);
 
   const handleGenerateAll = async () => {
     const pageIds = getSelectedPageIdsForExport();
@@ -1507,20 +1607,6 @@ export const SlidePreview: React.FC = () => {
     setHtmlGlobalBackground('');
     show({ message: '背景图已清除', type: 'success' });
   }, [show]);
-
-  const handleChangeVariant = useCallback(async (variantId: string) => {
-    if (!currentProject?.id) return;
-    const page = currentProject.pages[selectedIndex];
-    if (!page?.id || !page.html_model) return;
-    const newModel = { ...(page.html_model as Record<string, unknown>), variant: variantId };
-    try {
-      await updatePage(currentProject.id, page.id, { html_model: newModel } as any);
-      await syncProject(currentProject.id);
-    } catch (err) {
-      console.error('切换变体失败:', err);
-      show({ message: '切换变体失败', type: 'error' });
-    }
-  }, [currentProject?.id, currentProject?.pages, selectedIndex, syncProject, show]);
 
   // 处理图片上传触发（支持指定页面）
   const triggerImageUpload = useCallback((slotPath: string, pageIdOverride?: string) => {
@@ -2313,7 +2399,7 @@ export const SlidePreview: React.FC = () => {
                           </div>
                           <div className="p-2 bg-white">
                             <p className="text-xs text-gray-600 truncate">
-                              {index + 1}. {page.outline_content?.title || payload.layout_id}
+                              {index + 1}. {page.outline_content?.title || getLayoutDisplayName(payload.layout_id)}
                             </p>
                           </div>
                         </div>
@@ -2353,18 +2439,19 @@ export const SlidePreview: React.FC = () => {
         >
           <>
               {/* 预览区 */}
-              <div className="flex-1 overflow-y-auto min-h-0 flex items-center justify-center p-4 md:p-8">
+              <div className="flex-1 overflow-hidden min-h-0 flex items-center justify-center p-4 md:p-8">
                 <div className="max-w-5xl w-full">
-                  <div className="relative aspect-video bg-white rounded-lg shadow-xl overflow-hidden touch-manipulation">
+                  <div
+                    ref={isHtmlMode ? previewContainerRef : undefined}
+                    className="relative aspect-video bg-white rounded-lg shadow-xl overflow-hidden touch-manipulation flex items-center justify-center"
+                  >
                     {/* HTML渲染模式 */}
                     {isHtmlMode && selectedPagePayload ? (
                       <div
-                        ref={previewContainerRef}
                         style={{
-                          width: '64rem',
-                          height: `calc(64rem * ${htmlTheme.sizes.slideHeight} / 1280)`,
-                          margin: '0 auto',
-                          overflow: 'hidden',
+                          width: htmlTheme.sizes.slideWidth * previewScale,
+                          height: htmlTheme.sizes.slideHeight * previewScale,
+                          flexShrink: 0,
                         }}
                       >
                         <SlideRenderer
@@ -2433,6 +2520,7 @@ export const SlidePreview: React.FC = () => {
                 variants={currentPageVariants ?? undefined}
                 currentVariant={currentPageVariantId}
                 onVariantChange={handleVariantChange}
+                isVariantUpdating={isVariantUpdating}
                 versionMenu={imageVersions.length > 1 ? (
                   <div className="relative">
                     <Button

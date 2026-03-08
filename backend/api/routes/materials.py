@@ -181,7 +181,7 @@ async def generate_material_image(
     )
     task.set_progress({"total": 1, "completed": 0, "failed": 0})
     db.add(task)
-    await db.flush()
+    await db.commit()
 
     from services.ai_service_manager import get_ai_service
     from services.file_service import FileService

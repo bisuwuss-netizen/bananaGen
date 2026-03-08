@@ -291,6 +291,12 @@ class StructuredMixin:
             layout_id=layout_id, model=model,
             constraints=(continuity_context or {}).get('template_constraints') if isinstance(continuity_context, dict) else None
         )
+        layout_variant = str(page_outline.get('layout_variant') or 'a').strip().lower() or 'a'
+        if isinstance(model, dict):
+            model['variant'] = layout_variant
+            model['layout_variant'] = layout_variant
+            if page_outline.get('layout_archetype'):
+                model['layout_archetype'] = page_outline.get('layout_archetype')
 
         if return_metadata:
             return {'model': model, 'closed_promise_ids': closed_promise_ids}
@@ -348,6 +354,12 @@ class StructuredMixin:
                 layout_id=lid, model=model,
                 constraints=context_by_id.get(page_id, {}).get('template_constraints') if isinstance(context_by_id.get(page_id), dict) else None
             )
+            layout_variant = str(page_outline.get('layout_variant') or 'a').strip().lower() or 'a'
+            if isinstance(model, dict):
+                model['variant'] = layout_variant
+                model['layout_variant'] = layout_variant
+                if page_outline.get('layout_archetype'):
+                    model['layout_archetype'] = page_outline.get('layout_archetype')
             output[page_id] = {'model': model, 'closed_promise_ids': closed_ids}
 
         return output
@@ -635,7 +647,11 @@ class StructuredMixin:
             page_id = item.get('page_id')
             source_outline = page_outline_by_id.get(page_id, {})
             layout_variant = str(source_outline.get('layout_variant') or 'a').strip().lower()
-            if isinstance(model, dict) and layout_variant: model['variant'] = layout_variant
+            if isinstance(model, dict) and layout_variant:
+                model['variant'] = layout_variant
+                model['layout_variant'] = layout_variant
+                if source_outline.get('layout_archetype'):
+                    model['layout_archetype'] = source_outline.get('layout_archetype')
             ppt_document['pages'].append({
                 'page_id': page_id, 'order_index': item.get('order_index', 0),
                 'layout_id': item.get('layout_id', 'title_content'), 'model': model,
@@ -876,6 +892,12 @@ class StructuredMixin:
             layout_id=layout_id, model=model,
             constraints=(continuity_context or {}).get('template_constraints') if isinstance(continuity_context, dict) else None
         )
+        layout_variant = str(page_outline.get('layout_variant') or 'a').strip().lower() or 'a'
+        if isinstance(model, dict):
+            model['variant'] = layout_variant
+            model['layout_variant'] = layout_variant
+            if page_outline.get('layout_archetype'):
+                model['layout_archetype'] = page_outline.get('layout_archetype')
 
         if return_metadata:
             return {'model': model, 'closed_promise_ids': closed_promise_ids}
@@ -1108,6 +1130,9 @@ class StructuredMixin:
             layout_variant = str(source_outline.get('layout_variant') or 'a').strip().lower()
             if isinstance(model, dict) and layout_variant:
                 model['variant'] = layout_variant
+                model['layout_variant'] = layout_variant
+                if source_outline.get('layout_archetype'):
+                    model['layout_archetype'] = source_outline.get('layout_archetype')
             ppt_document['pages'].append({
                 'page_id': page_id, 'order_index': item.get('order_index', 0),
                 'layout_id': item.get('layout_id', 'title_content'), 'model': model,

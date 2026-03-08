@@ -15,6 +15,10 @@ const statusConfig: Record<PageStatus, { label: string; className: string }> = {
     label: '已生成描述',
     className: 'bg-blue-100 text-blue-600',
   },
+  HTML_MODEL_GENERATED: {
+    label: '内容已生成',
+    className: 'bg-cyan-100 text-cyan-700',
+  },
   GENERATING: {
     label: '生成中',
     className: 'bg-orange-100 text-orange-600 animate-pulse',
@@ -43,4 +47,3 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
     </span>
   );
 };
-

@@ -9,6 +9,7 @@ import {
   getBaseSlideStyle,
   getTitleStyle,
   getCardStyle,
+  toInlineStyle,
 } from '../utils/styleHelper';
 
 interface PollInteractiveLayoutProps {
@@ -199,6 +200,67 @@ export const PollInteractiveLayout: React.FC<PollInteractiveLayoutProps> = ({ mo
     </section>
   );
 };
+
+export function renderPollInteractiveLayoutHTML(model: PollInteractiveModel, theme: ThemeConfig): string {
+  const { question, options, instruction, background_image } = model;
+
+  const slideStyle = toInlineStyle({
+    ...getBaseSlideStyle(theme),
+    ...(background_image
+      ? {
+        backgroundImage: `url(${background_image})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }
+      : {}),
+  });
+
+  const titleStyle = toInlineStyle({
+    ...getTitleStyle(theme),
+    textAlign: 'center',
+    marginBottom: '16px',
+  });
+
+  const instructionStyle = toInlineStyle({
+    fontSize: theme.sizes.bodySize,
+    color: theme.colors.textLight,
+    textAlign: 'center',
+    marginBottom: '40px',
+  });
+
+  const optionsHTML = options.map((option, index) => {
+    const optionCardStyle = toInlineStyle({
+      ...getCardStyle(theme),
+      padding: '20px 24px',
+      marginBottom: '20px',
+      position: 'relative',
+      overflow: 'hidden',
+    });
+
+    const emojiStyle = toInlineStyle({
+      fontSize: '32px', width: '48px', height: '48px', display: 'flex',
+      alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.backgroundAlt,
+      borderRadius: theme.decorations?.borderRadius || '12px', flexShrink: '0',
+    });
+
+    return `
+    <div style="${optionCardStyle}">
+      <div style="display: flex; align-items: center; gap: 16px; position: relative; z-index: 1;">
+        <div style="${emojiStyle}">${option.emoji || String.fromCharCode(65 + index)}</div>
+        <span style="font-size: ${theme.sizes.bodySize}; color: ${theme.colors.text}; font-weight: 600; flex: 1;">${option.text}</span>
+      </div>
+    </div>`;
+  }).join('\n');
+
+  return `
+<section style="${slideStyle}">
+  <h2 style="${titleStyle}">${question}</h2>
+  ${instruction ? `<p style="${instructionStyle}">📱 ${instruction}</p>` : ''}
+  <div style="max-width: 900px; margin: 0 auto; display: flex; flex-direction: column;">
+    ${optionsHTML}
+  </div>
+</section>`;
+}
 
 // 添加display name用于调试
 PollInteractiveLayout.displayName = 'PollInteractiveLayout';

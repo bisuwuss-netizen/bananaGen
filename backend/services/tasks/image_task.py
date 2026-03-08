@@ -14,7 +14,7 @@ from deps import async_session_factory
 from models import Material, Page, Task
 from services.runtime_state import load_runtime_config, runtime_context
 
-from .utils import save_image_with_version
+from .utils import finalize_generation_task, save_image_with_version
 
 logger = logging.getLogger(__name__)
 
@@ -159,17 +159,21 @@ async def generate_images_task(
 
                 await asyncio.gather(*tasks)
 
-                # Fetch fresh task reference
+                from models import Project
                 task = await session.get(Task, task_id)
+                task_succeeded = True
                 if task:
-                    task.status = "COMPLETED"
-                    task.completed_at = datetime.now()
+                    task_succeeded = finalize_generation_task(
+                        task,
+                        completed=completed,
+                        failed=failed,
+                        finished_at=datetime.utcnow(),
+                    )
                     await session.commit()
 
-                from models import Project
                 project = await session.get(Project, project_id)
-                if project and failed == 0:
-                    project.status = "COMPLETED"
+                if project:
+                    project.status = "COMPLETED" if task_succeeded else "FAILED"
                     await session.commit()
 
             except Exception as exc:
@@ -177,8 +181,14 @@ async def generate_images_task(
                 if task:
                     task.status = "FAILED"
                     task.error_message = str(exc)
-                    task.completed_at = datetime.now()
-                    await session.commit()
+                    task.completed_at = datetime.utcnow()
+
+                from models import Project
+                project = await session.get(Project, project_id)
+                if project:
+                    project.status = "FAILED"
+
+                await session.commit()
 
 
 async def generate_single_page_image_task(

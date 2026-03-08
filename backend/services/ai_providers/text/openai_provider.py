@@ -54,9 +54,8 @@ class OpenAITextProvider(TextProvider):
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ]
+                messages=[{"role": "user", "content": prompt}],
+                extra_body={"enable_thinking": False},
             )
             return response.choices[0].message.content
         except Exception as e:
@@ -69,9 +68,8 @@ class OpenAITextProvider(TextProvider):
         try:
             response = await self.async_client.chat.completions.create(
                 model=self.model,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ]
+                messages=[{"role": "user", "content": prompt}],
+                extra_body={"enable_thinking": False},
             )
             return response.choices[0].message.content
         except Exception as e:

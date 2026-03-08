@@ -31,41 +31,55 @@ export const TocLayout: React.FC<TocLayoutProps> = ({ model, theme }) => {
   };
   const titleStyle = toInlineStyle({ ...getTitleStyle(theme), textShadow: '0 1px 2px rgba(0,0,0,0.1)' });
 
+  // @ts-ignore
+  const isVariantB = String((model as any).layout_variant || (model as any).variant || 'a').toLowerCase() === 'b';
+
   const listContainerStyle = toInlineStyle({
     marginTop: '50px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '24px',
+    display: isVariantB ? 'grid' : 'flex',
+    gridTemplateColumns: isVariantB ? '1fr 1fr' : undefined,
+    flexDirection: isVariantB ? undefined : 'column',
+    columnGap: isVariantB ? '40px' : undefined,
+    rowGap: '24px',
   });
 
   return (
     <section style={slideStyle}>
-      <h2 style={parseStyle(titleStyle)}>{title}</h2>
+      <h2 style={{ ...parseStyle(titleStyle), ...(isVariantB ? { borderBottom: `2px solid ${theme.colors.primary}`, paddingBottom: '16px', display: 'inline-block' } : {}) }}>{title}</h2>
       <div style={parseStyle(listContainerStyle)}>
         {items.map((item) => (
-          <TocItem key={item.index} item={item} theme={theme} />
+          <TocItem key={item.index} item={item} theme={theme} isVariantB={isVariantB} />
         ))}
       </div>
     </section>
   );
 };
 
-const TocItem: React.FC<{ item: { index: number; text: string }; theme: ThemeConfig }> = ({
+const TocItem: React.FC<{ item: { index: number; text: string }; theme: ThemeConfig; isVariantB?: boolean }> = ({
   item,
   theme,
+  isVariantB,
 }) => {
   const itemStyle = toInlineStyle({
     display: 'flex',
     alignItems: 'center',
     gap: '20px',
+    ...(isVariantB ? {
+      backgroundColor: theme.colors.backgroundAlt,
+      padding: '20px',
+      borderRadius: '8px',
+      borderLeft: `4px solid ${theme.colors.secondary}`,
+      boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+    } : {})
   });
 
   const indexStyle = toInlineStyle({
     width: '48px',
     height: '48px',
-    borderRadius: '50%',
-    backgroundColor: theme.colors.secondary,
-    color: '#ffffff',
+    borderRadius: isVariantB ? '8px' : '50%',
+    backgroundColor: isVariantB ? '#ffffff' : theme.colors.secondary,
+    color: isVariantB ? theme.colors.secondary : '#ffffff',
+    border: isVariantB ? `2px solid ${theme.colors.secondary}` : 'none',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -77,7 +91,7 @@ const TocItem: React.FC<{ item: { index: number; text: string }; theme: ThemeCon
   const textStyle = toInlineStyle({
     fontSize: '24px',
     color: theme.colors.text,
-    fontWeight: '500',
+    fontWeight: isVariantB ? '600' : '500',
   });
 
   return (
@@ -127,11 +141,16 @@ export function renderTocLayoutHTML(model: TocModel, theme: ThemeConfig): string
     fontFamily: theme.fonts.title,
   });
 
+  // @ts-ignore
+  const isVariantB = String((model as any).layout_variant || (model as any).variant || 'a').toLowerCase() === 'b';
+
   const listContainerStyle = toInlineStyle({
     marginTop: '50px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '24px',
+    display: isVariantB ? 'grid' : 'flex',
+    gridTemplateColumns: isVariantB ? '1fr 1fr' : undefined,
+    flexDirection: isVariantB ? undefined : 'column',
+    columnGap: isVariantB ? '40px' : undefined,
+    rowGap: '24px',
   });
 
   const itemsHTML = items
@@ -140,14 +159,16 @@ export function renderTocLayoutHTML(model: TocModel, theme: ThemeConfig): string
         display: 'flex',
         alignItems: 'center',
         gap: '20px',
+        ...(isVariantB ? { backgroundColor: theme.colors.backgroundAlt, padding: '20px', borderRadius: '8px', borderLeft: `4px solid ${theme.colors.secondary}`, boxShadow: '0 2px 8px rgba(0,0,0,0.02)' } : {})
       });
 
       const indexStyle = toInlineStyle({
         width: '48px',
         height: '48px',
-        borderRadius: '50%',
-        backgroundColor: theme.colors.secondary,
-        color: '#ffffff',
+        borderRadius: isVariantB ? '8px' : '50%',
+        backgroundColor: isVariantB ? '#ffffff' : theme.colors.secondary,
+        color: isVariantB ? theme.colors.secondary : '#ffffff',
+        border: isVariantB ? `2px solid ${theme.colors.secondary}` : 'none',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -159,7 +180,7 @@ export function renderTocLayoutHTML(model: TocModel, theme: ThemeConfig): string
       const textStyle = toInlineStyle({
         fontSize: '24px',
         color: theme.colors.text,
-        fontWeight: '500',
+        fontWeight: isVariantB ? '600' : '500',
       });
 
       return `<div style="${itemStyle}">
@@ -169,8 +190,12 @@ export function renderTocLayoutHTML(model: TocModel, theme: ThemeConfig): string
     })
     .join('\n    ');
 
+  const finalTitleStyle = isVariantB 
+    ? `${titleStyle} border-bottom: 2px solid ${theme.colors.primary}; padding-bottom: 16px; display: inline-block;`
+    : titleStyle;
+
   return `<section style="${slideStyle}">
-  <h2 style="${titleStyle}">${title}</h2>
+  <h2 style="${finalTitleStyle}">${title}</h2>
   <div style="${listContainerStyle}">
     ${itemsHTML}
   </div>

@@ -11,6 +11,11 @@ class Project(db.Model):
     Project model - represents a PPT project
     """
     __tablename__ = 'projects'
+    GENERATION_TASK_TYPES = {
+        'GENERATE_DESCRIPTIONS',
+        'GENERATE_IMAGES',
+        'GENERATE_PAGE_IMAGE',
+    }
     
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     idea_prompt = db.Column(db.Text, nullable=True)
@@ -39,7 +44,24 @@ class Project(db.Model):
     materials = db.relationship('Material', back_populates='project', lazy='select',
                            cascade='all, delete-orphan')
     
-    def to_dict(self, include_pages=False):
+    def _get_latest_generation_task(self):
+        """Return the latest task that reflects project generation progress."""
+        generation_tasks = [
+            task
+            for task in self.tasks
+            if task.task_type in self.GENERATION_TASK_TYPES
+        ]
+        if not generation_tasks:
+            return None
+
+        def _task_sort_key(task):
+            created_at = task.created_at or datetime.min
+            completed_at = task.completed_at or datetime.min
+            return created_at, completed_at
+
+        return max(generation_tasks, key=_task_sort_key)
+
+    def to_dict(self, include_pages=False, page_summary=False, include_latest_generation_task=False):
         """Convert to dictionary"""
         # Format created_at and updated_at with UTC timezone indicator for proper frontend parsing
         created_at_str = None
@@ -69,12 +91,24 @@ class Project(db.Model):
             'updated_at': updated_at_str,
         }
         
+        sorted_pages = sorted(
+            self.pages,
+            key=lambda p: int(p.order_index) if p.order_index is not None else 999,
+        )
+
+        if sorted_pages:
+            data['preview_page'] = sorted_pages[0].to_dict()
+
         if include_pages:
             # 显式按 order_index 数值排序，确保 joinedload 时也能正确排序
             # 注意：order_index 可能是字符串（DB列类型为VARCHAR时），需要转为 int
-            sorted_pages = sorted(self.pages, key=lambda p: int(p.order_index) if p.order_index is not None else 999)
-            data['pages'] = [page.to_dict() for page in sorted_pages]
-        
+            data['pages'] = [page.to_dict(summary_only=page_summary) for page in sorted_pages]
+
+        if include_latest_generation_task:
+            latest_generation_task = self._get_latest_generation_task()
+            if latest_generation_task:
+                data['latest_generation_task'] = latest_generation_task.to_dict()
+
         return data
     
     def __repr__(self):

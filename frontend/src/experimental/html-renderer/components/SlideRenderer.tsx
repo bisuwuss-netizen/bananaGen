@@ -20,6 +20,12 @@ import {
   // 专属布局Model
   LearningObjectivesModel,
   TheoryExplanationModel,
+  AcademicNarrativeModel,
+  AcademicCaseStudyModel,
+  AcademicComparisonModel,
+  AcademicDiagramModel,
+  AcademicPracticeModel,
+  AcademicEndingModel,
   WarmupQuestionModel,
   PollInteractiveModel,
   TimelineModel,
@@ -46,6 +52,7 @@ import {
   EduLogicFlowModel,
   EduDataBoardModel,
   EduSummaryModel,
+  EduQACaseModel,
 } from '../types/schema';
 import { CoverLayout } from '../layouts/CoverLayout';
 import { TocLayout } from '../layouts/TocLayout';
@@ -60,6 +67,12 @@ import { QuoteLayout } from '../layouts/QuoteLayout';
 // 专属布局组件
 import { LearningObjectivesLayout } from '../layouts/LearningObjectivesLayout';
 import { TheoryExplanationLayout } from '../layouts/TheoryExplanationLayout';
+import { AcademicNarrativeLayout } from '../layouts/AcademicNarrativeLayout';
+import { AcademicCaseStudyLayout } from '../layouts/AcademicCaseStudyLayout';
+import { AcademicComparisonLayout } from '../layouts/AcademicComparisonLayout';
+import { AcademicDiagramLayout } from '../layouts/AcademicDiagramLayout';
+import { AcademicPracticeLayout } from '../layouts/AcademicPracticeLayout';
+import { AcademicEndingLayout } from '../layouts/AcademicEndingLayout';
 import { WarmupQuestionLayout } from '../layouts/WarmupQuestionLayout';
 import { PollInteractiveLayout } from '../layouts/PollInteractiveLayout';
 import { TimelineLayout } from '../layouts/TimelineLayout';
@@ -86,7 +99,11 @@ import { EduTimelineStepsLayout } from '../layouts/EduTimelineStepsLayout';
 import { EduLogicFlowLayout } from '../layouts/EduLogicFlowLayout';
 import { EduDataBoardLayout } from '../layouts/EduDataBoardLayout';
 import { EduSummaryLayout } from '../layouts/EduSummaryLayout';
-import { normalizeLayoutId } from '../layouts';
+import { EduQACaseLayout } from '../layouts/EduQACaseLayout';
+import { VocationalBulletsLayout } from '../layouts/VocationalBulletsLayout';
+import { VocationalContentLayout } from '../layouts/VocationalContentLayout';
+import { VocationalComparisonLayout } from '../layouts/VocationalComparisonLayout';
+import { getLayoutDisplayName, normalizeLayoutId } from '../layouts';
 
 interface SlideRendererProps {
   page: PagePayload;
@@ -162,7 +179,7 @@ export const SlideRenderer: React.FC<SlideRendererProps> = ({
         color: '#c00',
         fontSize: '18px',
       }}>
-        错误: model 为空 (layout: {layout_id})
+        错误: model 为空（布局：{getLayoutDisplayName(layout_id)}）
       </div>
     );
   }
@@ -211,6 +228,18 @@ export const SlideRenderer: React.FC<SlideRendererProps> = ({
         return <LearningObjectivesLayout model={model as LearningObjectivesModel} theme={theme} />;
       case 'theory_explanation':
         return <TheoryExplanationLayout model={model as TheoryExplanationModel} theme={theme} />;
+      case 'academic_narrative':
+        return <AcademicNarrativeLayout model={model as AcademicNarrativeModel} theme={theme} />;
+      case 'case_study':
+        return <AcademicCaseStudyLayout model={model as AcademicCaseStudyModel} theme={theme} />;
+      case 'comparison_table':
+        return <AcademicComparisonLayout model={model as AcademicComparisonModel} theme={theme} />;
+      case 'diagram_illustration':
+        return <AcademicDiagramLayout model={model as AcademicDiagramModel} theme={theme} />;
+      case 'academic_practice':
+        return <AcademicPracticeLayout model={model as AcademicPracticeModel} theme={theme} />;
+      case 'ending_academic':
+        return <AcademicEndingLayout model={model as AcademicEndingModel} theme={theme} />;
 
       // 互动方案专属布局
       case 'warmup_question':
@@ -229,6 +258,29 @@ export const SlideRenderer: React.FC<SlideRendererProps> = ({
         return <SafetyNoticeLayout model={model as SafetyNoticeModel} theme={theme} />;
       case 'detail_zoom':
         return <DetailZoomLayout model={model as DetailZoomModel} theme={theme} />;
+      case 'vocational_bullets':
+        return (
+          <VocationalBulletsLayout
+            model={{ ...(model as TitleBulletsModel), layoutId: layout_id } as TitleBulletsModel}
+            theme={theme}
+          />
+        );
+      case 'vocational_content':
+        return (
+          <VocationalContentLayout
+            model={{ ...(model as TitleContentModel), layoutId: layout_id } as TitleContentModel}
+            theme={theme}
+            onImageUpload={onImageUpload ? () => onImageUpload('image.src') : undefined}
+          />
+        );
+      case 'vocational_comparison':
+        return (
+          <VocationalComparisonLayout
+            model={{ ...(model as TwoColumnModel), layoutId: layout_id } as TwoColumnModel}
+            theme={theme}
+            onImageUpload={onImageUpload}
+          />
+        );
 
       // Modern scheme - 现代创新方案
       case 'sidebar_card':
@@ -268,6 +320,8 @@ export const SlideRenderer: React.FC<SlideRendererProps> = ({
         return <EduDataBoardLayout model={model as EduDataBoardModel} theme={theme} />;
       case 'edu_summary':
         return <EduSummaryLayout model={model as EduSummaryModel} theme={theme} />;
+      case 'edu_qa_case':
+        return <EduQACaseLayout model={model as EduQACaseModel} theme={theme} />;
 
       default:
         return (
@@ -282,7 +336,7 @@ export const SlideRenderer: React.FC<SlideRendererProps> = ({
               color: '#666',
             }}
           >
-            未知布局类型: {layout_id}
+            未知布局类型：{getLayoutDisplayName(layout_id)}
           </div>
         );
       }
@@ -306,7 +360,7 @@ export const SlideRenderer: React.FC<SlideRendererProps> = ({
             渲染错误
           </div>
           <div style={{ fontSize: '16px' }}>
-            布局: {layout_id} (normalized: {normalizedLayoutId})
+            布局：{getLayoutDisplayName(layout_id)}（内部标识：{normalizedLayoutId}）
           </div>
           <div style={{ fontSize: '14px', marginTop: '10px', color: '#666' }}>
             {error instanceof Error ? error.message : String(error)}

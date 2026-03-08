@@ -46,6 +46,16 @@ VARIANT_POOLS_BY_BASE_LAYOUT: Dict[str, List[str]] = {
     "edu_data_board": ["a", "b"],
     "edu_summary": ["a", "b"],
     "edu_qa_case": ["a", "b", "c", "d"],
+    # Academic scheme
+    "learning_objectives": ["a", "b"],
+    "theory_explanation": ["a", "b"],
+    "academic_narrative": ["a", "b"],
+    "key_concepts": ["a", "b"],
+    "academic_practice": ["a", "b"],
+    "case_study": ["a", "b"],
+    "comparison_table": ["a", "b"],
+    "diagram_illustration": ["a", "b"],
+    "ending_academic": ["a", "b"],
 }
 
 # capacity_profile: max content each variant can hold.
@@ -89,6 +99,42 @@ CAPACITY_PROFILES: Dict[str, Dict[str, Dict[str, Any]]] = {
         "a": {"max_items": 6, "max_chars_per_item": 80, "max_total_chars": 600},
         "b": {"max_items": 5, "max_chars_per_item": 100, "max_total_chars": 600},
     },
+    "learning_objectives": {
+        "a": {"max_items": 4, "max_chars_per_item": 100, "max_total_chars": 450},
+        "b": {"max_items": 6, "max_chars_per_item": 80, "max_total_chars": 500},
+    },
+    "theory_explanation": {
+        "a": {"max_items": 4, "max_chars_per_item": 300, "max_total_chars": 1200}, # 适合较多纯理论
+        "b": {"max_items": 4, "max_chars_per_item": 200, "max_total_chars": 800},  # 图文/公式版更需简练
+    },
+    "academic_narrative": {
+        "a": {"max_items": 3, "max_chars_per_item": 400, "max_total_chars": 1500},
+        "b": {"max_items": 3, "max_chars_per_item": 500, "max_total_chars": 1800},
+    },
+    "key_concepts": {
+        "a": {"max_items": 5, "max_chars_per_item": 150, "max_total_chars": 800},
+        "b": {"max_items": 6, "max_chars_per_item": 120, "max_total_chars": 800},
+    },
+    "academic_practice": {
+        "a": {"max_items": 6, "max_chars_per_item": 100, "max_total_chars": 600},
+        "b": {"max_items": 5, "max_chars_per_item": 150, "max_total_chars": 800},
+    },
+    "case_study": {
+        "a": {"max_items": 4, "max_chars_per_item": 150, "max_total_chars": 800},
+        "b": {"max_items": 3, "max_chars_per_item": 250, "max_total_chars": 1000},
+    },
+    "comparison_table": {
+        "a": {"max_items": 3, "max_chars_per_item": 200, "max_total_chars": 700},
+        "b": {"max_items": 4, "max_chars_per_item": 150, "max_total_chars": 800},
+    },
+    "diagram_illustration": {
+        "a": {"max_items": 5, "max_chars_per_item": 150, "max_total_chars": 800},
+        "b": {"max_items": 4, "max_chars_per_item": 200, "max_total_chars": 800},
+    },
+    "ending_academic": {
+        "a": {"max_items": 6, "max_chars_per_item": 100, "max_total_chars": 600},
+        "b": {"max_items": 4, "max_chars_per_item": 150, "max_total_chars": 600},
+    },
 }
 
 # For each layout, preferred fallback order when capacity overflows.
@@ -103,6 +149,15 @@ FALLBACK_ORDER: Dict[str, List[str]] = {
     "edu_summary": ["a", "b"],
     "edu_qa_case": ["b", "c", "a", "d"],
     "title_bullets": ["a", "b"],
+    "learning_objectives": ["a", "b"],
+    "theory_explanation": ["a", "b"],
+    "academic_narrative": ["b", "a"], # 文字多时优先用大容量的 b
+    "key_concepts": ["a", "b"],
+    "academic_practice": ["a", "b"],
+    "case_study": ["b", "a"],
+    "comparison_table": ["a", "b"],
+    "diagram_illustration": ["a", "b"],
+    "ending_academic": ["a", "b"],
 }
 
 
@@ -212,7 +267,15 @@ def assign_layout_variants(
             relaxed_run.append(variant)
 
         candidates = preferred or relaxed_cap or relaxed_run
-        candidates.sort(key=lambda variant: (base_usage.get(variant, 0), _stable_rank(f"{page_index}:{variant}:{page.get('title', '')}", seed)))
+
+        def _rank_with_seed(value: str) -> int:
+            try:
+                return _stable_rank(value, seed)
+            except TypeError:
+                # Keep compatibility with tests or monkeypatches that provide 1-arg rank functions.
+                return _stable_rank(value)
+
+        candidates.sort(key=lambda variant: (base_usage.get(variant, 0), _rank_with_seed(f"{page_index}:{variant}:{page.get('title', '')}")))
         chosen = candidates[0] if candidates else pool[0]
 
         page["layout_variant"] = chosen

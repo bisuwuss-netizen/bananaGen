@@ -90,9 +90,10 @@ class Page(db.Model):
         else:
             self.html_model = None
 
-    def to_dict(self, include_versions=False):
+    def to_dict(self, include_versions=False, summary_only=False):
         """Convert to dictionary"""
         description = self.get_description_content()
+        html_model = self.get_html_model()
         continuity = {}
         if isinstance(description, dict):
             continuity = description.get('continuity') if isinstance(description.get('continuity'), dict) else {}
@@ -102,20 +103,24 @@ class Page(db.Model):
             'order_index': int(self.order_index) if self.order_index is not None else 0,
             'part': self.part,
             'outline_content': self.get_outline_content(),
-            'description_content': description,
             'layout_id': self.layout_id,
-            'html_model': self.get_html_model(),
             'closed_promise_ids': continuity.get('closed_promise_ids', []),
             'missing_required_close_promise_ids': continuity.get('missing_required_close_promise_ids', []),
             'generated_image_url': f'/files/{self.project_id}/pages/{self.generated_image_path.split("/")[-1]}' if self.generated_image_path else None,
+            'has_description_content': description is not None,
+            'has_html_model': isinstance(html_model, dict) and bool(html_model),
             'status': self.status,
             'created_at': format_datetime_to_iso(self.created_at, add_utc_z=True),
             'updated_at': format_datetime_to_iso(self.updated_at, add_utc_z=True),
         }
-        
+
+        if not summary_only:
+            data['description_content'] = description
+            data['html_model'] = html_model
+
         if include_versions:
             data['image_versions'] = [v.to_dict() for v in self.image_versions.all()]
-        
+
         return data
     
     def __repr__(self):

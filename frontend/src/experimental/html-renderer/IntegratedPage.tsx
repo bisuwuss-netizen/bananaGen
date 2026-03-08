@@ -7,7 +7,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { PPTDocument, PagePayload, ThemeConfig } from './types/schema';
 import { techBlueTheme } from './themes/tech-blue';
 import { SlideRenderer } from './components/SlideRenderer';
-import { renderLayoutHTML } from './layouts';
+import { getLayoutDisplayName, renderLayoutHTML } from './layouts';
 import {
   generateHTMLDocument,
   downloadHTML,
@@ -410,7 +410,7 @@ export const IntegratedPage: React.FC = () => {
                   <SlideRenderer page={page} theme={theme} scale={thumbnailScale} />
                 </div>
                 <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#a0a0a0' }}>
-                  {index + 1}. {String(((page.model as unknown as Record<string, unknown>)?.title) || page.layout_id)}
+                  {index + 1}. {String(((page.model as unknown as Record<string, unknown>)?.title) || getLayoutDisplayName(page.layout_id))}
                 </p>
               </div>
             ))}
@@ -544,7 +544,7 @@ export const IntegratedPage: React.FC = () => {
           >
             <span style={{ color: '#a0a0a0', fontSize: '13px' }}>
               第 {selectedPageIndex + 1} / {pptDoc.pages.length} 页 | 布局：
-              <span style={{ color: '#ed8936' }}>{selectedPage?.layout_id}</span>
+              <span style={{ color: '#ed8936' }}>{getLayoutDisplayName(selectedPage?.layout_id)}</span>
             </span>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
@@ -609,7 +609,7 @@ export const IntegratedPage: React.FC = () => {
             </div>
             <div style={{ marginBottom: '10px' }}>
               <span style={{ color: '#a0a0a0' }}>布局类型：</span>
-              <span style={{ color: '#ed8936' }}>{selectedPage.layout_id}</span>
+              <span style={{ color: '#ed8936' }}>{getLayoutDisplayName(selectedPage.layout_id)}</span>
             </div>
             <div style={{ marginBottom: '10px' }}>
               <span style={{ color: '#a0a0a0' }}>排序索引：</span>

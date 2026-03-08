@@ -3,12 +3,7 @@ import { Edit2, FileText, RefreshCw, Code, Layout } from 'lucide-react';
 import { Card, ContextualStatusBadge, Button, Modal, Textarea, Skeleton, Markdown } from '@/components/shared';
 import { useDescriptionGeneratingState } from '@/hooks/useGeneratingState';
 import type { Page, DescriptionContent, LayoutId } from '@/types';
-import { layoutNames, normalizeLayoutId } from '@/experimental/html-renderer/layouts';
-
-const getLayoutDisplayName = (layoutId: LayoutId): string => {
-  const normalized = normalizeLayoutId(layoutId);
-  return layoutNames[normalized] || layoutId;
-};
+import { getLayoutDisplayName } from '@/experimental/html-renderer/layouts';
 
 export interface DescriptionCardProps {
   page: Page;
@@ -43,184 +38,194 @@ export const DescriptionCard: React.FC<DescriptionCardProps> = ({
   // 从 html_model 提取显示内容摘要
   const getHtmlModelSummary = (htmlModel: Record<string, unknown> | undefined): string => {
     if (!htmlModel) return '';
-    
-    // 提取主要文本字段作为摘要
+
     const parts: string[] = [];
-    if (htmlModel.title) parts.push(`**${htmlModel.title}**`);
-    if (htmlModel.subtitle) parts.push(htmlModel.subtitle as string);
-    
-    // 处理封面页的额外字段（author, department, date）
-    const metaFields: string[] = [];
-    if (htmlModel.author) metaFields.push(htmlModel.author as string);
-    if (htmlModel.department) metaFields.push(htmlModel.department as string);
-    if (htmlModel.date) metaFields.push(htmlModel.date as string);
-    if (metaFields.length > 0) {
-      parts.push(metaFields.join(' · '));
-    }
-    
-    // 处理 description 字段（cinematic_overlay, dark_math, overlap 等）
-    if (htmlModel.description && typeof htmlModel.description === 'string') {
-      parts.push(htmlModel.description as string);
-    }
-    
-    // 处理 key_point 字段（overlap 布局）
-    if (htmlModel.key_point && typeof htmlModel.key_point === 'string') {
-      parts.push(`💡 ${htmlModel.key_point}`);
-    }
-    
-    // 处理 note 字段（dark_math 布局）
-    if (htmlModel.note && typeof htmlModel.note === 'string') {
-      parts.push(`📝 ${htmlModel.note}`);
-    }
-    
-    // 处理 metric 字段（cinematic_overlay 布局）
+    const seen = new Set<string>();
+
+    const normalizeText = (value: unknown): string => {
+      if (typeof value === 'string') return value.trim();
+      if (typeof value === 'number') return String(value);
+      return '';
+    };
+
+    const isMeaningful = (text: string): boolean => {
+      if (!text) return false;
+      return !/^[•·\-–—.,;:，。；：、\s]+$/.test(text);
+    };
+
+    const addPart = (value: unknown, prefix = '') => {
+      const text = normalizeText(value);
+      if (!isMeaningful(text)) return;
+      const line = `${prefix}${text}`.trim();
+      if (!line || seen.has(line)) return;
+      seen.add(line);
+      parts.push(line);
+    };
+
+    const addTextList = (value: unknown, prefix = '• ') => {
+      if (!Array.isArray(value)) return;
+      value.forEach((item) => addPart(item, prefix));
+    };
+
+    const titleText = normalizeText(htmlModel.title);
+    if (isMeaningful(titleText)) addPart(`**${titleText}**`);
+    addPart(htmlModel.subtitle);
+
+    const meta = [htmlModel.author, htmlModel.department, htmlModel.date]
+      .map((value) => normalizeText(value))
+      .filter((text) => isMeaningful(text));
+    if (meta.length > 0) addPart(meta.join(' · '));
+
+    addPart(htmlModel.description);
+    addPart(htmlModel.key_point, '💡 ');
+    addPart(htmlModel.note, '📝 ');
+    addPart(htmlModel.scenario, '场景：');
+    addPart(htmlModel.challenge, '挑战：');
+    addPart(htmlModel.conclusion, '结论：');
+    addPart(htmlModel.summary, '总结：');
+    addPart(htmlModel.next_chapter, '下节：');
+    addPart(htmlModel.pull_quote, '引述：');
+    addPart(htmlModel.hint, '提示：');
+    addPart(htmlModel.question, '❓ ');
+
     if (htmlModel.metric && typeof htmlModel.metric === 'object') {
-      const metric = htmlModel.metric as { value?: string; label?: string };
-      if (metric.value || metric.label) {
-        parts.push(`📊 ${metric.value || ''} ${metric.label || ''}`.trim());
-      }
+      const metric = htmlModel.metric as { value?: unknown; label?: unknown };
+      addPart(`${normalizeText(metric.value)} ${normalizeText(metric.label)}`.trim(), '📊 ');
     }
-    
-    // 处理 content 字段（可能是字符串或字符串数组）
-    if (htmlModel.content) {
-      if (Array.isArray(htmlModel.content)) {
-        parts.push((htmlModel.content as string[]).join('\n'));
-      } else {
-        parts.push(htmlModel.content as string);
-      }
+
+    if (Array.isArray(htmlModel.content)) {
+      addTextList(htmlModel.content);
+    } else {
+      addPart(htmlModel.content);
     }
-    
-    // 处理 bullets 字段（对象数组，需要提取 text 属性）
-    if (htmlModel.bullets && Array.isArray(htmlModel.bullets)) {
-      const bulletTexts = (htmlModel.bullets as { text?: string; description?: string }[])
-        .map((b) => {
-          if (typeof b === 'string') return `• ${b}`;
-          const text = b.text || '';
-          const desc = b.description ? ` - ${b.description}` : '';
-          return `• ${text}${desc}`;
-        })
-        .join('\n');
-      parts.push(bulletTexts);
+
+    addTextList(htmlModel.theory);
+    addTextList(htmlModel.references, '参考：');
+    addTextList(htmlModel.narrative);
+    addTextList(htmlModel.summary_points);
+    addTextList(htmlModel.homework, '作业：');
+    addTextList(htmlModel.requirements, '要求：');
+    addTextList(htmlModel.options, '选项：');
+
+    if (Array.isArray(htmlModel.objectives)) {
+      (htmlModel.objectives as Record<string, unknown>[])
+        .forEach((objective) => {
+          const level = normalizeText(objective.level);
+          const text = normalizeText(objective.text);
+          const hours = objective.hours ? `${normalizeText(objective.hours)}H` : '';
+          const combined = [level ? `[${level}]` : '', text, hours].filter(Boolean).join(' ');
+          addPart(combined, '• ');
+        });
     }
-    
-    // 处理 items 字段（支持多种结构：toc, sidebar_card, grid_matrix 等）
-    if (htmlModel.items && Array.isArray(htmlModel.items)) {
-      const itemTexts = (htmlModel.items as Record<string, unknown>[])
-        .map((item, idx) => {
-          // sidebar_card / grid_matrix: {title, description/subtitle, ...}
-          if (item.title) {
-            const desc = (item.description || item.subtitle || item.text || '') as string;
-            return `${item.index || idx + 1}. **${item.title}**${desc ? ` - ${desc}` : ''}`;
+
+    if (Array.isArray(htmlModel.bullets)) {
+      (htmlModel.bullets as unknown[]).forEach((bullet) => {
+        if (typeof bullet === 'string') {
+          addPart(bullet, '• ');
+          return;
+        }
+        if (!bullet || typeof bullet !== 'object') return;
+        const row = bullet as Record<string, unknown>;
+        const text = normalizeText(row.text);
+        const desc = normalizeText(row.description);
+        addPart([text, desc].filter(Boolean).join(' - '), '• ');
+      });
+    }
+
+    if (Array.isArray(htmlModel.items)) {
+      (htmlModel.items as Record<string, unknown>[]).forEach((item, idx) => {
+        const title = normalizeText(item.title ?? item.name ?? item.text);
+        const desc = normalizeText(item.description ?? item.subtitle);
+        const head = [title, desc].filter(Boolean).join(' - ');
+        addPart(`${item.index ?? idx + 1}. ${head}`.trim());
+        if (Array.isArray(item.features)) {
+          item.features.forEach((feature) => addPart(feature, '  • '));
+        }
+      });
+    }
+
+    if (Array.isArray(htmlModel.steps)) {
+      (htmlModel.steps as Record<string, unknown>[]).forEach((step, idx) => {
+        const number = normalizeText(step.number || idx + 1);
+        const label = normalizeText(step.label || step.title);
+        const desc = normalizeText(step.description);
+        addPart(`${number}. ${[label, desc].filter(Boolean).join(': ')}`.trim());
+      });
+    }
+
+    if (Array.isArray(htmlModel.events)) {
+      (htmlModel.events as Record<string, unknown>[]).forEach((event) => {
+        const year = normalizeText(event.year);
+        const title = normalizeText(event.title);
+        const desc = normalizeText(event.description);
+        addPart(`${year ? `[${year}] ` : ''}${title}${desc ? ` - ${desc}` : ''}`);
+      });
+    }
+
+    if (Array.isArray(htmlModel.columns)) {
+      (htmlModel.columns as Record<string, unknown>[]).forEach((col, idx) => {
+        const title = normalizeText(col.title);
+        const desc = normalizeText(col.description);
+        addPart(`${col.number ?? idx + 1}. ${[title, desc].filter(Boolean).join(': ')}`.trim());
+        if (Array.isArray(col.points)) {
+          col.points.forEach((point) => addPart(point, '  • '));
+        }
+      });
+    }
+
+    if (Array.isArray(htmlModel.formulas)) {
+      (htmlModel.formulas as Record<string, unknown>[]).forEach((formula) => {
+        const latex = normalizeText(formula.latex ?? formula.label);
+        const explanation = normalizeText(formula.explanation);
+        addPart(`${latex}${explanation ? `: ${explanation}` : ''}`, '📐 ');
+      });
+    }
+
+    if (Array.isArray(htmlModel.explanations)) {
+      (htmlModel.explanations as Record<string, unknown>[]).forEach((explanation) => {
+        const label = normalizeText(explanation.label);
+        const desc = normalizeText(explanation.description);
+        addPart(`${label}${desc ? `: ${desc}` : ''}`, '• ');
+      });
+    }
+
+    if (Array.isArray(htmlModel.margin_notes)) {
+      (htmlModel.margin_notes as Record<string, unknown>[]).forEach((note) => {
+        const title = normalizeText(note.title);
+        const content = normalizeText(note.content);
+        addPart(`${title}${content ? `: ${content}` : ''}`, '旁注：');
+      });
+    }
+
+    const appendColumnSummary = (column: unknown, label: string) => {
+      if (!column || typeof column !== 'object') return;
+      const row = column as Record<string, unknown>;
+      const header = normalizeText(row.header ?? row.title);
+      if (header) addPart(`**${label}:** ${header}`);
+      if (Array.isArray(row.content)) row.content.forEach((item) => addPart(item, '  • '));
+      if (Array.isArray(row.points)) row.points.forEach((item) => addPart(item, '  • '));
+      if (Array.isArray(row.bullets)) {
+        (row.bullets as unknown[]).forEach((item) => {
+          if (typeof item === 'string') {
+            addPart(item, '  • ');
+            return;
           }
-          // toc: {index, text}
-          return `${item.index || '•'}. ${item.text || ''}`;
-        })
-        .join('\n');
-      parts.push(itemTexts);
-    }
-    
-    // 处理 steps 字段（用于 process_steps / flow_process 布局）
-    if (htmlModel.steps && Array.isArray(htmlModel.steps)) {
-      const stepTexts = (htmlModel.steps as { number?: number; label?: string; description?: string }[])
-        .map((step) => {
-          const num = step.number || '•';
-          const label = step.label || '';
-          const desc = step.description ? `: ${step.description}` : '';
-          return `${num}. ${label}${desc}`;
-        })
-        .join('\n');
-      parts.push(stepTexts);
-    }
-    
-    // 处理 events 字段（vertical_timeline / timeline 布局）
-    if (htmlModel.events && Array.isArray(htmlModel.events)) {
-      const eventTexts = (htmlModel.events as { year?: string; title?: string; description?: string }[])
-        .map((event) => {
-          const time = event.year ? `[${event.year}] ` : '';
-          const title = event.title || '';
-          const desc = event.description ? ` - ${event.description}` : '';
-          return `${time}${title}${desc}`;
-        })
-        .join('\n');
-      parts.push(eventTexts);
-    }
-    
-    // 处理 columns 字段（tri_column 布局）
-    if (htmlModel.columns && Array.isArray(htmlModel.columns)) {
-      const colTexts = (htmlModel.columns as { number?: number; title?: string; description?: string }[])
-        .map((col) => {
-          const title = col.title || '';
-          const desc = col.description ? `: ${col.description}` : '';
-          return `${col.number || '•'}. ${title}${desc}`;
-        })
-        .join('\n');
-      parts.push(colTexts);
-    }
-    
-    // 处理 formulas 字段（dark_math / theory_explanation 布局）
-    if (htmlModel.formulas && Array.isArray(htmlModel.formulas)) {
-      const formulaTexts = (htmlModel.formulas as { label?: string; latex?: string; explanation?: string }[])
-        .map((f) => {
-          const label = f.label || '';
-          const explanation = f.explanation ? `: ${f.explanation}` : '';
-          return `📐 ${label}${explanation}`;
-        })
-        .join('\n');
-      parts.push(formulaTexts);
-    }
-    
-    // 处理 left/right 字段（two_column / diagonal_split 布局）
-    const formatColumnContent = (column: Record<string, unknown>, label: string) => {
-      const columnTitle = column.header || column.title;
-      if (columnTitle) parts.push(`**${label}:** ${columnTitle}`);
-      
-      // 处理 subtitle
-      if (column.subtitle) parts.push(`  ${column.subtitle}`);
-      
-      // 处理 content 字段（可能是字符串数组）
-      if (column.content && Array.isArray(column.content)) {
-        const contentItems = (column.content as string[])
-          .map((item) => `  • ${item}`)
-          .join('\n');
-        parts.push(contentItems);
-      }
-      
-      // 处理 points 字段（diagonal_split 布局使用 points 而非 bullets）
-      if (column.points && Array.isArray(column.points)) {
-        const pointItems = (column.points as string[])
-          .map((item) => typeof item === 'string' ? `  • ${item}` : `  • ${(item as any).text || ''}`)
-          .join('\n');
-        parts.push(pointItems);
-      }
-      
-      // 处理 bullets 字段（可能是对象数组）
-      if (column.bullets && Array.isArray(column.bullets)) {
-        const bulletItems = (column.bullets as { text?: string }[])
-          .map((b) => typeof b === 'string' ? `  • ${b}` : `  • ${b.text || ''}`)
-          .join('\n');
-        parts.push(bulletItems);
+          if (item && typeof item === 'object') {
+            addPart((item as Record<string, unknown>).text, '  • ');
+          }
+        });
       }
     };
-    
-    if (htmlModel.left && typeof htmlModel.left === 'object') {
-      formatColumnContent(htmlModel.left as Record<string, unknown>, '左栏');
+
+    appendColumnSummary(htmlModel.left, '左栏');
+    appendColumnSummary(htmlModel.right, '右栏');
+
+    if (isMeaningful(normalizeText(htmlModel.quote))) {
+      addPart(`"${normalizeText(htmlModel.quote)}"`);
+      addPart(htmlModel.author, '— ');
     }
-    if (htmlModel.right && typeof htmlModel.right === 'object') {
-      formatColumnContent(htmlModel.right as Record<string, unknown>, '右栏');
-    }
-    
-    // 处理 question 字段（warmup_question, poll_interactive 布局）
-    if (htmlModel.question && typeof htmlModel.question === 'string') {
-      parts.push(`❓ ${htmlModel.question}`);
-    }
-    
-    // 处理 quote 字段（用于 quote 布局）
-    if (htmlModel.quote) {
-      parts.push(`"${htmlModel.quote}"`);
-      if (htmlModel.author) parts.push(`— ${htmlModel.author}`);
-    }
-    
-    return parts.join('\n\n') || JSON.stringify(htmlModel, null, 2);
+
+    return parts.join('\n\n') || '暂无可展示内容';
   };
 
   const text = getDescriptionText(page.description_content);
@@ -378,7 +383,7 @@ export const DescriptionCard: React.FC<DescriptionCardProps> = ({
       <Modal
         isOpen={isViewingJson}
         onClose={() => setIsViewingJson(false)}
-        title={`第 ${index + 1} 页 - 结构化内容 (${page.layout_id || 'unknown'})`}
+        title={`第 ${index + 1} 页 - 结构化内容 (${getLayoutDisplayName(page.layout_id as LayoutId | undefined)})`}
         size="lg"
       >
         <div className="space-y-4">

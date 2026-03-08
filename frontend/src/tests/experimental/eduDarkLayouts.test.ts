@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import React from 'react';
+import { render } from '@testing-library/react';
 import { renderLayoutHTML } from '@/experimental/html-renderer/layouts';
 import { getThemeByScheme } from '@/experimental/html-renderer/themes';
+import { SlideRenderer } from '@/experimental/html-renderer/components/SlideRenderer';
 
 describe('edu dark layouts html render', () => {
   const theme = getThemeByScheme('edu_dark');
@@ -71,11 +74,53 @@ describe('edu dark layouts html render', () => {
         },
         expected: '总结测试',
       },
+      {
+        layoutId: 'edu_qa_case',
+        model: {
+          title: '问答字段映射测试',
+          question: '什么是拓扑优化？',
+          answer: '在约束下求最优材料分布的方法。',
+          analysis: [
+            { title: '分析维度1', content: '需考虑约束与目标函数。' },
+            { title: '分析维度2', content: '要平衡质量与刚度表现。' },
+          ],
+          conclusion: '先建模再验证，避免主观结论。',
+          variant: 'd',
+        },
+        expected: '什么是拓扑优化？',
+      },
     ];
 
     for (const item of cases) {
       const html = renderLayoutHTML(item.layoutId, item.model as any, theme);
       expect(html).toContain(item.expected);
     }
+  });
+
+  it('renders edu_qa_case in SlideRenderer without falling back to unknown layout', () => {
+    const page = {
+      page_id: 'p-edu-qa-case',
+      order_index: 1,
+      layout_id: 'edu_qa_case' as const,
+      model: {
+        title: '问答测试',
+        question: '为什么会出现卡顿？',
+        answer: '主要由资源抢占和配置冲突导致。',
+        analysis: [
+          { title: '根因分析', content: 'GPU 显存占用过高导致响应延迟。' },
+        ],
+        conclusion: '先排查瓶颈再调优配置。',
+        variant: 'd',
+      },
+    };
+
+    const { getByText, queryByText } = render(
+      React.createElement(SlideRenderer, { page: page as any, theme })
+    );
+
+    expect(getByText('为什么会出现卡顿？')).toBeTruthy();
+    expect(getByText('主要由资源抢占和配置冲突导致。')).toBeTruthy();
+    expect(queryByText('这是一个示例问题？')).toBeNull();
+    expect(queryByText(/未知布局类型/)).toBeNull();
   });
 });

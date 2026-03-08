@@ -64,3 +64,7 @@ AGENTS.md
 node_modules/
 .env*
 !.env.example
+.playwright-cli/
+frontend/.npm-cache/
+edu_qa_case_ultimate.html
+tests/html_previews/*.html

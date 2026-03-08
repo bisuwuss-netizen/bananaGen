@@ -9,6 +9,7 @@ import {
   getBaseSlideStyle,
   getTitleStyle,
   getCardStyle,
+  toInlineStyle,
 } from '../utils/styleHelper';
 
 interface WarmupQuestionLayoutProps {
@@ -156,6 +157,48 @@ export const WarmupQuestionLayout: React.FC<WarmupQuestionLayoutProps> = ({ mode
     </section>
   );
 };
+
+export function renderWarmupQuestionLayoutHTML(model: WarmupQuestionModel, theme: ThemeConfig): string {
+  const { question, thinkTime, hints, background_image } = model;
+  const slideStyle = toInlineStyle({
+    ...getBaseSlideStyle(theme),
+    ...(background_image
+      ? {
+        backgroundImage: `url(${background_image})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }
+      : {}),
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+  });
+
+  const questionStyle = toInlineStyle({
+    ...getTitleStyle(theme),
+    fontSize: '36px', textAlign: 'center', maxWidth: '900px', lineHeight: '1.4', marginBottom: '40px',
+  });
+
+  const hintsHTML = (hints || []).map((hint, index) => {
+    const hintCardStyle = toInlineStyle({
+      ...getCardStyle(theme),
+      padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px',
+    });
+    return `
+    <div style="${hintCardStyle}">
+      <div style="width: 32px; height: 32px; border-radius: 50%; background-color: ${theme.colors.secondary}; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; flex-shrink: 0;">${index + 1}</div>
+      <span style="font-size: ${theme.sizes.bodySize}; color: ${theme.colors.text}; line-height: 1.5;">${hint}</span>
+    </div>`;
+  }).join('\n');
+
+  return `
+<section style="${slideStyle}">
+  <div style="width: 120px; height: 120px; border-radius: 50%; background-color: ${theme.colors.secondary}; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 64px; margin-bottom: 30px;">❓</div>
+  <h2 style="${questionStyle}">${question}</h2>
+  ${thinkTime ? `<div style="padding: 12px 24px; border-radius: 20px; background-color: ${theme.colors.accent}; color: #ffffff; font-size: 20px; font-weight: bold; margin-bottom: 40px;">⏱️ 思考时间：${thinkTime}秒</div>` : ''}
+  <div style="max-width: 800px; width: 100%;">
+    ${hintsHTML}
+  </div>
+</section>`;
+}
 
 // 添加display name用于调试
 WarmupQuestionLayout.displayName = 'WarmupQuestionLayout';

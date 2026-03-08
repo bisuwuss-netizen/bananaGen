@@ -190,6 +190,7 @@ def apply_page_model_quality_guard(
         model = {}
 
     safe_model = copy.deepcopy(model)
+    raw_layout = _clean_short(layout_id)
     resolved_layout = _resolve_layout_id(layout_id)
     page_title = _clean_short((page_outline or {}).get("title")) or _clean_short(safe_model.get("title")) or "本页内容"
 
@@ -204,6 +205,22 @@ def apply_page_model_quality_guard(
         safe_model = _guard_two_column_model(safe_model, page_title)
     elif resolved_layout == "process_steps":
         safe_model = _guard_process_steps_model(safe_model, page_title)
+    elif resolved_layout == "learning_objectives":
+        safe_model = _guard_learning_objectives_model(safe_model, page_title, page_outline)
+    elif resolved_layout == "theory_explanation":
+        safe_model = _guard_theory_explanation_model(safe_model, page_title, page_outline)
+    elif resolved_layout == "academic_narrative":
+        safe_model = _guard_academic_narrative_model(safe_model, page_title, page_outline)
+    elif resolved_layout == "case_study":
+        safe_model = _guard_case_study_model(safe_model, page_title, page_outline)
+    elif resolved_layout == "comparison_table":
+        safe_model = _guard_comparison_table_model(safe_model, page_title, page_outline)
+    elif resolved_layout == "diagram_illustration":
+        safe_model = _guard_diagram_illustration_model(safe_model, page_title, page_outline)
+    elif resolved_layout == "academic_practice":
+        safe_model = _guard_academic_practice_model(safe_model, page_title, page_outline)
+    elif raw_layout == "ending_academic":
+        safe_model = _guard_ending_academic_model(safe_model, page_title, page_outline)
     elif resolved_layout == "quote":
         quote = _ensure_sentence(safe_model.get("quote"), f"{page_title}值得反复推敲与验证")
         safe_model["quote"] = quote
@@ -1018,6 +1035,330 @@ def _guard_process_steps_model(model: Dict[str, Any], page_title: str) -> Dict[s
         )
 
     model["steps"] = normalized[:6]
+    return model
+
+
+def _outline_points(page_outline: Optional[Dict[str, Any]]) -> List[str]:
+    if not isinstance(page_outline, dict):
+        return []
+    points = page_outline.get("points")
+    if not isinstance(points, list):
+        return []
+    cleaned: List[str] = []
+    for item in points:
+        text = _clean_short(item)
+        if text:
+            cleaned.append(text)
+    return cleaned[:8]
+
+
+def _safe_text_list(value: Any, max_items: int = 8) -> List[str]:
+    if not isinstance(value, list):
+        value = [value] if value else []
+    result: List[str] = []
+    for item in value:
+        text = _clean_short(item)
+        if not text:
+            continue
+        result.append(text)
+        if len(result) >= max_items:
+            break
+    return result
+
+
+def _guard_learning_objectives_model(
+    model: Dict[str, Any],
+    page_title: str,
+    page_outline: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    objectives = model.get("objectives")
+    if not isinstance(objectives, list):
+        objectives = []
+
+    normalized: List[Dict[str, Any]] = []
+    fallback_points = _outline_points(page_outline)
+    seed_points = fallback_points or [
+        f"{page_title}的核心概念理解",
+        f"{page_title}的方法应用训练",
+        f"{page_title}的综合分析能力",
+    ]
+    levels = ["理解", "应用", "分析"]
+
+    for idx, obj in enumerate(objectives):
+        if not isinstance(obj, dict):
+            continue
+        text = _clean_short(obj.get("text"))
+        if not text:
+            continue
+        level = _clean_short(obj.get("level")) or levels[min(idx, len(levels) - 1)]
+        hours = obj.get("hours")
+        normalized.append(
+            {
+                "text": text,
+                "level": level,
+                "hours": int(hours) if isinstance(hours, (int, float)) else 1,
+                "checked": bool(obj.get("checked", False)),
+            }
+        )
+
+    while len(normalized) < 3:
+        idx = len(normalized)
+        seed = seed_points[idx] if idx < len(seed_points) else f"{page_title}学习目标{idx + 1}"
+        normalized.append(
+            {
+                "text": _ensure_sentence(seed, f"{page_title}学习目标"),
+                "level": levels[min(idx, len(levels) - 1)],
+                "hours": 1,
+                "checked": False,
+            }
+        )
+
+    model["title"] = _clean_short(model.get("title")) or page_title
+    model["objectives"] = normalized[:6]
+    model["course_code"] = _clean_short(model.get("course_code")) or "COURSE-101"
+    return model
+
+
+def _guard_theory_explanation_model(
+    model: Dict[str, Any],
+    page_title: str,
+    page_outline: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    theory = [_ensure_sentence(item, f"{page_title}的理论阐述") for item in _safe_text_list(model.get("theory"), max_items=4)]
+    seed_points = _outline_points(page_outline)
+    while len(theory) < 2:
+        seed = seed_points[len(theory)] if len(seed_points) > len(theory) else f"{page_title}的核心原理与适用边界"
+        theory.append(_ensure_sentence(seed, f"{page_title}的核心原理与适用边界"))
+
+    formulas = model.get("formulas")
+    normalized_formulas: List[Dict[str, str]] = []
+    if isinstance(formulas, list):
+        for item in formulas:
+            if not isinstance(item, dict):
+                continue
+            latex = _clean_short(item.get("latex"))
+            explanation = _ensure_sentence(item.get("explanation"), f"说明该表达式在{page_title}中的意义")
+            if latex:
+                normalized_formulas.append({"latex": latex, "explanation": explanation})
+    if not normalized_formulas:
+        normalized_formulas.append(
+            {
+                "latex": "y=f(x)",
+                "explanation": _ensure_sentence("", f"给出{page_title}中变量关系的定性解释"),
+            }
+        )
+
+    references = _safe_text_list(model.get("references"), max_items=4)
+    if not references:
+        references = [f"{page_title}相关教材章节", "课程讲义与课堂笔记"]
+
+    model["title"] = _clean_short(model.get("title")) or page_title
+    model["theory"] = theory[:4]
+    model["formulas"] = normalized_formulas[:4]
+    model["references"] = references[:4]
+    return model
+
+
+def _guard_academic_narrative_model(
+    model: Dict[str, Any],
+    page_title: str,
+    page_outline: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    narrative = [_ensure_sentence(item, f"{page_title}的叙述内容") for item in _safe_text_list(model.get("narrative"), max_items=4)]
+    seeds = _outline_points(page_outline)
+    while len(narrative) < 2:
+        seed = seeds[len(narrative)] if len(seeds) > len(narrative) else f"{page_title}的定义、机制与教学应用"
+        narrative.append(_ensure_sentence(seed, f"{page_title}的定义、机制与教学应用"))
+
+    margin_notes = model.get("margin_notes")
+    normalized_notes: List[Dict[str, str]] = []
+    if isinstance(margin_notes, list):
+        for note in margin_notes:
+            if not isinstance(note, dict):
+                continue
+            title = _clean_short(note.get("title"))
+            content = _ensure_sentence(note.get("content"), f"补充解释{page_title}中的关键术语")
+            if title:
+                normalized_notes.append({"title": title, "content": content})
+    if not normalized_notes:
+        normalized_notes = [
+            {
+                "title": "核心概念",
+                "content": _ensure_sentence("", f"概括{page_title}涉及的关键概念与边界条件"),
+            }
+        ]
+
+    model["title"] = _clean_short(model.get("title")) or page_title
+    model["narrative"] = narrative[:4]
+    model["margin_notes"] = normalized_notes[:3]
+    model["pull_quote"] = _ensure_sentence(
+        model.get("pull_quote"),
+        f"{page_title}强调“概念准确、逻辑严谨、应用可验证”",
+    )
+    return model
+
+
+def _guard_case_study_model(
+    model: Dict[str, Any],
+    page_title: str,
+    page_outline: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    points = model.get("points")
+    normalized_points: List[Dict[str, str]] = []
+    if isinstance(points, list):
+        for idx, point in enumerate(points):
+            if not isinstance(point, dict):
+                continue
+            title = _clean_short(point.get("title")) or f"分析点{idx + 1}"
+            description = _ensure_sentence(
+                point.get("description"),
+                f"说明{title}在案例中的成因、动作与结果",
+            )
+            normalized_points.append({"title": title, "description": description})
+
+    seed_points = _outline_points(page_outline)
+    while len(normalized_points) < 3:
+        idx = len(normalized_points)
+        title = seed_points[idx] if idx < len(seed_points) else f"分析点{idx + 1}"
+        normalized_points.append(
+            {
+                "title": _clean_short(title) or f"分析点{idx + 1}",
+                "description": _ensure_sentence("", f"围绕{title}给出问题、方法与启示"),
+            }
+        )
+
+    model["title"] = _clean_short(model.get("title")) or page_title
+    model["scenario"] = _ensure_sentence(model.get("scenario"), f"{page_title}的案例背景与业务场景")
+    model["challenge"] = _ensure_sentence(model.get("challenge"), f"{page_title}中的关键挑战与约束")
+    model["points"] = normalized_points[:4]
+    model["conclusion"] = _ensure_sentence(model.get("conclusion"), f"{page_title}的可迁移经验与结论")
+    return model
+
+
+def _guard_comparison_table_model(
+    model: Dict[str, Any],
+    page_title: str,
+    page_outline: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    items = model.get("items")
+    normalized_items: List[Dict[str, Any]] = []
+    if isinstance(items, list):
+        for idx, item in enumerate(items):
+            if not isinstance(item, dict):
+                continue
+            name = _clean_short(item.get("name")) or f"方案{idx + 1}"
+            description = _ensure_sentence(item.get("description"), f"{name}的定位与适用条件")
+            features = _safe_text_list(item.get("features"), max_items=4)
+            while len(features) < 2:
+                features.append(f"{name}在典型场景中的关键特征{len(features) + 1}")
+            normalized_items.append(
+                {
+                    "name": name,
+                    "description": description,
+                    "features": features[:4],
+                }
+            )
+
+    while len(normalized_items) < 2:
+        idx = len(normalized_items) + 1
+        name = f"对比维度{idx}"
+        normalized_items.append(
+            {
+                "name": name,
+                "description": _ensure_sentence("", f"{name}的适用边界与实践差异"),
+                "features": [f"{name}特征1", f"{name}特征2"],
+            }
+        )
+
+    model["title"] = _clean_short(model.get("title")) or page_title
+    model["subtitle"] = _clean_short(model.get("subtitle")) or "核心维度对比"
+    model["items"] = normalized_items[:3]
+    model["conclusion"] = _ensure_sentence(model.get("conclusion"), f"{page_title}给出的选择建议与结论")
+    return model
+
+
+def _guard_diagram_illustration_model(
+    model: Dict[str, Any],
+    page_title: str,
+    page_outline: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    explanations = model.get("explanations")
+    normalized: List[Dict[str, str]] = []
+    if isinstance(explanations, list):
+        for idx, row in enumerate(explanations):
+            if not isinstance(row, dict):
+                continue
+            label = _clean_short(row.get("label")) or f"要素{idx + 1}"
+            description = _ensure_sentence(row.get("description"), f"解释{label}的作用与关联关系")
+            normalized.append({"label": label, "description": description})
+
+    seeds = _outline_points(page_outline)
+    while len(normalized) < 3:
+        idx = len(normalized)
+        label = seeds[idx] if idx < len(seeds) else f"要素{idx + 1}"
+        normalized.append(
+            {
+                "label": _clean_short(label) or f"要素{idx + 1}",
+                "description": _ensure_sentence("", f"说明{label}在{page_title}中的位置、输入与输出"),
+            }
+        )
+
+    model["title"] = _clean_short(model.get("title")) or page_title
+    model["subtitle"] = _clean_short(model.get("subtitle")) or "结构图解与机制说明"
+    model["explanations"] = normalized[:5]
+    model["summary"] = _ensure_sentence(model.get("summary"), f"{page_title}的图解结论与实践提示")
+    return model
+
+
+def _guard_academic_practice_model(
+    model: Dict[str, Any],
+    page_title: str,
+    page_outline: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    task_type = _clean_short(model.get("task_type")).lower()
+    options = _safe_text_list(model.get("options"), max_items=6)
+    requirements = _safe_text_list(model.get("requirements"), max_items=6)
+
+    if task_type not in {"quiz", "task"}:
+        task_type = "quiz" if options else "task"
+
+    if task_type == "quiz":
+        while len(options) < 4:
+            options.append(f"{page_title}选项{len(options) + 1}")
+        requirements = []
+    else:
+        while len(requirements) < 3:
+            requirements.append(f"{page_title}实训要求{len(requirements) + 1}")
+        options = []
+
+    model["title"] = _clean_short(model.get("title")) or page_title
+    model["task_type"] = task_type
+    model["description"] = _ensure_sentence(model.get("description"), f"{page_title}的任务背景与完成目标")
+    model["requirements"] = requirements
+    model["options"] = options
+    model["hint"] = _ensure_sentence(model.get("hint"), f"{page_title}的答题或实操提示")
+    return model
+
+
+def _guard_ending_academic_model(
+    model: Dict[str, Any],
+    page_title: str,
+    page_outline: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    summary_points = _safe_text_list(model.get("summary_points"), max_items=6)
+    seeds = _outline_points(page_outline)
+    while len(summary_points) < 3:
+        seed = seeds[len(summary_points)] if len(seeds) > len(summary_points) else f"{page_title}核心要点{len(summary_points) + 1}"
+        summary_points.append(_ensure_sentence(seed, f"{page_title}核心要点"))
+
+    homework = _safe_text_list(model.get("homework"), max_items=4)
+    if not homework:
+        homework = [f"完成与{page_title}相关的巩固练习并整理结论"]
+
+    model["title"] = _clean_short(model.get("title")) or page_title
+    model["summary_points"] = summary_points[:6]
+    model["homework"] = homework[:4]
+    model["next_chapter"] = _ensure_sentence(model.get("next_chapter"), "下一节将进入进阶应用与综合案例")
     return model
 
 

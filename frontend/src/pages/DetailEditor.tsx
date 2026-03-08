@@ -137,6 +137,7 @@ export const DetailEditor: React.FC = () => {
   }
 
   const isHtmlMode = currentProject.render_mode === 'html';
+  const hasPages = currentProject.pages.length > 0;
 
   // 检查是否所有页面都已生成内容（根据模式检查不同字段）
   const hasAllDescriptions = currentProject.pages.every(
@@ -193,7 +194,7 @@ export const DetailEditor: React.FC = () => {
               title=""
               placeholder="例如：让描述更详细、删除第2页的某个要点、强调XXX的重要性... · Ctrl+Enter提交"
               onSubmit={handleAiRefineDescriptions}
-              disabled={false}
+              disabled={!hasPages}
               className="!p-0 !bg-transparent !border-0"
               onStatusChange={setIsAiRefining}
             />
@@ -237,7 +238,7 @@ export const DetailEditor: React.FC = () => {
             title=""
             placeholder="例如：让描述更详细... · Ctrl+Enter"
             onSubmit={handleAiRefineDescriptions}
-            disabled={false}
+            disabled={!hasPages}
             className="!p-0 !bg-transparent !border-0"
             onStatusChange={setIsAiRefining}
           />

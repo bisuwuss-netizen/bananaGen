@@ -165,7 +165,7 @@ async def export_editable_pptx(
         status="PENDING",
     )
     db.add(task)
-    await db.flush()
+    await db.commit()
 
     from services.file_service import FileService
     from services.tasks import (

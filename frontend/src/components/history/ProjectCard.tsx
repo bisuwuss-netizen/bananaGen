@@ -1,7 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, FileText, ChevronRight, Trash2 } from 'lucide-react';
 import { Card } from '@/components/shared';
-import { getProjectTitle, getFirstPageImage, formatDate, getStatusText, getStatusColor } from '@/utils/projectUtils';
+import { SlideRenderer } from '@/experimental/html-renderer/components/SlideRenderer';
+import { getThemeByScheme } from '@/experimental/html-renderer/themes';
+import type { PagePayload } from '@/experimental/html-renderer/types/schema';
+import { normalizeLayoutId } from '@/experimental/html-renderer/layouts';
+import {
+  getProjectTitle,
+  getFirstPageImage,
+  getPreviewPage,
+  formatDate,
+  getStatusText,
+  getStatusColor,
+  getProjectSchemeName,
+  getProjectSchemeDescription,
+  getProjectFailureReason,
+} from '@/utils/projectUtils';
 import type { Project } from '@/types';
 
 export interface ProjectCardProps {
@@ -55,8 +69,30 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   const pageCount = project.pages?.length || 0;
   const statusText = getStatusText(project);
   const statusColor = getStatusColor(project);
-  
+  const schemeName = getProjectSchemeName(project);
+  const schemeDescription = getProjectSchemeDescription(project);
+  const failureReason = getProjectFailureReason(project);
+  const previewPage = getPreviewPage(project);
   const firstPageImage = shouldLoadImage ? getFirstPageImage(project) : null;
+  const htmlTheme = getThemeByScheme(project.scheme_id);
+  const canRenderHtmlPreview = Boolean(
+    shouldLoadImage &&
+    project.render_mode === 'html' &&
+    previewPage?.layout_id &&
+    previewPage.html_model
+  );
+  const isDesktopPreview = typeof window !== 'undefined' && window.innerWidth >= 768;
+  const previewScale = isDesktopPreview ? 0.2 : 0.125;
+  const previewFrameWidth = htmlTheme.sizes.slideWidth * previewScale;
+  const previewFrameHeight = htmlTheme.sizes.slideHeight * previewScale;
+  const previewPayload: PagePayload | null = canRenderHtmlPreview && previewPage?.layout_id && previewPage.html_model
+    ? {
+        page_id: previewPage.id || previewPage.page_id,
+        order_index: previewPage.order_index,
+        layout_id: normalizeLayoutId(previewPage.layout_id) as PagePayload['layout_id'],
+        model: previewPage.html_model,
+      }
+    : null;
 
   return (
     <Card
@@ -119,18 +155,51 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
               {formatDate(project.updated_at || project.created_at)}
             </span>
           </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+              模板系列: {schemeName}
+            </span>
+            <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+              {project.render_mode === 'html' ? 'HTML 渲染' : '图片渲染'}
+            </span>
+          </div>
+          <p className="mt-3 max-w-2xl text-xs md:text-sm text-gray-500">
+            {schemeDescription}
+          </p>
+          {failureReason ? (
+            <p className="mt-2 max-w-2xl text-xs md:text-sm text-red-600">
+              失败原因: {failureReason}
+            </p>
+          ) : null}
         </div>
         
         {/* 右侧：图片预览 */}
         <div className="hidden sm:block w-40 h-24 md:w-64 md:h-36 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">
-          {firstPageImage ? (
+          {canRenderHtmlPreview && previewPayload ? (
+            <div
+              className="w-full h-full flex items-center justify-center bg-white overflow-hidden"
+              data-testid="project-html-preview"
+            >
+              <div
+                data-testid="project-html-preview-frame"
+                style={{
+                  width: previewFrameWidth,
+                  height: previewFrameHeight,
+                  overflow: 'hidden',
+                  flexShrink: 0,
+                }}
+              >
+                <SlideRenderer page={previewPayload} theme={htmlTheme} scale={previewScale} />
+              </div>
+            </div>
+          ) : firstPageImage ? (
             <img
               src={firstPageImage}
               alt="第一页预览"
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400">
+            <div className="w-full h-full flex items-center justify-center text-gray-400" data-testid="project-preview-placeholder">
               <FileText size={20} className="md:w-6 md:h-6" />
             </div>
           )}
@@ -151,4 +220,3 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     </Card>
   );
 };
-

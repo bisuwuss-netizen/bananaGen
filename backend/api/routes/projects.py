@@ -54,14 +54,28 @@ async def list_projects(
         query = query.where(user_filter)
         count_query = count_query.where(user_filter)
 
-    query = query.order_by(desc(Project.updated_at)).offset(offset).limit(limit)
+    query = (
+        query
+        .options(selectinload(Project.pages), selectinload(Project.tasks))
+        .order_by(desc(Project.updated_at))
+        .offset(offset)
+        .limit(limit)
+    )
     result = await db.execute(query)
     projects = result.scalars().all()
 
     total = (await db.execute(count_query)).scalar() or 0
 
     return SuccessResponse(data={
-        "projects": [_project_to_dict(p) for p in projects],
+        "projects": [
+            _project_to_dict(
+                p,
+                include_pages=True,
+                page_summary=True,
+                include_latest_generation_task=True,
+            )
+            for p in projects
+        ],
         "total": total,
         "limit": limit,
         "offset": offset,
@@ -110,7 +124,7 @@ async def get_project(
     """
     query = (
         select(Project)
-        .options(selectinload(Project.pages))
+        .options(selectinload(Project.pages), selectinload(Project.tasks))
         .where(Project.id == project_id)
     )
     result = await db.execute(query)
@@ -119,7 +133,13 @@ async def get_project(
     if not project:
         raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
 
-    return SuccessResponse(data=_project_to_dict(project, include_pages=True))
+    return SuccessResponse(
+        data=_project_to_dict(
+            project,
+            include_pages=True,
+            include_latest_generation_task=True,
+        )
+    )
 
 
 @router.put("/{project_id}", response_model=SuccessResponse)
@@ -184,11 +204,20 @@ async def delete_project(
 
 # ── Helpers ──────────────────────────────────────────────────────
 
-def _project_to_dict(project: Project, include_pages: bool = False) -> dict:
+def _project_to_dict(
+    project: Project,
+    include_pages: bool = False,
+    page_summary: bool = False,
+    include_latest_generation_task: bool = False,
+) -> dict:
     """
     Convert Project ORM object to response dict.
     
     Temporary bridge during migration - will eventually be replaced
     by Pydantic model_validate(project) once models use from_attributes.
     """
-    return project.to_dict(include_pages=include_pages)
+    return project.to_dict(
+        include_pages=include_pages,
+        page_summary=page_summary,
+        include_latest_generation_task=include_latest_generation_task,
+    )

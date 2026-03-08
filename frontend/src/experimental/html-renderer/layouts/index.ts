@@ -12,6 +12,15 @@ export { EndingLayout, renderEndingLayoutHTML } from './EndingLayout';
 export { SectionTitleLayout, renderSectionTitleLayoutHTML } from './SectionTitleLayout';
 export { ImageFullLayout, renderImageFullLayoutHTML } from './ImageFullLayout';
 export { QuoteLayout, renderQuoteLayoutHTML } from './QuoteLayout';
+// Academic scheme - 学术严谨方案
+export { LearningObjectivesLayout, renderLearningObjectivesLayoutHTML } from './LearningObjectivesLayout';
+export { TheoryExplanationLayout, renderTheoryExplanationLayoutHTML } from './TheoryExplanationLayout';
+export { AcademicNarrativeLayout, renderAcademicNarrativeLayoutHTML } from './AcademicNarrativeLayout';
+export { AcademicCaseStudyLayout, renderAcademicCaseStudyLayoutHTML } from './AcademicCaseStudyLayout';
+export { AcademicComparisonLayout, renderAcademicComparisonLayoutHTML } from './AcademicComparisonLayout';
+export { AcademicDiagramLayout, renderAcademicDiagramLayoutHTML } from './AcademicDiagramLayout';
+export { AcademicPracticeLayout, renderAcademicPracticeLayoutHTML } from './AcademicPracticeLayout';
+export { AcademicEndingLayout, renderAcademicEndingLayoutHTML } from './AcademicEndingLayout';
 // Modern scheme - 现代创新方案
 export { SidebarCardLayout, renderSidebarCardLayoutHTML } from './SidebarCardLayout';
 export { DarkMathLayout, renderDarkMathLayoutHTML } from './DarkMathLayout';
@@ -23,6 +32,12 @@ export { ConcentricFocusLayout, renderConcentricFocusLayoutHTML } from './Concen
 export { VerticalTimelineLayout, renderVerticalTimelineLayoutHTML } from './VerticalTimelineLayout';
 export { TriColumnLayout, renderTriColumnLayoutHTML } from './TriColumnLayout';
 export { CinematicOverlayLayout, renderCinematicOverlayLayoutHTML } from './CinematicOverlayLayout';
+export { PollInteractiveLayout, renderPollInteractiveLayoutHTML } from './PollInteractiveLayout';
+export { WarmupQuestionLayout, renderWarmupQuestionLayoutHTML } from './WarmupQuestionLayout';
+export { TimelineLayout, renderTimelineLayoutHTML } from './TimelineLayout';
+export { PortfolioLayout, renderPortfolioLayoutHTML } from './PortfolioLayout';
+export { SafetyNoticeLayout, renderSafetyNoticeLayoutHTML } from './SafetyNoticeLayout';
+export { DetailZoomLayout, renderDetailZoomLayoutHTML } from './DetailZoomLayout';
 // Edu dark scheme
 export { EduCoverLayout, renderEduCoverLayoutHTML } from './EduCoverLayout';
 export { EduTocLayout, renderEduTocLayoutHTML } from './EduTocLayout';
@@ -33,6 +48,10 @@ export { EduLogicFlowLayout, renderEduLogicFlowLayoutHTML } from './EduLogicFlow
 export { EduDataBoardLayout, renderEduDataBoardLayoutHTML } from './EduDataBoardLayout';
 export { EduSummaryLayout, renderEduSummaryLayoutHTML } from './EduSummaryLayout';
 export { EduQACaseLayout, renderEduQACaseLayoutHTML } from './EduQACaseLayout';
+// Vocational specialized layouts
+export { VocationalBulletsLayout, renderVocationalBulletsLayoutHTML } from './VocationalBulletsLayout';
+export { VocationalContentLayout, renderVocationalContentLayoutHTML } from './VocationalContentLayout';
+export { VocationalComparisonLayout, renderVocationalComparisonLayoutHTML } from './VocationalComparisonLayout';
 
 import { LayoutId, LayoutModel, ThemeConfig } from '../types/schema';
 import { renderCoverLayoutHTML } from './CoverLayout';
@@ -45,6 +64,15 @@ import { renderEndingLayoutHTML } from './EndingLayout';
 import { renderSectionTitleLayoutHTML } from './SectionTitleLayout';
 import { renderImageFullLayoutHTML } from './ImageFullLayout';
 import { renderQuoteLayoutHTML } from './QuoteLayout';
+// Academic scheme - 学术严谨方案
+import { renderLearningObjectivesLayoutHTML } from './LearningObjectivesLayout';
+import { renderTheoryExplanationLayoutHTML } from './TheoryExplanationLayout';
+import { renderAcademicNarrativeLayoutHTML } from './AcademicNarrativeLayout';
+import { renderAcademicCaseStudyLayoutHTML } from './AcademicCaseStudyLayout';
+import { renderAcademicComparisonLayoutHTML } from './AcademicComparisonLayout';
+import { renderAcademicDiagramLayoutHTML } from './AcademicDiagramLayout';
+import { renderAcademicPracticeLayoutHTML } from './AcademicPracticeLayout';
+import { renderAcademicEndingLayoutHTML } from './AcademicEndingLayout';
 // Modern scheme - 现代创新方案
 import { renderSidebarCardLayoutHTML } from './SidebarCardLayout';
 import { renderDarkMathLayoutHTML } from './DarkMathLayout';
@@ -56,6 +84,12 @@ import { renderConcentricFocusLayoutHTML } from './ConcentricFocusLayout';
 import { renderVerticalTimelineLayoutHTML } from './VerticalTimelineLayout';
 import { renderTriColumnLayoutHTML } from './TriColumnLayout';
 import { renderCinematicOverlayLayoutHTML } from './CinematicOverlayLayout';
+import { renderPollInteractiveLayoutHTML } from './PollInteractiveLayout';
+import { renderWarmupQuestionLayoutHTML } from './WarmupQuestionLayout';
+import { renderTimelineLayoutHTML } from './TimelineLayout';
+import { renderPortfolioLayoutHTML } from './PortfolioLayout';
+import { renderSafetyNoticeLayoutHTML } from './SafetyNoticeLayout';
+import { renderDetailZoomLayoutHTML } from './DetailZoomLayout';
 // Edu dark scheme
 import { renderEduCoverLayoutHTML } from './EduCoverLayout';
 import { renderEduTocLayoutHTML } from './EduTocLayout';
@@ -66,54 +100,75 @@ import { renderEduLogicFlowLayoutHTML } from './EduLogicFlowLayout';
 import { renderEduDataBoardLayoutHTML } from './EduDataBoardLayout';
 import { renderEduSummaryLayoutHTML } from './EduSummaryLayout';
 import { renderEduQACaseLayoutHTML } from './EduQACaseLayout';
+// Vocational specialized layouts
+import { renderVocationalBulletsLayoutHTML } from './VocationalBulletsLayout';
+import { renderVocationalContentLayoutHTML } from './VocationalContentLayout';
+import { renderVocationalComparisonLayoutHTML } from './VocationalComparisonLayout';
 
 export const LAYOUT_ID_ALIASES: Record<string, string> = {
-  // academic - 专属布局（learning_objectives, theory_explanation）不映射
+  // academic
   cover_academic: 'cover',
   toc_academic: 'toc',
-  // learning_objectives: 独立组件
   key_concepts: 'title_bullets',
-  // theory_explanation: 独立组件
-  case_study: 'title_content',
-  comparison_table: 'two_column',
-  diagram_illustration: 'image_full',
   key_takeaways: 'title_bullets',
-  ending_academic: 'ending',
-  // interactive - 专属布局（warmup_question, poll_interactive）不映射
+  // interactive
   cover_interactive: 'cover',
-  agenda_interactive: 'toc',
-  // warmup_question: 独立组件
-  // poll_interactive: 独立组件
-  story_narrative: 'title_content',
-  group_activity: 'title_bullets',
-  mind_map: 'image_full',
-  quiz_check: 'title_bullets',
-  discussion_prompt: 'title_content',
+  agenda_path: 'toc',
+  story_narrative: 'vocational_content',
+  group_collab: 'vocational_bullets',
+  mind_map_structure: 'image_full',
+  quiz_interaction: 'vocational_bullets',
+  case_discussion: 'vocational_content',
+  feedback_poll: 'vocational_content',
+  discussion_card: 'vocational_content',
+  reflection_quiz: 'title_bullets',
+  role_play_scenario: 'vocational_content',
+  warmup_inquiry: 'warmup_question',
   ending_interactive: 'ending',
-  // visual - 专属布局（timeline, portfolio）不映射
-  cover_visual: 'cover',
-  timeline_navigation: 'toc',
-  hero_image: 'image_full',
-  gallery_grid: 'image_full',
-  before_after: 'two_column',
-  infographic: 'title_bullets',
-  split_screen: 'two_column',
-  video_placeholder: 'image_full',
-  // portfolio_showcase: portfolio的别名
-  // timeline: 独立组件
-  // portfolio: 独立组件
-  ending_visual: 'ending',
-  // practical - 专属布局（safety_notice, detail_zoom）不映射
+  // visual
+  cover_field: 'cover',
+  timeline_evolution: 'timeline',
+  field_observation: 'image_full',
+  gallery_professional: 'portfolio',
+  case_before_after: 'vocational_comparison',
+  infographic_flow: 'vocational_bullets',
+  site_survey: 'image_full',
+  specimen_detail: 'detail_zoom',
+  portfolio_industry: 'portfolio',
+  ending_field: 'ending',
+  // practical
   cover_practical: 'cover',
-  checklist_practical: 'title_bullets',
-  // safety_notice: 独立组件
-  equipment_intro: 'two_column',
-  step_by_step: 'process_steps',
-  // detail_zoom: 独立组件
-  common_mistakes: 'two_column',
-  tip_trick: 'title_bullets',
-  practice_exercise: 'title_content',
+  checklist_verification: 'vocational_bullets',
+  equipment_orientation: 'vocational_comparison',
+  sop_vertical_steps: 'vertical_timeline',
+  common_faults: 'vocational_comparison',
+  technical_tip: 'quote',
+  task_instruction: 'vocational_content',
+  safety_protocol: 'safety_notice',
+  detail_specs: 'vocational_content',
   ending_practical: 'ending',
+  // tech_blue
+  cover_tech: 'cover',
+  arch_blocks: 'vocational_content',
+  flow_logic_sequence: 'process_steps',
+  param_dashboard: 'edu_data_board',
+  protocol_analysis: 'vocational_bullets',
+  requirement_specs: 'vocational_bullets',
+  system_comparison: 'vocational_comparison',
+  tech_principle: 'vocational_content',
+  toc_tech: 'toc',
+  ending_tech: 'ending',
+  // modern (management)
+  cover_modern: 'cover',
+  business_canvas: 'grid_matrix',
+  comparison_matrix: 'vocational_comparison',
+  legal_regulation: 'vocational_content',
+  org_structure_flow: 'vocational_bullets',
+  process_sop_standard: 'process_steps',
+  stat_report: 'edu_data_board',
+  strategic_pillars: 'tri_column',
+  toc_modern: 'toc',
+  ending_modern: 'ending',
 };
 
 export const normalizeLayoutId = (layoutId: LayoutId): LayoutId => {
@@ -129,6 +184,9 @@ export function renderLayoutHTML(
   theme: ThemeConfig
 ): string {
   const normalizedId = normalizeLayoutId(layoutId);
+  // Inject layoutId into model for vocational specialists
+  const enrichedModel = { ...model, layoutId };
+
   switch (normalizedId) {
     case 'cover':
       return renderCoverLayoutHTML(model as any, theme);
@@ -150,6 +208,30 @@ export function renderLayoutHTML(
       return renderImageFullLayoutHTML(model as any, theme);
     case 'quote':
       return renderQuoteLayoutHTML(model as any, theme);
+    // Vocational specialized
+    case 'vocational_bullets':
+      return renderVocationalBulletsLayoutHTML(enrichedModel as any, theme);
+    case 'vocational_content':
+      return renderVocationalContentLayoutHTML(enrichedModel as any, theme);
+    case 'vocational_comparison':
+      return renderVocationalComparisonLayoutHTML(enrichedModel as any, theme);
+    // Academic scheme - 学术严谨方案
+    case 'learning_objectives':
+      return renderLearningObjectivesLayoutHTML(model as any, theme);
+    case 'theory_explanation':
+      return renderTheoryExplanationLayoutHTML(model as any, theme);
+    case 'academic_narrative':
+      return renderAcademicNarrativeLayoutHTML(model as any, theme);
+    case 'case_study':
+      return renderAcademicCaseStudyLayoutHTML(model as any, theme);
+    case 'comparison_table':
+      return renderAcademicComparisonLayoutHTML(model as any, theme);
+    case 'diagram_illustration':
+      return renderAcademicDiagramLayoutHTML(model as any, theme);
+    case 'academic_practice':
+      return renderAcademicPracticeLayoutHTML(model as any, theme);
+    case 'ending_academic':
+      return renderAcademicEndingLayoutHTML(model as any, theme);
     // Modern scheme - 现代创新方案
     case 'sidebar_card':
       return renderSidebarCardLayoutHTML(model as any, theme);
@@ -171,6 +253,18 @@ export function renderLayoutHTML(
       return renderTriColumnLayoutHTML(model as any, theme);
     case 'cinematic_overlay':
       return renderCinematicOverlayLayoutHTML(model as any, theme);
+    case 'poll_interactive':
+      return renderPollInteractiveLayoutHTML(model as any, theme);
+    case 'warmup_question':
+      return renderWarmupQuestionLayoutHTML(model as any, theme);
+    case 'timeline':
+      return renderTimelineLayoutHTML(model as any, theme);
+    case 'portfolio':
+      return renderPortfolioLayoutHTML(model as any, theme);
+    case 'safety_notice':
+      return renderSafetyNoticeLayoutHTML(model as any, theme);
+    case 'detail_zoom':
+      return renderDetailZoomLayoutHTML(model as any, theme);
     // Edu dark scheme
     case 'edu_cover':
       return renderEduCoverLayoutHTML(model as any, theme);
@@ -193,7 +287,7 @@ export function renderLayoutHTML(
     default:
       console.warn(`Unknown layout: ${layoutId}`);
       return `<section style="width:1280px;height:720px;display:flex;align-items:center;justify-content:center;background:#f0f0f0;">
-        <p style="color:#666;">未知布局类型: ${layoutId}</p>
+        <p style="color:#666;">未知布局类型：${getLayoutDisplayName(layoutId)}</p>
       </section>`;
   }
 }
@@ -212,6 +306,19 @@ export const layoutNames: Record<string, string> = {
   section_title: '章节标题',
   image_full: '全图页',
   quote: '引用页',
+  vocational_bullets: '要点讲解',
+  vocational_content: '内容讲解',
+  vocational_comparison: '对比讲解',
+  learning_objectives: '学习目标',
+  theory_explanation: '理论推导',
+  academic_narrative: '长文叙述',
+  case_study: '案例分析',
+  comparison_table: '对比分析',
+  diagram_illustration: '原理图解',
+  academic_practice: '随堂实训',
+  ending_academic: '课程结束',
+  cover_academic: '学术封面',
+  toc_academic: '学术目录',
   // Modern scheme - 现代创新方案
   sidebar_card: '左侧导航卡片',
   dark_math: '科技深色分割',
@@ -222,15 +329,112 @@ export const layoutNames: Record<string, string> = {
   concentric_focus: '同心聚焦',
   vertical_timeline: '垂直脉络',
   tri_column: '三柱支撑',
-  cinematic_overlay: '沉浸全图',
+  cinematic_overlay: '未来沉浸全图',
+  // Interactive scheme - 互动探究型
+  agenda_path: '学程地图',
+  case_discussion: '案例研讨',
+  cover_interactive: '导入封面',
+  ending_interactive: '评价结语',
+  feedback_poll: '即时反馈',
+  group_collab: '协作任务',
+  group_activity: '小组活动',
+  mind_map_structure: '知识脑图',
+  mind_map: '思维导图',
+  quiz_interaction: '交互测验',
+  quiz_check: '课堂测验',
+  role_play_scenario: '情境模拟',
+  discussion_prompt: '讨论引导',
+  agenda_interactive: '互动议程',
+  warmup_inquiry: '课前探究',
+  warmup_question: '热身提问',
+  poll_interactive: '投票互动',
+  story_narrative: '故事叙述',
+  // Modern Management - 现代管理型
+  business_canvas: '业务看板',
+  comparison_matrix: '标准对比',
+  cover_modern: '管理封面',
+  ending_modern: '总结展望',
+  legal_regulation: '规则解析',
+  org_structure_flow: '组织架构',
+  process_sop_standard: '标杆流程',
+  stat_report: '运行分析',
+  strategic_pillars: '核心支柱',
+  toc_modern: '专业导览',
+  // Vocational Practice - 精益实操型
+  checklist_verification: '核查清单',
+  common_faults: '故障排除',
+  cover_practical: '实训封面',
+  detail_specs: '零件精度',
+  ending_practical: '实训总结',
+  equipment_orientation: '设备认知',
+  safety_protocol: '安全禁令',
+  sop_vertical_steps: 'SOP手册',
+  task_instruction: '工单指令',
+  technical_tip: '讲师小结',
+  // Engineering Logic - 技术逻辑型
+  arch_blocks: '技术架构',
+  cover_tech: '技术封面',
+  ending_tech: '技术演进',
+  flow_logic_sequence: '逻辑时序',
+  param_dashboard: '性能看板',
+  protocol_analysis: '协议拆解',
+  requirement_specs: '需求规格',
+  system_comparison: '选型对比',
+  tech_principle: '技术原理',
+  toc_tech: '技术大纲',
+  // Industry Showcase - 行业展示型
+  cover_visual: '视觉封面',
+  timeline_navigation: '时间导航',
+  timeline: '时间轴',
+  hero_image: '主视觉大图',
+  gallery_grid: '图库网格',
+  before_after: '前后对比',
+  infographic: '信息图解',
+  split_screen: '分屏对照',
+  video_placeholder: '视频占位',
+  portfolio_showcase: '作品展示',
+  portfolio: '作品集展示',
+  ending_visual: '视觉收尾',
+  case_before_after: '修缮对比',
+  cover_field: '现场封面',
+  ending_field: '现场收束',
+  field_observation: '现场观测',
+  gallery_professional: '专业图库',
+  infographic_flow: '图解流',
+  portfolio_industry: '成果品鉴',
+  site_survey: '踏勘报告',
+  specimen_detail: '标本特写',
+  timeline_evolution: '演进轴线',
+  checklist_practical: '操作清单',
+  safety_notice: '安全提示',
+  equipment_intro: '设备介绍',
+  step_by_step: '步骤拆解',
+  detail_zoom: '细节放大',
+  common_mistakes: '常见错误',
+  tip_trick: '技巧提示',
+  practice_exercise: '练习实操',
   // Edu dark scheme
-  edu_cover: '深色封面',
-  edu_toc: '深色目录',
-  edu_tri_compare: '三栏对比',
-  edu_core_hub: '中心模型',
-  edu_timeline_steps: '推进时间轴',
-  edu_logic_flow: '逻辑演进',
+  edu_cover: '职教通用封面',
+  edu_toc: '模块导览',
+  edu_tri_compare: '三维对比',
+  edu_core_hub: '核心框架',
+  edu_timeline_steps: '实施路径',
+  edu_logic_flow: '教学链路',
   edu_data_board: '数据看板',
-  edu_summary: '反思总结',
-  edu_qa_case: '问答与案例',
+  edu_summary: '反思评价',
+  edu_qa_case: '典型案例',
+};
+
+export const getLayoutDisplayName = (layoutId?: string | null): string => {
+  if (!layoutId) {
+    return '未知布局';
+  }
+
+  const directName = layoutNames[layoutId];
+  if (directName) {
+    return directName;
+  }
+
+  const normalizedId = normalizeLayoutId(layoutId as LayoutId);
+  return layoutNames[normalizedId] || layoutId;
 };

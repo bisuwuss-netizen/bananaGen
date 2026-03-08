@@ -28,8 +28,18 @@ export const CoverLayout: React.FC<CoverLayoutProps> = ({ model, theme }) => {
       : generateGradient(theme.colors.primary, theme.colors.secondary, 135),
   };
 
-  // 内容容器样式（居中）
-  const contentStyle = toInlineStyle({
+  // @ts-ignore
+  const isVariantB = String((model as any).layout_variant || (model as any).variant || 'a').toLowerCase() === 'b';
+
+  // 内容容器样式
+  const contentStyle = toInlineStyle(isVariantB ? {
+    position: 'absolute',
+    bottom: '60px',
+    left: '60px',
+    textAlign: 'left',
+    width: '80%',
+    maxWidth: '900px',
+  } : {
     position: 'absolute',
     top: '50%',
     left: '50%',
@@ -70,10 +80,10 @@ export const CoverLayout: React.FC<CoverLayoutProps> = ({ model, theme }) => {
 
   // 装饰线样式
   const decorLineStyle = toInlineStyle({
-    width: '80px',
-    height: '4px',
+    width: isVariantB ? '120px' : '80px',
+    height: isVariantB ? '6px' : '4px',
     backgroundColor: theme.colors.accent,
-    margin: '30px auto',
+    margin: isVariantB ? '30px 0' : '30px auto',
     borderRadius: '2px',
   });
 
@@ -113,7 +123,17 @@ export function renderCoverLayoutHTML(model: CoverModel, theme: ThemeConfig): st
       : generateGradient(theme.colors.primary, theme.colors.secondary, 135),
   });
 
-  const contentStyle = toInlineStyle({
+  // @ts-ignore
+  const isVariantB = String((model as any).layout_variant || (model as any).variant || 'a').toLowerCase() === 'b';
+
+  const contentStyle = toInlineStyle(isVariantB ? {
+    position: 'absolute',
+    bottom: '60px',
+    left: '60px',
+    textAlign: 'left',
+    width: '80%',
+    maxWidth: '900px',
+  } : {
     position: 'absolute',
     top: '50%',
     left: '50%',
@@ -142,10 +162,10 @@ export function renderCoverLayoutHTML(model: CoverModel, theme: ThemeConfig): st
   });
 
   const decorLineStyle = toInlineStyle({
-    width: '80px',
-    height: '4px',
+    width: isVariantB ? '120px' : '80px',
+    height: isVariantB ? '6px' : '4px',
     backgroundColor: theme.colors.accent,
-    margin: '30px auto',
+    margin: isVariantB ? '30px 0' : '30px auto',
     borderRadius: '2px',
   });
 

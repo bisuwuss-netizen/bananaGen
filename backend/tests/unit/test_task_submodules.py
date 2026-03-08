@@ -1,5 +1,6 @@
 import inspect
 
+from models.task import Task
 from services.tasks import description_task, export_task, image_task, manager, utils
 
 
@@ -13,6 +14,18 @@ def test_task_manager_helpers_cover_timeout_parsing():
 def test_task_utils_chunked_handles_small_and_invalid_sizes():
     assert utils._chunked([1, 2, 3, 4], 2) == [[1, 2], [3, 4]]
     assert utils._chunked([1, 2, 3], 0) == [[1], [2], [3]]
+
+
+def test_finalize_generation_task_marks_partial_failures_as_failed():
+    task = Task(project_id="project-1", task_type="GENERATE_DESCRIPTIONS", status="PROCESSING")
+    task.set_progress({"total": 3, "completed": 0, "failed": 0})
+
+    task_succeeded = utils.finalize_generation_task(task, completed=2, failed=1)
+
+    assert task_succeeded is False
+    assert task.status == "FAILED"
+    assert task.get_progress() == {"total": 3, "completed": 2, "failed": 1}
+    assert task.error_message == "内容生成部分失败：1/3 页未成功完成"
 
 
 def test_task_submodules_expose_expected_entrypoints():

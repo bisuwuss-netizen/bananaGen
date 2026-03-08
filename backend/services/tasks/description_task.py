@@ -25,7 +25,7 @@ from services.presentation.narrative_continuity import (
 from services.runtime_state import load_runtime_config, runtime_context
 
 from .manager import _safe_positive_int
-from .utils import _chunked
+from .utils import _chunked, finalize_generation_task
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +113,19 @@ async def generate_descriptions_task(
                             }
                         )
 
+                    try:
+                        from services.presentation.layout_planner import assign_layout_variants
+                        from services.prompts.layouts import LAYOUT_ID_ALIASES
+
+                        raw_outline_context["pages"] = assign_layout_variants(
+                            outline=raw_outline_context["pages"],
+                            scheme_id=project_context.scheme_id or "edu_dark",
+                            layout_aliases=LAYOUT_ID_ALIASES,
+                            seed=project_context.idea_prompt or str(project_id),
+                        )
+                    except Exception as planner_err:
+                        logger.warning("HTML description task: layout variant planning skipped: %s", planner_err)
+
                     html_outline_context = enrich_outline_with_narrative_contract(raw_outline_context)
                     normalized_pages = html_outline_context.get("pages") if isinstance(html_outline_context.get("pages"), list) else []
                     narrative_tracker = NarrativeRuntimeTracker(html_outline_context)
@@ -124,13 +137,18 @@ async def generate_descriptions_task(
                             "layout_id": page_obj.layout_id or page_data.get("layout_id", "title_content"),
                             "has_image": bool(page_data.get("has_image", False)),
                             "keywords": page_data.get("keywords", page_data.get("points", [])[:3]),
+                            "layout_variant": "a",
                         }
+                        layout_variant = str(normalized_outline.get("layout_variant") or "a").strip().lower() or "a"
+                        layout_archetype = str(normalized_outline.get("layout_archetype") or "").strip()
                         html_jobs.append(
                             {
                                 "db_page_id": page_obj.id,
                                 "logical_page_id": normalized_outline.get("page_id", f"p{i:02d}"),
                                 "page_index": i,
                                 "layout_id": page_obj.layout_id or normalized_outline.get("layout_id", "title_content"),
+                                "layout_variant": layout_variant,
+                                "layout_archetype": layout_archetype,
                                 "page_outline": normalized_outline,
                             }
                         )
@@ -152,8 +170,12 @@ async def generate_descriptions_task(
                                     "required_close_promise_ids",
                                     normalized_outline.get("promises_close", []),
                                 ),
+                                "layout_id": page_obj.layout_id or normalized_outline.get("layout_id", "title_content"),
+                                "layout_variant": layout_variant,
                             }
                         )
+                        if layout_archetype:
+                            merged_outline["layout_archetype"] = layout_archetype
                         page_obj.set_outline_content(merged_outline)
 
                     await session.commit()
@@ -174,10 +196,13 @@ async def generate_descriptions_task(
 
                             if render_mode == "html":
                                 layout_id = page_layout_id or page_outline.get("layout_id", "title_content")
+                                layout_variant = str(page_outline.get("layout_variant") or "a").strip().lower() or "a"
+                                layout_archetype = str(page_outline.get("layout_archetype") or "").strip()
                                 structured_page_outline = {
                                     "page_id": logical_page_id or page_outline.get("page_id", f"p{page_index:02d}"),
                                     "title": page_outline.get("title", ""),
                                     "layout_id": layout_id,
+                                    "layout_variant": layout_variant,
                                     "has_image": bool(page_outline.get("has_image", False)),
                                     "keywords": page_outline.get("keywords", page_outline.get("points", [])[:3]),
                                     "depends_on": page_outline.get("depends_on", []),
@@ -189,6 +214,8 @@ async def generate_descriptions_task(
                                         page_outline.get("promises_close", []),
                                     ),
                                 }
+                                if layout_archetype:
+                                    structured_page_outline["layout_archetype"] = layout_archetype
                                 if "section_number" in page_outline:
                                     structured_page_outline["section_number"] = page_outline.get("section_number")
                                 if "subtitle" in page_outline:
@@ -208,6 +235,11 @@ async def generate_descriptions_task(
                                     return_metadata=True,
                                 )
                                 model = generation_result.get("model") if isinstance(generation_result, dict) else {}
+                                if isinstance(model, dict):
+                                    model["variant"] = layout_variant
+                                    model["layout_variant"] = layout_variant
+                                    if layout_archetype:
+                                        model["layout_archetype"] = layout_archetype
                                 closed_promise_ids = generation_result.get("closed_promise_ids") if isinstance(generation_result, dict) else []
                                 required_ids = []
                                 if isinstance(continuity_context, dict):
@@ -227,6 +259,8 @@ async def generate_descriptions_task(
                                         "layout_id": layout_id,
                                         "logical_page_id": structured_page_outline.get("page_id"),
                                         "title": structured_page_outline.get("title", ""),
+                                        "layout_variant": layout_variant,
+                                        "layout_archetype": layout_archetype,
                                     },
                                     None,
                                 )
@@ -263,9 +297,35 @@ async def generate_descriptions_task(
                         if count_stats:
                             failed += 1
                         return
+                    if not isinstance(result_data, dict):
+                        page.status = "FAILED"
+                        if count_stats:
+                            failed += 1
+                        return
 
                     if render_mode == "html":
-                        page.set_html_model(result_data.get("html_model"))
+                        model = result_data.get("html_model") if isinstance(result_data.get("html_model"), dict) else {}
+                        persisted_outline = page.get_outline_content()
+                        if not isinstance(persisted_outline, dict):
+                            persisted_outline = {}
+                        layout_variant = str(
+                            result_data.get("layout_variant")
+                            or persisted_outline.get("layout_variant")
+                            or model.get("layout_variant")
+                            or model.get("variant")
+                            or "a"
+                        ).strip().lower() or "a"
+                        layout_archetype = str(
+                            result_data.get("layout_archetype")
+                            or persisted_outline.get("layout_archetype")
+                            or model.get("layout_archetype")
+                            or ""
+                        ).strip()
+                        model["variant"] = layout_variant
+                        model["layout_variant"] = layout_variant
+                        if layout_archetype:
+                            model["layout_archetype"] = layout_archetype
+                        page.set_html_model(model)
                         continuity_meta = {
                             "closed_promise_ids": result_data.get("closed_promise_ids")
                             if isinstance(result_data.get("closed_promise_ids"), list)
@@ -277,6 +337,13 @@ async def generate_descriptions_task(
                         page.set_description_content({"continuity": continuity_meta, "generated_at": datetime.utcnow().isoformat()})
                         if result_data.get("layout_id"):
                             page.layout_id = result_data.get("layout_id")
+                        persisted_outline["layout_id"] = page.layout_id or result_data.get("layout_id", persisted_outline.get("layout_id"))
+                        persisted_outline["layout_variant"] = layout_variant
+                        if layout_archetype:
+                            persisted_outline["layout_archetype"] = layout_archetype
+                        if result_data.get("logical_page_id"):
+                            persisted_outline["logical_page_id"] = result_data.get("logical_page_id")
+                        page.set_outline_content(persisted_outline)
                         page.status = "HTML_MODEL_GENERATED"
                     else:
                         page.set_description_content(result_data.get("description_content"))
@@ -373,8 +440,23 @@ async def generate_descriptions_task(
                                 batch_row = batch_output.get(logical_page_id) if isinstance(batch_output, dict) else None
                                 if isinstance(batch_row, dict) and isinstance(batch_row.get("model"), dict):
                                     closed_ids = batch_row.get("closed_promise_ids") if isinstance(batch_row.get("closed_promise_ids"), list) else []
+                                    row_model = batch_row.get("model") or {}
+                                    row_variant = str(
+                                        job.get("layout_variant")
+                                        or job.get("page_outline", {}).get("layout_variant")
+                                        or "a"
+                                    ).strip().lower() or "a"
+                                    row_archetype = str(
+                                        job.get("layout_archetype")
+                                        or job.get("page_outline", {}).get("layout_archetype")
+                                        or ""
+                                    ).strip()
+                                    row_model["variant"] = row_variant
+                                    row_model["layout_variant"] = row_variant
+                                    if row_archetype:
+                                        row_model["layout_archetype"] = row_archetype
                                     row_result = {
-                                        "html_model": batch_row.get("model") or {},
+                                        "html_model": row_model,
                                         "closed_promise_ids": closed_ids,
                                         "missing_required_close_promise_ids": [
                                             pid for pid in required_by_page.get(logical_page_id, []) if pid not in closed_ids
@@ -382,6 +464,8 @@ async def generate_descriptions_task(
                                         "layout_id": job.get("layout_id"),
                                         "logical_page_id": logical_page_id,
                                         "title": job.get("page_outline", {}).get("title", ""),
+                                        "layout_variant": row_variant,
+                                        "layout_archetype": row_archetype,
                                     }
                                     local_results.append((job["db_page_id"], row_result, None))
                                     try:
@@ -651,16 +735,21 @@ async def generate_descriptions_task(
                             task.update_progress(completed=completed, failed=failed)
                             await session.commit()
 
+                from models import Project
                 task = await session.get(Task, task_id)
+                task_succeeded = True
                 if task:
-                    task.status = "COMPLETED"
-                    task.completed_at = datetime.now()
+                    task_succeeded = finalize_generation_task(
+                        task,
+                        completed=completed,
+                        failed=failed,
+                        finished_at=datetime.utcnow(),
+                    )
                     await session.commit()
 
-                from models import Project
                 project = await session.get(Project, project_id)
-                if project and failed == 0:
-                    project.status = "DESCRIPTIONS_GENERATED"
+                if project:
+                    project.status = "DESCRIPTIONS_GENERATED" if task_succeeded else "FAILED"
                     await session.commit()
             except Exception as exc:
                 import traceback
@@ -670,8 +759,14 @@ async def generate_descriptions_task(
                 if task:
                     task.status = "FAILED"
                     task.error_message = str(exc)
-                    task.completed_at = datetime.now()
-                    await session.commit()
+                    task.completed_at = datetime.utcnow()
+
+                from models import Project
+                project = await session.get(Project, project_id)
+                if project:
+                    project.status = "FAILED"
+
+                await session.commit()
 
 
 __all__ = ["generate_descriptions_task"]

@@ -12,6 +12,7 @@ type Props = {
   variants?: VariantOption[];
   currentVariant?: string;
   onVariantChange?: (variantId: string) => void;
+  isVariantUpdating?: boolean;
   versionMenu?: React.ReactNode;
 };
 
@@ -23,6 +24,7 @@ export function SlidePreviewFooter({
   variants,
   currentVariant,
   onVariantChange,
+  isVariantUpdating = false,
   versionMenu,
 }: Props) {
   return (
@@ -61,11 +63,12 @@ export function SlidePreviewFooter({
               <button
                 key={v.id}
                 onClick={() => onVariantChange(v.id)}
+                disabled={isVariantUpdating}
                 className={`px-2.5 py-1 rounded-md text-xs transition-colors ${
                   currentVariant === v.id
                     ? 'bg-banana-500 text-white shadow-sm'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+                } ${isVariantUpdating ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
                 {v.label}
               </button>

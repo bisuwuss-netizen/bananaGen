@@ -7,7 +7,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { PPTDocument, ThemeConfig } from './types/schema';
 import { techBlueTheme } from './themes/tech-blue';
 import { SlideRenderer } from './components/SlideRenderer';
-import { renderLayoutHTML } from './layouts';
+import { getLayoutDisplayName, renderLayoutHTML } from './layouts';
 import { generateHTMLDocument, downloadHTML, copyHTMLToClipboard, fileToBase64 } from './utils/htmlExporter';
 import samplePPT from './mock-data/sample-ppt.json';
 
@@ -170,7 +170,7 @@ export const HTMLRendererPage: React.FC = () => {
               <SlideRenderer page={page} theme={theme} scale={thumbnailScale} />
             </div>
             <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#a0a0a0' }}>
-              {index + 1}. {(page.model as any).title || page.layout_id}
+              {index + 1}. {(page.model as any).title || getLayoutDisplayName(page.layout_id)}
             </p>
           </div>
         ))}
@@ -343,7 +343,7 @@ export const HTMLRendererPage: React.FC = () => {
         >
           <span style={{ color: '#a0a0a0', fontSize: '14px' }}>
             第 {selectedPageIndex + 1} / {pptDoc.pages.length} 页 | 布局：
-            <span style={{ color: '#ed8936' }}>{selectedPage.layout_id}</span>
+            <span style={{ color: '#ed8936' }}>{getLayoutDisplayName(selectedPage.layout_id)}</span>
           </span>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -400,7 +400,7 @@ export const HTMLRendererPage: React.FC = () => {
           </div>
           <div style={{ marginBottom: '12px' }}>
             <span style={{ color: '#a0a0a0' }}>布局类型：</span>
-            <span style={{ color: '#ed8936' }}>{selectedPage.layout_id}</span>
+            <span style={{ color: '#ed8936' }}>{getLayoutDisplayName(selectedPage.layout_id)}</span>
           </div>
           <div style={{ marginBottom: '12px' }}>
             <span style={{ color: '#a0a0a0' }}>排序索引：</span>

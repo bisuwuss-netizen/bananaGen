@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   Home as HomeIcon,
@@ -9,6 +10,7 @@ import {
   Paperclip,
   Palette,
   Lightbulb,
+  Eye,
 } from 'lucide-react';
 import { Button, Textarea, Card, useToast, MaterialGeneratorModal, ReferenceFileList, ReferenceFileSelector, FilePreviewModal, ImagePreviewList } from '@/components/shared';
 import { TemplateSelector, getTemplateFile } from '@/components/shared/TemplateSelector';
@@ -38,12 +40,13 @@ export const Home: React.FC = () => {
   const [previewFileId, setPreviewFileId] = useState<string | null>(null);
   const [useTemplateStyle, setUseTemplateStyle] = useState(false);
   const [templateStyle, setTemplateStyle] = useState('');
-  const [hoveredPresetId, setHoveredPresetId] = useState<string | null>(null);
   const [presetStyles, setPresetStyles] = useState<PresetStyle[]>([]);
   const [isLoadingPresetStyles, setIsLoadingPresetStyles] = useState(false);
   const [renderMode] = useState<'image' | 'html'>('html');
+  const [activePresetPreview, setActivePresetPreview] = useState<PresetStyle | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const presetPreviewTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   // 检查是否有当前项目 & 加载用户模板 & 加载预设风格
   useEffect(() => {
@@ -78,6 +81,60 @@ export const Home: React.FC = () => {
     };
     loadPresetStyles();
   }, []);
+
+  useEffect(() => {
+    if (!activePresetPreview || typeof document === 'undefined') {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [activePresetPreview]);
+
+  useEffect(() => {
+    if (!activePresetPreview) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setActivePresetPreview(null);
+        window.setTimeout(() => {
+          presetPreviewTriggerRef.current?.focus();
+        }, 0);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activePresetPreview]);
+
+  const activePresetStyleId = useMemo(
+    () => presetStyles.find((preset) => preset.description === templateStyle)?.id ?? null,
+    [presetStyles, templateStyle]
+  );
+
+  const applyPresetStyle = (preset: PresetStyle) => {
+    setTemplateStyle(preset.description);
+  };
+
+  const closePresetPreview = () => {
+    setActivePresetPreview(null);
+    window.setTimeout(() => {
+      presetPreviewTriggerRef.current?.focus();
+    }, 0);
+  };
+
+  const openPresetPreview = (preset: PresetStyle, button: HTMLButtonElement) => {
+    presetPreviewTriggerRef.current = button;
+    setActivePresetPreview(preset);
+  };
 
   const handleOpenMaterialModal = () => {
     // 在主页始终生成全局素材，不关联任何项目
@@ -352,7 +409,7 @@ export const Home: React.FC = () => {
     idea: {
       icon: <Sparkles size={20} />,
       label: '一句话生成',
-      placeholder: '例如：生成一份关于 AI 发展史的演讲 PPT',
+      placeholder: '例如：生成一份关于 AI 发展史的演讲 PPT...',
       description: '输入你的想法，AI 将为你生成完整的 PPT',
     },
     outline: {
@@ -526,7 +583,7 @@ export const Home: React.FC = () => {
               size="sm"
               icon={<ImagePlus size={16} className="md:w-[18px] md:h-[18px]" />}
               onClick={handleOpenMaterialModal}
-              className="hidden sm:inline-flex hover:bg-banana-100/60 hover:shadow-sm hover:scale-105 transition-all duration-200 font-medium"
+              className="hidden sm:inline-flex font-medium duration-200 hover:scale-105 hover:bg-banana-100/60 hover:shadow-sm transition-[transform,background-color,box-shadow]"
             >
               <span className="hidden md:inline">素材生成</span>
             </Button>
@@ -536,14 +593,14 @@ export const Home: React.FC = () => {
               size="sm"
               icon={<ImagePlus size={16} />}
               onClick={handleOpenMaterialModal}
-              className="sm:hidden hover:bg-banana-100/60 hover:shadow-sm hover:scale-105 transition-all duration-200"
+              className="sm:hidden duration-200 hover:scale-105 hover:bg-banana-100/60 hover:shadow-sm transition-[transform,background-color,box-shadow]"
               title="素材生成"
             />
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate('/history')}
-              className="text-xs md:text-sm hover:bg-banana-100/60 hover:shadow-sm hover:scale-105 transition-all duration-200 font-medium"
+              className="text-xs font-medium duration-200 hover:scale-105 hover:bg-banana-100/60 hover:shadow-sm md:text-sm transition-[transform,background-color,box-shadow]"
             >
               <span className="hidden sm:inline">历史项目</span>
               <span className="sm:hidden">历史</span>
@@ -586,7 +643,7 @@ export const Home: React.FC = () => {
         </div>*/}
 
         {/* 创建卡片 */}
-        <Card className="app-panel p-4 md:p-10 border-slate-200/50 hover:shadow-lift transition-all duration-300">
+        <Card className="app-panel border-slate-200/50 p-4 duration-300 hover:shadow-lift md:p-10 transition-[box-shadow,border-color,background-color]">
           {/* 选项卡 */}
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-6 md:mb-8">
             {(Object.keys(tabConfig) as CreationType[]).map((type) => {
@@ -595,7 +652,7 @@ export const Home: React.FC = () => {
                 <button
                   key={type}
                   onClick={() => setActiveTab(type)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-6 py-2.5 md:py-3 rounded-lg font-medium transition-all text-sm md:text-base touch-manipulation ${
+                  className={`flex-1 touch-manipulation items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium duration-200 md:gap-2 md:px-6 md:py-3 md:text-base transition-[background-color,color,box-shadow,border-color] ${
                     activeTab === type
                       ? 'bg-banana-500 text-white'
                       : 'bg-white border border-banana-500 text-banana-500 hover:bg-banana-500 hover:text-white'
@@ -717,7 +774,7 @@ export const Home: React.FC = () => {
                         }}
                         className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-banana-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-banana-500"></div>
+                    <div className="peer h-6 w-11 rounded-full bg-gray-200 transition-colors duration-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-banana-300 peer-checked:bg-banana-500 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:content-[''] after:transition-transform after:duration-200"></div>
                   </div>
                 </label>
               )}
@@ -749,49 +806,48 @@ export const Home: React.FC = () => {
                     ) : presetStyles.length === 0 ? (
                       <p className="text-xs text-gray-500">暂无预设风格</p>
                     ) : (
-                      presetStyles.map((preset) => (
-                        <div key={preset.id} className="relative">
-                          <button
-                            type="button"
-                            onClick={() => setTemplateStyle(preset.description)}
-                            onMouseEnter={() => setHoveredPresetId(preset.id)}
-                            onMouseLeave={() => setHoveredPresetId(null)}
-                            className="px-3 py-1.5 text-xs font-medium rounded-full border-2 border-gray-200 hover:border-banana-400 hover:bg-banana-50 transition-all duration-200 hover:shadow-sm"
-                          >
-                            {preset.name}
-                          </button>
+                      presetStyles.map((preset) => {
+                        const isActive = activePresetStyleId === preset.id;
+                        const isPreviewOpen = activePresetPreview?.id === preset.id;
 
-                          {/* 悬停时显示预览图片 */}
-                          {hoveredPresetId === preset.id && preset.previewImage && (
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                              <div className="bg-white rounded-lg shadow-2xl border-2 border-banana-400 p-2.5 w-72">
-                                <img
-                                  src={preset.previewImage}
-                                  alt={preset.name}
-                                  className="w-full h-40 object-cover rounded"
-                                  onError={(e) => {
-                                    // 如果图片加载失败，隐藏预览
-                                    e.currentTarget.style.display = 'none';
-                                  }}
-                                />
-                                <p className="text-xs text-gray-600 mt-2 px-1 line-clamp-3">
-                                  {preset.description}
-                                </p>
-                              </div>
-                              {/* 小三角形指示器 */}
-                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
-                                <div className="w-3 h-3 bg-white border-r-2 border-b-2 border-banana-400 transform rotate-45"></div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))
+                        return (
+                          <div key={preset.id} className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              aria-pressed={isActive}
+                              onClick={() => applyPresetStyle(preset)}
+                              className={`rounded-full border-2 px-3 py-1.5 text-xs font-medium duration-200 transition-[border-color,background-color,box-shadow,color] ${
+                                isActive
+                                  ? 'border-banana-400 bg-banana-50 text-banana-700 shadow-sm'
+                                  : 'border-gray-200 text-gray-700 hover:border-banana-400 hover:bg-banana-50 hover:shadow-sm'
+                              }`}
+                            >
+                              {preset.name}
+                            </button>
+
+                            {preset.previewImage && (
+                              <button
+                                type="button"
+                                aria-label={`预览 ${preset.name} 风格`}
+                                aria-haspopup="dialog"
+                                aria-expanded={isPreviewOpen}
+                                aria-controls={isPreviewOpen ? 'preset-style-preview-dialog' : undefined}
+                                onClick={(event) => openPresetPreview(preset, event.currentTarget)}
+                                className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-gray-500 duration-200 hover:border-banana-300 hover:bg-banana-50 hover:text-banana-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-banana-300/80 focus-visible:ring-offset-2 transition-[border-color,background-color,color,box-shadow]"
+                              >
+                                <Eye size={12} />
+                                预览
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 </div>
 
                 <p className="text-xs text-gray-500">
-                  💡 提示：点击预设风格快速填充，或自定义描述风格、配色、布局等要求
+                  💡 提示：点击名称可快速应用风格，点击“预览”可查看样张后再决定是否采用
                 </p>
               </div>
             ) : (
@@ -825,6 +881,94 @@ export const Home: React.FC = () => {
       />
       
       <FilePreviewModal fileId={previewFileId} onClose={() => setPreviewFileId(null)} />
+
+      {activePresetPreview?.previewImage && typeof document !== 'undefined'
+        ? createPortal(
+            <div className="fixed inset-0 z-[95]" data-testid="preset-style-preview-overlay">
+              <div
+                className="absolute inset-0 bg-slate-950/32 backdrop-blur-[3px]"
+                onClick={closePresetPreview}
+              />
+              <div className="relative flex h-full items-center justify-center p-4 md:p-8">
+                <div
+                  id="preset-style-preview-dialog"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="preset-style-preview-title"
+                  aria-describedby="preset-style-preview-description"
+                  className="relative flex w-full max-w-[860px] flex-col overflow-hidden rounded-[30px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(248,250,252,0.93)_100%)] shadow-[0_32px_120px_rgba(15,23,42,0.28)] backdrop-blur-2xl"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <div className="border-b border-slate-200/80 bg-white/70 px-5 py-5 md:px-7">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-slate-400">
+                          <span className="inline-block h-2.5 w-2.5 rounded-full bg-banana-400" />
+                          风格预览
+                        </div>
+                        <h4
+                          id="preset-style-preview-title"
+                          className="text-xl font-semibold text-slate-900 md:text-2xl"
+                        >
+                          {activePresetPreview.name}
+                        </h4>
+                        <p
+                          id="preset-style-preview-description"
+                          className="mt-2 max-w-[660px] text-sm leading-6 text-slate-600"
+                        >
+                          {activePresetPreview.description}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={closePresetPreview}
+                        className="rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-medium text-slate-500 duration-200 hover:border-slate-300 hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-banana-300/80 focus-visible:ring-offset-2 transition-[border-color,color,background-color]"
+                      >
+                        关闭
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="px-5 pb-5 pt-5 md:px-7 md:pb-7">
+                    <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-slate-100 shadow-[0_18px_60px_rgba(15,23,42,0.14)]">
+                      <img
+                        src={activePresetPreview.previewImage}
+                        alt={`${activePresetPreview.name} 预览图`}
+                        className="block max-h-[65vh] w-full object-contain"
+                      />
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-xs leading-5 text-slate-500">
+                        点击“应用该风格”会将这条预设描述填入输入框，方便继续微调。
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={closePresetPreview}
+                          className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-500 duration-200 hover:border-slate-300 hover:text-slate-900 transition-[border-color,color]"
+                        >
+                          稍后再看
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            applyPresetStyle(activePresetPreview);
+                            closePresetPreview();
+                          }}
+                          className="rounded-full bg-banana-500 px-4 py-2 text-sm font-medium text-white duration-200 hover:bg-banana-600 transition-[background-color,box-shadow]"
+                        >
+                          {activePresetStyleId === activePresetPreview.id ? '已应用该风格' : '应用该风格'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 };

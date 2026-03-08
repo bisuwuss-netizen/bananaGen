@@ -1,5 +1,6 @@
 import React from 'react';
 import { EduCoverModel, ThemeConfig } from '../types/schema';
+import { ImageSlotFrame } from '../components/ImageSlotFrame';
 
 interface EduCoverLayoutProps {
   model: EduCoverModel;
@@ -151,10 +152,14 @@ export const EduCoverLayout: React.FC<EduCoverLayoutProps> = ({ model, theme, on
         boxShadow: data.hero_image ? 'none' : '0 0 40px rgba(6,182,212,0.22), inset 0 0 32px rgba(6,182,212,0.12)',
       }}>
         {data.hero_image ? (
-          <img
+          <ImageSlotFrame
             src={data.hero_image}
             alt={data.title}
-            style={{
+            theme={theme}
+            slotLabel="封面主体插槽"
+            slotHint="建议使用透明主体图或高冲击视觉主图，默认居中裁切。"
+            frameStyle={{ width: '100%', height: '100%', borderRadius: 0 }}
+            imageStyle={{
               width: '100%',
               height: '100%',
               objectFit: 'cover',
@@ -164,20 +169,17 @@ export const EduCoverLayout: React.FC<EduCoverLayoutProps> = ({ model, theme, on
             }}
           />
         ) : (
-          <button
-            type="button"
+          <ImageSlotFrame
+            theme={theme}
+            slotLabel="封面主体插槽"
+            slotHint="建议上传主体透明模型图或视觉主图，封面会按大幅主视觉展示。"
             onClick={onImageUpload}
-            style={{
-              width: '80%', height: '80%', border: 'none', borderRadius: 32,
+            frameStyle={{ width: '80%', height: '80%', borderRadius: 32 }}
+            placeholderStyle={{
               background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01))',
-              color: theme.colors.accent, fontSize: 20, cursor: onImageUpload ? 'pointer' : 'default',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16,
-              borderStyle: 'dashed', borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)'
+              borderColor: 'rgba(255,255,255,0.2)',
             }}
-          >
-            <span style={{ fontSize: 40 }}>🖼️</span>
-            <span>点击上传主体透明模型图</span>
-          </button>
+          />
         )}
       </div>
     </section>

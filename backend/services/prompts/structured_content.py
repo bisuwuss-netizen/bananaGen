@@ -173,7 +173,8 @@ def get_structured_page_content_prompt(page_outline: dict,
     """
     layout_id = page_outline.get('layout_id', 'title_content')
     resolved_layout_id = resolve_layout_id(layout_id)
-    schema_template = LAYOUT_SCHEMAS.get(resolved_layout_id, LAYOUT_SCHEMAS['title_content'])
+    schema_layout_id = layout_id if layout_id in LAYOUT_SCHEMAS else resolved_layout_id
+    schema_template = LAYOUT_SCHEMAS.get(schema_layout_id, LAYOUT_SCHEMAS['title_content'])
     has_image = page_outline.get('has_image', False)
     layout_variant = str(page_outline.get('layout_variant') or 'a').strip().lower()
     layout_archetype = page_outline.get('layout_archetype', '')
@@ -233,18 +234,18 @@ def get_structured_page_content_prompt(page_outline: dict,
     else:
         section_instruction = ""
 
-    if resolved_layout_id == 'ending' and layout_variant == 'b':
+    if schema_layout_id == 'ending' and layout_variant == 'b':
         variant_instruction = """
 **变体约束（ending, variant=b）**：
 - 必须输出 reflection_blocks，且至少 3 个 block
 - 每个 block 必须包含 title + items（items 至少 1 条）
 - 必须输出 closing 作为总结金句"""
-    elif resolved_layout_id == 'process_steps' and layout_variant == 'b':
+    elif schema_layout_id == 'process_steps' and layout_variant == 'b':
         variant_instruction = """
 **变体约束（process_steps, variant=b）**：
 - steps 保持 3-4 步，强调阶段递进，适配横向步骤条
 - 每步 description 用完整句，不少于 12 字"""
-    elif resolved_layout_id == 'title_bullets' and layout_variant == 'b':
+    elif schema_layout_id == 'title_bullets' and layout_variant == 'b':
         variant_instruction = """
 **变体约束（title_bullets, variant=b）**：
 - bullets 优先输出 3-5 条，便于右侧纵向卡片堆叠
@@ -269,6 +270,16 @@ def get_structured_page_content_prompt(page_outline: dict,
 - closing 必须输出，作为左侧核心金句，不超过 30 字"""
     else:
         variant_instruction = ""
+
+    academic_quality_instruction = ""
+    if (scheme_id or "").strip().lower() == "academic":
+        academic_quality_instruction = """
+学术内容质量硬约束（必须遵守）：
+- 内容应接近真实教材写法：术语准确、结论稳健、避免夸张营销语。
+- 禁止编造精确统计数据、出处和机构结论；不确定时用“通常/一般/常见场景”表达。
+- 每页至少包含一个可教学的专业点（概念定义、原理机制、公式含义、案例结论或实训标准）。
+- 上下页需形成知识递进（定义→推导/分析→应用/练习→总结），禁止同义重复堆砌。
+"""
 
     prompt = f"""\
 你是一位专业的PPT内容撰写者。请根据以下页面大纲生成详细的页面内容。
@@ -319,9 +330,11 @@ def get_structured_page_content_prompt(page_outline: dict,
 16. 若提供了 required_close_promise_ids，这是硬约束：必须在正文覆盖对应内容，并在 closed_promise_ids 中返回完整 id 列表
 17. 若提供了 must_cover，必须逐项覆盖，不可遗漏
 18. 必须遵守 template_constraints，禁止输出超出模板容量的列表或过长文案
+19. 禁止输出空字符串、空对象、纯占位符条目（如“...”“待补充”）；列表项必须是可读内容
 {toc_instruction}
 {section_instruction}
 {variant_instruction}
+{academic_quality_instruction}
 只返回 JSON 对象，不要包含其他文字。
 {get_language_instruction(language)}
 """
@@ -350,7 +363,8 @@ def get_structured_page_content_batch_prompt(batch_requests: List[dict],
         page_id = page_outline.get('page_id')
         layout_id = page_outline.get('layout_id', 'title_content')
         resolved_layout_id = resolve_layout_id(layout_id)
-        schema_template = LAYOUT_SCHEMAS.get(resolved_layout_id, LAYOUT_SCHEMAS['title_content'])
+        schema_layout_id = layout_id if layout_id in LAYOUT_SCHEMAS else resolved_layout_id
+        schema_template = LAYOUT_SCHEMAS.get(schema_layout_id, LAYOUT_SCHEMAS['title_content'])
         normalized_items.append({
             "page_id": page_id,
             "title": page_outline.get('title', ''),
@@ -394,5 +408,4 @@ def get_structured_page_content_batch_prompt(batch_requests: List[dict],
 {get_language_instruction(language)}
 """
     return prompt
-
 

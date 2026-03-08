@@ -9,6 +9,7 @@ import {
   getBaseSlideStyle,
   getTitleStyle,
   getCardStyle,
+  toInlineStyle,
 } from '../utils/styleHelper';
 
 interface SafetyNoticeLayoutProps {
@@ -162,6 +163,90 @@ export const SafetyNoticeLayout: React.FC<SafetyNoticeLayoutProps> = ({ model, t
     </section>
   );
 };
+
+
+export function renderSafetyNoticeLayoutHTML(model: SafetyNoticeModel, theme: ThemeConfig): string {
+  const { title, warnings, summary, background_image } = model;
+
+  const slideStyle = toInlineStyle({
+    ...getBaseSlideStyle(theme),
+    ...(background_image
+      ? {
+        backgroundImage: `url(${background_image})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }
+      : {}),
+  });
+
+  const titleStyle = toInlineStyle({ ...getTitleStyle(theme), textShadow: '0 1px 2px rgba(0,0,0,0.1)' });
+
+  const warningsContainerStyle = toInlineStyle({
+    marginTop: '40px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
+  });
+
+  const getLevelConfig = (level: 'danger' | 'warning' | 'caution') => {
+    const configs = {
+      danger: { color: '#dc2626', bgColor: '#fef2f2', icon: '⚠️', label: '危险' },
+      warning: { color: '#ea580c', bgColor: '#fff7ed', icon: '⚡', label: '警告' },
+      caution: { color: '#ca8a04', bgColor: '#fefce8', icon: '⚠', label: '注意' },
+    };
+    return configs[level];
+  };
+
+  const warningsHTML = warnings.map((warning) => {
+    const config = getLevelConfig(warning.level);
+    const warningCardStyle = toInlineStyle({
+      ...getCardStyle(theme),
+      backgroundColor: config.bgColor,
+      borderLeft: `6px solid ${config.color}`,
+      padding: '20px 24px',
+      display: 'flex',
+      alignItems: 'flex-start',
+      gap: '16px',
+    });
+
+    const iconContainerStyle = toInlineStyle({
+      width: '56px', height: '56px', borderRadius: '50%', backgroundColor: config.color,
+      color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: '28px', flexShrink: '0',
+    });
+
+    const levelBadgeStyle = toInlineStyle({
+      display: 'inline-block', padding: '4px 12px', borderRadius: '12px',
+      backgroundColor: config.color, color: '#ffffff', fontSize: theme.sizes.smallSize,
+      fontWeight: 'bold', marginBottom: '8px',
+    });
+
+    return `
+    <div style="${warningCardStyle}">
+      <div style="${iconContainerStyle}">${warning.icon || config.icon}</div>
+      <div style="flex: 1;">
+        <div style="${levelBadgeStyle}">${config.label}</div>
+        <p style="font-size: ${theme.sizes.bodySize}; color: ${theme.colors.text}; line-height: 1.6; margin: 0;">${warning.text}</p>
+      </div>
+    </div>`;
+  }).join('\n');
+
+  const summaryHTML = summary ? `
+    <div style="margin-top: 30px; padding: 20px 24px; backgroundColor: ${theme.colors.backgroundAlt}; border-radius: ${theme.decorations?.borderRadius || '12px'}; border-left: 4px solid ${theme.colors.primary};">
+      <div style="font-size: ${theme.sizes.smallSize}; color: ${theme.colors.text}; lineHeight: 1.6;">
+        <strong>💡 安全提示：</strong> ${summary}
+      </div>
+    </div>` : '';
+
+  return `
+<section style="${slideStyle}">
+  <h2 style="${titleStyle}">${title}</h2>
+  <div style="${warningsContainerStyle}">
+    ${warningsHTML}
+  </div>
+  ${summaryHTML}
+</section>`;
+}
 
 // 添加display name用于调试
 SafetyNoticeLayout.displayName = 'SafetyNoticeLayout';

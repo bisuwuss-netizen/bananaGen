@@ -25,6 +25,20 @@ export function generateHTMLDocument(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="ppt-size" content="width=${slideWidth},height=${slideHeight}">
   <title>${escapeHtml(title)}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,700;1,400&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
+        displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']]
+      },
+      startup: {
+        typeset: true
+      }
+    };
+  </script>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body style="margin:0; padding:0; background-color:#f0f0f0;">
 ${slidesHTML.join('\n\n')}

@@ -45,13 +45,22 @@ export type LayoutId =
   | 'learning_objectives'
   | 'key_concepts'
   | 'theory_explanation'
+  | 'academic_narrative'
   | 'case_study'
   | 'comparison_table'
   | 'diagram_illustration'
   | 'key_takeaways'
+  | 'academic_practice'
   | 'ending_academic'
   // Interactive scheme
   | 'cover_interactive'
+  | 'agenda_path'
+  | 'case_discussion'
+  | 'feedback_poll'
+  | 'group_collab'
+  | 'mind_map_structure'
+  | 'quiz_interaction'
+  | 'role_play_scenario'
   | 'agenda_interactive'
   | 'warmup_question'
   | 'poll_interactive'
@@ -61,6 +70,10 @@ export type LayoutId =
   | 'quiz_check'
   | 'discussion_prompt'
   | 'ending_interactive'
+  // Vocational specialized layouts
+  | 'vocational_bullets'
+  | 'vocational_content'
+  | 'vocational_comparison'
   // Visual scheme
   | 'cover_visual'
   | 'timeline_navigation'
@@ -122,6 +135,12 @@ export type LayoutModel =
   // 学术方案专属布局
   | LearningObjectivesModel
   | TheoryExplanationModel
+  | AcademicNarrativeModel
+  | AcademicCaseStudyModel
+  | AcademicComparisonModel
+  | AcademicPracticeModel
+  | AcademicEndingModel
+  | AcademicDiagramModel
   // 互动方案专属布局
   | WarmupQuestionModel
   | PollInteractiveModel
@@ -395,6 +414,78 @@ export interface TheoryExplanationModel {
   background_image?: string;
 }
 
+/** 学术长文叙述布局（学术方案专属） */
+export interface AcademicNarrativeModel {
+  title: string;
+  narrative: string[];      // 正文段落（左侧宽栏）
+  margin_notes?: {          // 旁注（右侧窄栏）
+    title: string;          // 旁注标题（如 Definition / Note）
+    content: string;        // 旁注内容
+  }[];
+  pull_quote?: string;      // 核心金句拉引（嵌入正文中）
+  background_image?: string;
+}
+
+/** 案例分析布局（学术/高职方案专属） */
+export interface AcademicCaseStudyModel {
+  title: string;            // 如：典型案例分析
+  scenario: string;         // 场景描述/背景
+  challenge?: string;       // 面临挑战/抛出问题
+  points: {                 // 分析要点
+    title: string;
+    description: string;
+  }[];
+  conclusion?: string;      // 案例启示/总结
+  image?: string;           // 案例配图
+  background_image?: string;
+}
+
+/** 概念对比布局（学术/高职方案专属） */
+export interface AcademicComparisonModel {
+  title: string;            // 如：TCP与UDP协议特性对比
+  subtitle?: string;
+  items: {                  // 对比项（通常2-3个）
+    name: string;
+    description?: string;
+    features: string[];     // 特性列表
+  }[];
+  conclusion?: string;      // 适用场景总结
+  background_image?: string;
+}
+
+/** 随堂练习/实训任务布局（学术/高职方案专属） */
+export interface AcademicPracticeModel {
+  title: string;            // 如：随堂测验 / 实训任务要求
+  task_type?: 'quiz' | 'task'; // 类型：测验 / 动手实训
+  description: string;      // 题目/任务说明
+  requirements?: string[];  // 评分标准/操作要求 (实训用)
+  options?: string[];       // 选项 (选择题用)
+  hint?: string;            // 提示/踩分点
+  background_image?: string;
+}
+
+/** 原理图解布局（学术/高职方案专属） */
+export interface AcademicDiagramModel {
+  title: string;
+  subtitle?: string;
+  diagram_url?: string;      // 核心原理图/架构图
+  explanations: {           // 图解步骤/部件说明
+    label: string;          // 例如：步骤1 或 部件A
+    description: string;
+  }[];
+  summary?: string;
+  background_image?: string;
+}
+
+/** 课程总结与作业布局（学术/高职方案专属） */
+export interface AcademicEndingModel {
+  title: string;            // 如：本章小结与课后要求
+  summary_points: string[]; // 核心知识点回顾
+  homework?: string[];      // 课后作业/实训报告要求
+  next_chapter?: string;    // 下节预告
+  background_image?: string;
+}
+
 /** 热身问题布局（互动方案专属） */
 export interface WarmupQuestionModel {
   question: string;         // 主问题
@@ -437,7 +528,7 @@ export interface PortfolioModel {
     description?: string;   // 作品描述
     tags?: string[];        // 标签
   }[];
-  layout?: 'grid' | 'masonry';  // 布局方式
+  layout?: 'grid' | 'masonry' | 'list';  // 布局方式
   background_image?: string;
 }
 
@@ -698,12 +789,22 @@ export interface EduSummaryModel {
 export interface EduQACaseModel {
   title: string;
   subtitle?: string;
-  variant?: string; // 'a' 为问答卡片, 'b' 为案例看板
-  items: {
+  variant?: string; // 后端可能返回 a/b/c/d；前端当前映射到 a/b
+  layout_variant?: string; // 与 variant 含义一致的后端字段
+  items?: {
     label: string;      // 如 "Q", "A", "背景", "挑战" 等
     content: string;    // 内容正文
+    label_en?: string;  // 可选英文标签（用于样式装饰）
     icon?: string;      // 可选图标
     color?: string;     // 强调色
   }[];
+  // 后端结构化字段（当前生成链路主要输出）
+  question?: string;
+  answer?: string;
+  analysis?: {
+    title: string;
+    content: string;
+  }[];
+  conclusion?: string;
   background_image?: string;
 }

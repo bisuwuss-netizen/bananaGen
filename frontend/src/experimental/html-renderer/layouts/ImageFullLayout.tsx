@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { ImageFullModel, ThemeConfig } from '../types/schema';
+import { ImageSlotFrame } from '../components/ImageSlotFrame';
 import {
   toInlineStyle,
   getBaseSlideStyle,
@@ -78,33 +79,21 @@ export const ImageFullLayout: React.FC<ImageFullLayoutProps> = ({ model, theme, 
     fontStyle: 'italic',
   });
 
-  const placeholderBaseStyle = getImagePlaceholderStyle('80%', '400px');
-  const placeholderStyle = toInlineStyle({
-    ...placeholderBaseStyle,
-    cursor: onImageUpload ? 'pointer' : 'default',
-  });
-
   return (
     <section style={slideStyle}>
       {title && <h2 style={parseStyle(titleStyle)}>{title}</h2>}
       <div style={parseStyle(imageContainerStyle)}>
-        {image_src ? (
-          <div style={parseStyle(imageFrameStyle)}>
-            <img
-              src={image_src}
-              alt={image_alt || ''}
-              style={parseStyle(imageStyle)}
-            />
-          </div>
-        ) : (
-          <div
-            style={parseStyle(placeholderStyle)}
-            onClick={onImageUpload}
-            title="点击上传图片"
-          >
-            点击上传图片
-          </div>
-        )}
+        <ImageSlotFrame
+          src={image_src}
+          alt={image_alt || ''}
+          theme={theme}
+          slotLabel="全幅图片插槽"
+          slotHint="建议使用横向主视觉图，当前页会按 contain 完整呈现。"
+          onClick={onImageUpload}
+          frameStyle={parseStyle(imageFrameStyle)}
+          imageStyle={parseStyle(imageStyle)}
+          placeholderStyle={{ width: '80%', height: '400px' }}
+        />
       </div>
       {caption && <p style={parseStyle(captionStyle)}>{caption}</p>}
     </section>

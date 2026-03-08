@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import type { Project, Page } from '@/types';
+import type { Project, Page, Task } from '@/types';
 
 /**
  * 合并 className (支持 Tailwind CSS)
@@ -18,6 +18,10 @@ export function normalizeProject(data: any): Project {
     id: data.project_id || data.id,
     template_image_path: data.template_image_url || data.template_image_path,
     scheme_id: data.scheme_id || 'edu_dark',
+    latest_generation_task: data.latest_generation_task
+      ? normalizeTask(data.latest_generation_task)
+      : undefined,
+    preview_page: data.preview_page ? normalizePage(data.preview_page) : undefined,
     pages: (data.pages || []).map(normalizePage).sort((a: any, b: any) =>
       (a.order_index ?? 999) - (b.order_index ?? 999)
     ),
@@ -32,6 +36,14 @@ export function normalizePage(data: any): Page {
     ...data,
     id: data.page_id || data.id,
     generated_image_path: data.generated_image_url || data.generated_image_path,
+  };
+}
+
+export function normalizeTask(data: any): Task {
+  return {
+    ...data,
+    id: data.task_id || data.id,
+    error: data.error_message || data.error,
   };
 }
 

@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { TitleContentModel, ThemeConfig } from '../types/schema';
+import { ImageSlotFrame } from '../components/ImageSlotFrame';
 import {
   toInlineStyle,
   getBaseSlideStyle,
@@ -59,13 +60,6 @@ export const TitleContentLayout: React.FC<TitleContentLayoutProps> = ({ model, t
       flex: '1',
     });
 
-    const imageColumnStyle = toInlineStyle({
-      width: imageWidth,
-      flexShrink: '0',
-      display: 'flex',
-      alignItems: 'stretch',
-    });
-
     const paragraphStyle = toInlineStyle({
       ...getBodyStyle(theme),
       marginTop: '16px',
@@ -100,21 +94,6 @@ export const TitleContentLayout: React.FC<TitleContentLayoutProps> = ({ model, t
       objectPosition: 'center',
     });
 
-    const placeholderStyle = toInlineStyle({
-      width: '100%',
-      height: '100%',
-      minHeight: '320px',
-      backgroundColor: theme.colors.backgroundAlt,
-      borderRadius: '8px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      color: theme.colors.textLight,
-      fontSize: '14px',
-      border: `2px dashed ${theme.colors.secondary}`,
-      cursor: onImageUpload ? 'pointer' : 'default',
-    });
-
     return (
       <section style={slideStyle}>
         <h2 style={parseStyle(titleStyle)}>{title}</h2>
@@ -129,20 +108,17 @@ export const TitleContentLayout: React.FC<TitleContentLayoutProps> = ({ model, t
               <div style={parseStyle(highlightStyle)}>{highlight}</div>
             )}
           </div>
-          <div style={parseStyle(imageColumnStyle)}>
-            {image.src ? (
-              <div style={parseStyle(imageFrameStyle)}>
-                <img src={image.src} alt={image.alt || ''} style={parseStyle(imageStyle)} />
-              </div>
-            ) : (
-              <div
-                style={parseStyle(placeholderStyle)}
-                onClick={onImageUpload}
-                title="点击上传图片"
-              >
-                <span>点击上传图片</span>
-              </div>
-            )}
+          <div style={parseStyle(toInlineStyle({ width: imageWidth, flexShrink: 0, display: 'flex', alignItems: 'stretch' }))}>
+            <ImageSlotFrame
+              src={image.src}
+              alt={image.alt || ''}
+              theme={theme}
+              slotLabel="配图插槽"
+              slotHint="建议使用与正文并列的辅助配图，默认按 contain 完整显示。"
+              onClick={onImageUpload}
+              frameStyle={parseStyle(imageFrameStyle)}
+              imageStyle={parseStyle(imageStyle)}
+            />
           </div>
         </div>
       </section>
@@ -243,13 +219,6 @@ export function renderTitleContentLayoutHTML(model: TitleContentModel, theme: Th
       flex: '1',
     });
 
-    const imageColumnStyle = toInlineStyle({
-      width: imageWidth,
-      flexShrink: '0',
-      display: 'flex',
-      alignItems: 'stretch',
-    });
-
     const paragraphStyle = toInlineStyle({
       fontSize: theme.sizes.bodySize,
       color: theme.colors.text,
@@ -319,7 +288,7 @@ export function renderTitleContentLayoutHTML(model: TitleContentModel, theme: Th
     <div style="${textColumnStyle}">
       ${paragraphsHTML}${highlightHTML}
     </div>
-    <div style="${imageColumnStyle}">
+    <div style="width:${imageWidth};flex-shrink:0;display:flex;align-items:stretch;">
       ${imageHTML}
     </div>
   </div>

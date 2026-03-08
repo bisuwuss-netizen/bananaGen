@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { ProcessStepsModel, ThemeConfig } from '../types/schema';
+import { ImageSlotFrame } from '../components/ImageSlotFrame';
 import {
   toInlineStyle,
   getBaseSlideStyle,
@@ -85,20 +86,6 @@ export const ProcessStepsLayout: React.FC<ProcessStepsLayoutProps> = ({ model, t
       objectPosition: 'center',
     });
 
-    const placeholderStyle = toInlineStyle({
-      width: image.width || '90%',
-      height: '320px',
-      backgroundColor: theme.colors.backgroundAlt,
-      borderRadius: '12px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      color: theme.colors.textLight,
-      fontSize: '14px',
-      border: `2px dashed ${theme.colors.secondary}`,
-      cursor: onImageUpload ? 'pointer' : 'default',
-    });
-
     return (
       <section style={slideStyle}>
         <h2 style={parseStyle(titleStyle)}>{title}</h2>
@@ -110,19 +97,16 @@ export const ProcessStepsLayout: React.FC<ProcessStepsLayoutProps> = ({ model, t
           ))}
         </div>
         <div style={parseStyle(imageContainerStyle)}>
-          {image.src ? (
-            <div style={parseStyle(imageFrameStyle)}>
-              <img src={image.src} alt={image.alt || ''} style={parseStyle(imageStyle)} />
-            </div>
-          ) : (
-            <div
-              style={parseStyle(placeholderStyle)}
-              onClick={onImageUpload}
-              title="点击上传图片"
-            >
-              <span>点击上传图片</span>
-            </div>
-          )}
+          <ImageSlotFrame
+            src={image.src}
+            alt={image.alt || ''}
+            theme={theme}
+            slotLabel="流程配图插槽"
+            slotHint="建议放置步骤总览图、工艺示意图或操作现场图。"
+            onClick={onImageUpload}
+            frameStyle={parseStyle(imageFrameStyle)}
+            imageStyle={parseStyle(imageStyle)}
+          />
         </div>
       </section>
     );

@@ -28,6 +28,7 @@ export const ContextualStatusBadge: React.FC<ContextualStatusBadgeProps> = ({
   const statusConfig = {
     DRAFT: 'bg-gray-100 text-gray-600',
     DESCRIPTION_GENERATED: 'bg-blue-100 text-blue-600',
+    HTML_MODEL_GENERATED: 'bg-cyan-100 text-cyan-700',
     GENERATING: 'bg-orange-100 text-orange-600 animate-pulse',
     COMPLETED: 'bg-green-100 text-green-600',
     FAILED: 'bg-red-100 text-red-600',
@@ -45,4 +46,3 @@ export const ContextualStatusBadge: React.FC<ContextualStatusBadgeProps> = ({
     </span>
   );
 };
-

@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { TwoColumnModel, ColumnContent, ThemeConfig } from '../types/schema';
+import { ImageSlotFrame } from '../components/ImageSlotFrame';
 import {
   toInlineStyle,
   getBaseSlideStyle,
@@ -175,27 +176,17 @@ const ColumnRenderer: React.FC<{
       return (
         <>
           {content.header && <h3 style={parseStyle(headerStyle)}>{content.header}</h3>}
-          {content.image_src ? (
-            <div style={parseStyle(imageFrameStyle)}>
-              <img
-                src={content.image_src}
-                alt={content.image_alt || ''}
-                style={parseStyle(imageStyle)}
-              />
-            </div>
-          ) : (
-            <div
-              style={parseStyle(toInlineStyle({
-                ...getImagePlaceholderStyle('100%', '100%'),
-                minHeight: '320px',
-                cursor: onImageUpload ? 'pointer' : 'default',
-              }))}
-              onClick={onImageUpload}
-              title="点击上传图片"
-            >
-              点击上传图片
-            </div>
-          )}
+          <ImageSlotFrame
+            src={content.image_src}
+            alt={content.image_alt || ''}
+            theme={theme}
+            slotLabel={content.header ? `${content.header} 插槽` : '栏位图片插槽'}
+            slotHint="建议使用与该栏内容匹配的说明图，当前栏位会按 contain 显示。"
+            onClick={onImageUpload}
+            frameStyle={parseStyle(imageFrameStyle)}
+            imageStyle={parseStyle(imageStyle)}
+            placeholderStyle={{ minHeight: '320px' }}
+          />
         </>
       );
     }
@@ -234,7 +225,7 @@ const ColumnRenderer: React.FC<{
         );
       }
 
-      // Fallback: 如果使用了 content 数组但 type=bullets，解析其中可能的 HTML 标签
+      // Fallback: 如果使用了 content 数组 but type=bullets，解析其中可能的 HTML 标签
       return (
         <>
           {content.header && <h3 style={parseStyle(headerStyle)}>{content.header}</h3>}

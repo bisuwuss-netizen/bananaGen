@@ -6,16 +6,123 @@ interface EduQACaseLayoutProps {
   theme: ThemeConfig;
 }
 
-function normalizeModel(input: Partial<EduQACaseModel>): EduQACaseModel {
-  const items = Array.isArray(input.items) ? input.items : [];
+type EduQACaseItem = NonNullable<EduQACaseModel['items']>[number];
+type NormalizedEduQACaseModel = Omit<EduQACaseModel, 'items' | 'variant'> & {
+  items: EduQACaseItem[];
+  variant: 'a' | 'b';
+};
+
+const ITEM_COLOR_SCALE = ['#06b6d3', '#10b981', '#3b82f6', '#f59e0b'] as const;
+
+const hasText = (value: unknown): value is string =>
+  typeof value === 'string' && value.trim().length > 0;
+
+const normalizeVariant = (rawVariant: unknown, itemCount: number): 'a' | 'b' => {
+  const value = hasText(rawVariant) ? rawVariant.trim().toLowerCase() : '';
+  if (value === 'b' || value === 'c') return 'b';
+  if (value === 'a') return 'a';
+  if (value === 'd') return itemCount > 3 ? 'b' : 'a';
+  return itemCount > 3 ? 'b' : 'a';
+};
+
+const sanitizeItems = (items: EduQACaseModel['items']): EduQACaseItem[] => {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item, index) => {
+      const content = hasText(item?.content) ? item.content.trim() : '';
+      if (!content) return null;
+      const label = hasText(item?.label) ? item.label.trim() : `要点${index + 1}`;
+      const normalized: EduQACaseItem = {
+        label,
+        content,
+        color: hasText(item?.color) ? item.color.trim() : ITEM_COLOR_SCALE[index % ITEM_COLOR_SCALE.length],
+      };
+      if (hasText(item?.label_en)) normalized.label_en = item.label_en.trim();
+      if (hasText(item?.icon)) normalized.icon = item.icon.trim();
+      return normalized;
+    })
+    .filter((item): item is EduQACaseItem => item !== null);
+};
+
+const buildItemsFromStructuredFields = (input: Partial<EduQACaseModel>): EduQACaseItem[] => {
+  const items: EduQACaseItem[] = [];
+
+  if (hasText(input.question)) {
+    items.push({
+      label: 'Q',
+      label_en: 'Question',
+      content: input.question.trim(),
+      color: ITEM_COLOR_SCALE[0],
+    });
+  }
+
+  if (hasText(input.answer)) {
+    items.push({
+      label: 'A',
+      label_en: 'Answer',
+      content: input.answer.trim(),
+      color: ITEM_COLOR_SCALE[1],
+    });
+  }
+
+  if (Array.isArray(input.analysis)) {
+    input.analysis.forEach((entry, index) => {
+      const title = hasText(entry?.title) ? entry.title.trim() : `分析${index + 1}`;
+      const content = hasText(entry?.content) ? entry.content.trim() : '';
+      if (!content) return;
+      items.push({
+        label: title,
+        content,
+        color: ITEM_COLOR_SCALE[items.length % ITEM_COLOR_SCALE.length],
+      });
+    });
+  }
+
+  if (hasText(input.conclusion)) {
+    items.push({
+      label: '结论',
+      label_en: 'Conclusion',
+      content: input.conclusion.trim(),
+      color: ITEM_COLOR_SCALE[3],
+    });
+  }
+
+  if (items.length <= 4) return items;
+
+  const firstThree = items.slice(0, 3);
+  const overflowText = items
+    .slice(3)
+    .map((item) => `${item.label}：${item.content}`)
+    .join('；');
+  firstThree.push({
+    label: '延伸',
+    label_en: 'More',
+    content: overflowText,
+    color: ITEM_COLOR_SCALE[3],
+  });
+  return firstThree;
+};
+
+function normalizeModel(input: Partial<EduQACaseModel>): NormalizedEduQACaseModel {
+  const explicitItems = sanitizeItems(input.items);
+  const derivedItems = explicitItems.length > 0 ? explicitItems : buildItemsFromStructuredFields(input);
+  const items = derivedItems.length > 0
+    ? derivedItems
+    : [
+      { label: 'Q', label_en: 'Question', content: '这是一个示例问题？', color: '#06b6d3' },
+      { label: 'A', label_en: 'Answer', content: '这是一个示例回答，用于展示布局效果。', color: '#10b981' },
+    ];
+
   return {
     title: input.title || '问答与案例分析',
     subtitle: input.subtitle,
-    variant: input.variant || 'a',
-    items: items.length > 0 ? items : [
-      { label: 'Q', content: '这是一个示例问题？', color: '#06b6d3' },
-      { label: 'A', content: '这是一个示例回答，用于展示布局效果。', color: '#10b981' }
-    ],
+    variant: normalizeVariant(input.variant || input.layout_variant, items.length),
+    layout_variant: hasText(input.layout_variant) ? input.layout_variant : undefined,
+    items,
+    question: hasText(input.question) ? input.question : undefined,
+    answer: hasText(input.answer) ? input.answer : undefined,
+    analysis: Array.isArray(input.analysis) ? input.analysis : undefined,
+    conclusion: hasText(input.conclusion) ? input.conclusion : undefined,
     background_image: input.background_image,
   };
 }
@@ -45,6 +152,8 @@ const highlightText = (text: string, color: string = '#06b6d3') => {
 };
 
 const SHADOW_SOFT = '0 16px 40px rgba(0, 0, 0, 0.45)';
+const getItemLabelEn = (item: EduQACaseItem): string | undefined =>
+  (item as unknown as { label_en?: string }).label_en;
 
 export const EduQACaseLayout: React.FC<EduQACaseLayoutProps> = ({ model, theme }) => {
   const data = normalizeModel(model);
@@ -111,7 +220,7 @@ export const EduQACaseLayout: React.FC<EduQACaseLayoutProps> = ({ model, theme }
 };
 
 // 变体 A: 极致灵动问答 (压缩版)
-const EduQACards: React.FC<{ items: EduQACaseModel['items']; theme: ThemeConfig }> = ({ items, theme }) => {
+const EduQACards: React.FC<{ items: EduQACaseItem[]; theme: ThemeConfig }> = ({ items, theme }) => {
   return (
     <div style={{ position: 'relative', maxWidth: 1040, margin: '0 auto', width: '100%' }}>
       <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', strokeDasharray: '4 6', stroke: 'rgba(255,255,255,0.08)', strokeWidth: 1 }}>
@@ -173,7 +282,7 @@ const EduQACards: React.FC<{ items: EduQACaseModel['items']; theme: ThemeConfig 
 };
 
 // 变体 B: 非对称极致看板 (比例优化版)
-const EduCaseBoard: React.FC<{ items: EduQACaseModel['items']; theme: ThemeConfig }> = ({ items, theme }) => {
+const EduCaseBoard: React.FC<{ items: EduQACaseItem[]; theme: ThemeConfig }> = ({ items, theme }) => {
   const layoutItems = items.slice(0, 4);
   return (
     <div style={{ 
@@ -220,7 +329,7 @@ const EduCaseBoard: React.FC<{ items: EduQACaseModel['items']; theme: ThemeConfi
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, zIndex: 2 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: 4, opacity: 0.7 }}>
-                {item.label_en || item.label.toUpperCase()}
+                {getItemLabelEn(item) || item.label.toUpperCase()}
               </div>
               <div style={{
                 fontSize: isFeatured ? 30 : 24, // 压缩标题字号

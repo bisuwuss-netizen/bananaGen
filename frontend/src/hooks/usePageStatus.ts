@@ -107,6 +107,7 @@ function getStatusLabel(status: PageStatus): string {
   const labels: Record<PageStatus, string> = {
     DRAFT: '草稿',
     DESCRIPTION_GENERATED: '已生成描述',
+    HTML_MODEL_GENERATED: '内容已生成',
     GENERATING: '生成中',
     COMPLETED: '已完成',
     FAILED: '失败',
@@ -124,9 +125,9 @@ function getStatusDescription(
 ): string {
   if (status === 'DRAFT') return '草稿阶段';
   if (status === 'DESCRIPTION_GENERATED') return '描述已生成';
+  if (status === 'HTML_MODEL_GENERATED') return 'HTML 内容已生成';
   if (status === 'GENERATING') return '正在生成中';
   if (status === 'FAILED') return '生成失败';
   if (status === 'COMPLETED') return '全部完成';
   return '状态未知';
 }
-

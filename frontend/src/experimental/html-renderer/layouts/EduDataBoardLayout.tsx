@@ -6,8 +6,8 @@ interface EduDataBoardLayoutProps {
   theme: ThemeConfig;
 }
 
-type LooseEduDataBoardModel = Partial<EduDataBoardModel> & {
-  bullets?: Array<{ text?: string; description?: string; dataPoint?: { value?: string; unit?: string; source?: string } } | string>;
+type LooseEduDataBoardModel = Omit<Partial<EduDataBoardModel>, 'bullets'> & {
+  bullets?: Array<{ text?: string; description?: string; icon?: string; dataPoint?: { value?: string; unit?: string; source?: string } } | string>;
 };
 
 function toNumber(value: unknown, fallback: number): number {

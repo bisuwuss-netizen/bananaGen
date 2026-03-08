@@ -301,6 +301,8 @@ async def generate_page_description(
             NarrativeRuntimeTracker,
             enrich_outline_with_narrative_contract,
         )
+        from services.presentation.layout_planner import assign_layout_variants
+        from services.prompts.layouts import LAYOUT_ID_ALIASES
 
         layout_id = page.layout_id or page_data.get("layout_id", "title_content")
 
@@ -310,6 +312,9 @@ async def generate_page_description(
             if p.id == page.id:
                 current_index = i
             oc = p.get_outline_content() or {}
+            existing_model = p.get_html_model()
+            if not isinstance(existing_model, dict):
+                existing_model = {}
             ordered_outline_pages.append({
                 "page_id": f"p{i:02d}",
                 "title": oc.get("title", ""),
@@ -322,7 +327,33 @@ async def generate_page_description(
                 "promises_open": oc.get("promises_open", []),
                 "promises_close": oc.get("promises_close", []),
                 "required_close_promise_ids": oc.get("required_close_promise_ids", oc.get("promises_close", [])),
+                "layout_variant": oc.get("layout_variant")
+                or existing_model.get("layout_variant")
+                or existing_model.get("variant"),
             })
+
+        try:
+            ordered_outline_pages = assign_layout_variants(
+                outline=ordered_outline_pages,
+                scheme_id=project.scheme_id or "edu_dark",
+                layout_aliases=LAYOUT_ID_ALIASES,
+                seed=project.idea_prompt or project.id or project_id,
+            )
+        except Exception as planner_err:
+            logger.warning("Single-page regeneration variant planning skipped: %s", planner_err)
+
+        for i, p in enumerate(all_pages, 1):
+            planned_outline = ordered_outline_pages[i - 1] if i - 1 < len(ordered_outline_pages) else None
+            if not isinstance(planned_outline, dict):
+                continue
+            persisted_outline = p.get_outline_content() or {}
+            if not isinstance(persisted_outline, dict):
+                persisted_outline = {}
+            persisted_outline["logical_page_id"] = planned_outline.get("page_id", f"p{i:02d}")
+            persisted_outline["layout_variant"] = str(planned_outline.get("layout_variant") or "a").strip().lower() or "a"
+            if planned_outline.get("layout_archetype"):
+                persisted_outline["layout_archetype"] = planned_outline.get("layout_archetype")
+            p.set_outline_content(persisted_outline)
 
         full_outline_context = enrich_outline_with_narrative_contract({
             "title": project_context.idea_prompt or project.idea_prompt or "",
@@ -334,11 +365,15 @@ async def generate_page_description(
             (item for item in full_outline_context.get("pages", []) if item.get("page_id") == logical_page_id),
             {},
         )
+        layout_variant = str(page_outline_context.get("layout_variant") or "a").strip().lower() or "a"
+        layout_archetype = str(page_outline_context.get("layout_archetype") or "").strip()
+        layout_id = page_outline_context.get("layout_id", layout_id)
 
         structured_page_outline = {
             "page_id": logical_page_id,
             "title": page_data.get("title", page_outline_context.get("title", "")),
             "layout_id": layout_id,
+            "layout_variant": layout_variant,
             "has_image": bool(page_outline_context.get("has_image", False)),
             "keywords": page_outline_context.get("keywords", page_data.get("points", [])[:3]),
             "depends_on": page_outline_context.get("depends_on", []),
@@ -347,6 +382,8 @@ async def generate_page_description(
             "promises_close": page_outline_context.get("promises_close", []),
             "required_close_promise_ids": page_outline_context.get("required_close_promise_ids", page_outline_context.get("promises_close", [])),
         }
+        if layout_archetype:
+            structured_page_outline["layout_archetype"] = layout_archetype
         if "section_number" in page_data:
             structured_page_outline["section_number"] = page_data["section_number"]
         if "subtitle" in page_data:
@@ -378,6 +415,11 @@ async def generate_page_description(
             continuity_context=continuity_context,
         )
 
+        if isinstance(model, dict):
+            model["variant"] = layout_variant
+            model["layout_variant"] = layout_variant
+            if layout_archetype:
+                model["layout_archetype"] = layout_archetype
         page.set_html_model(model)
         if layout_id:
             page.layout_id = layout_id
@@ -430,7 +472,7 @@ async def generate_page_image(
     )
     task.set_progress({"total": 1, "completed": 0, "failed": 0})
     db.add(task)
-    await db.flush()
+    await db.commit()
 
     from services.ai_service_manager import get_ai_service
     from services.tasks import generate_single_page_image_task, task_manager

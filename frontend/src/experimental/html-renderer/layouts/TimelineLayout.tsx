@@ -1,6 +1,6 @@
 /**
- * 时间轴布局组件（视觉方案专属）
- * 特征：水平/垂直时间轴 + 事件节点 + 连接线
+ * 时间线布局组件（视觉方案专属）
+ * 特征：横向/纵向时间轴 + 节点卡片 + 进度指示
  */
 
 import React from 'react';
@@ -9,6 +9,7 @@ import {
   getBaseSlideStyle,
   getTitleStyle,
   getCardStyle,
+  toInlineStyle,
 } from '../utils/styleHelper';
 
 interface TimelineLayoutProps {
@@ -20,7 +21,8 @@ const asStyle = (styles: Record<string, string | number | undefined>): React.CSS
   styles as React.CSSProperties;
 
 export const TimelineLayout: React.FC<TimelineLayoutProps> = ({ model, theme }) => {
-  const { title, events, orientation = 'horizontal', background_image } = model;
+  const { title, events, orientation, background_image } = model;
+  const isHorizontal = orientation === 'horizontal';
 
   const slideStyle: React.CSSProperties = {
     ...getBaseSlideStyle(theme),
@@ -33,222 +35,166 @@ export const TimelineLayout: React.FC<TimelineLayoutProps> = ({ model, theme }) 
       : {}),
   };
 
-  const titleStyle = asStyle({ ...getTitleStyle(theme), textShadow: '0 1px 2px rgba(0,0,0,0.1)' });
+  const titleStyle = asStyle({
+    ...getTitleStyle(theme),
+    marginBottom: '40px',
+  });
 
-  if (orientation === 'horizontal') {
-    // 水平时间轴
-    const timelineContainerStyle = asStyle({
-      marginTop: '50px',
-      position: 'relative',
-      display: 'flex',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      paddingTop: '60px',
-    });
+  const timelineContainerStyle = asStyle({
+    display: 'flex',
+    flexDirection: isHorizontal ? 'row' : 'column',
+    gap: isHorizontal ? '20px' : '30px',
+    alignItems: isHorizontal ? 'flex-start' : 'stretch',
+    padding: isHorizontal ? '40px 0' : '0 40px',
+    height: 'calc(100% - 140px)',
+    overflow: 'hidden',
+    position: 'relative',
+  });
 
-    const timelineLineStyle = asStyle({
-      position: 'absolute',
-      top: '60px',
-      left: '5%',
-      right: '5%',
-      height: '4px',
-      backgroundColor: theme.colors.secondary,
-      borderRadius: '2px',
-    });
+  // 时间轴连线
+  const lineStyle = asStyle({
+    position: 'absolute',
+    backgroundColor: theme.colors.secondary,
+    opacity: 0.3,
+    zIndex: 0,
+    ...(isHorizontal
+      ? {
+        top: '120px',
+        left: '60px',
+        right: '60px',
+        height: '4px',
+      }
+      : {
+        top: '40px',
+        bottom: '40px',
+        left: '74px',
+        width: '4px',
+      }),
+  });
 
-    return (
-      <section style={slideStyle}>
-        <h2 style={titleStyle}>{title}</h2>
+  return (
+    <section style={slideStyle}>
+      <h2 style={titleStyle}>{title}</h2>
 
-        <div style={timelineContainerStyle}>
-          {/* 时间轴连接线 */}
-          <div style={timelineLineStyle}></div>
+      <div style={timelineContainerStyle}>
+        {/* 时间轴线 */}
+        <div style={lineStyle}></div>
 
-          {/* 事件节点 */}
-          {events.map((event, index) => {
-            const baseCardStyle = getCardStyle(theme);
-            const eventNodeStyle = asStyle({
-              width: `${100 / events.length - 2}%`,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              position: 'relative',
-            });
+        {events.map((event, index) => {
+          const eventItemStyle = asStyle({
+            display: 'flex',
+            flexDirection: isHorizontal ? 'column' : 'row',
+            alignItems: isHorizontal ? 'center' : 'flex-start',
+            gap: '16px',
+            flex: isHorizontal ? '1' : 'none',
+            position: 'relative',
+            zIndex: 1,
+          });
 
-            const dotStyle = asStyle({
-              width: '24px',
-              height: '24px',
-              borderRadius: '50%',
-              backgroundColor: theme.colors.primary,
-              border: '4px solid #ffffff',
-              boxShadow: '0 0 0 4px ' + theme.colors.secondary,
-              position: 'absolute',
-              top: '-12px',
-              zIndex: '2',
-            });
+          const nodeStyle = asStyle({
+            width: isHorizontal ? '40px' : '48px',
+            height: isHorizontal ? '40px' : '48px',
+            borderRadius: '50%',
+            backgroundColor: theme.colors.accent,
+            color: '#ffffff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: isHorizontal ? '18px' : '24px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+            flexShrink: '0',
+            marginTop: isHorizontal ? '0' : '4px',
+          });
 
-            const yearStyle = asStyle({
-              fontSize: '28px',
-              fontWeight: 'bold',
-              color: theme.colors.primary,
-              marginBottom: '12px',
-              marginTop: '20px',
-            });
+          const cardStyle = asStyle({
+            ...getCardStyle(theme),
+            flex: 1,
+            padding: '16px 20px',
+            width: isHorizontal ? '100%' : 'auto',
+          });
 
-            const eventCardStyle = asStyle({
-              ...baseCardStyle,
-              padding: '16px',
-              textAlign: 'center',
-              minHeight: '120px',
-              width: '100%',
-            });
-
-            const eventTitleStyle = asStyle({
-              fontSize: theme.sizes.bodySize,
-              fontWeight: 'bold',
-              color: theme.colors.text,
-              marginBottom: '8px',
-            });
-
-            const eventDescStyle = asStyle({
-              fontSize: theme.sizes.smallSize,
-              color: theme.colors.textLight,
-              lineHeight: '1.5',
-            });
-
-            return (
-              <div key={index} style={eventNodeStyle}>
-                {/* 时间点 */}
-                <div style={dotStyle}></div>
-
-                {/* 年份 */}
-                <div style={yearStyle}>{event.year}</div>
-
-                {/* 事件卡片 */}
-                <div style={eventCardStyle}>
-                  {event.icon && (
-                    <div style={{ fontSize: '24px', marginBottom: '8px' }}>
-                      {event.icon}
-                    </div>
-                  )}
-                  <div style={eventTitleStyle}>{event.title}</div>
-                  <div style={eventDescStyle}>{event.description}</div>
-                </div>
+          return (
+            <div key={index} style={eventItemStyle}>
+              {/* 年份/时间标志 */}
+              <div 
+                style={{ 
+                  fontSize: '24px', 
+                  fontWeight: 'bold', 
+                  color: theme.colors.primary,
+                  marginBottom: isHorizontal ? '8px' : '0',
+                  minWidth: isHorizontal ? 'auto' : '100px',
+                  textAlign: isHorizontal ? 'center' : 'right',
+                }}
+              >
+                {event.year}
               </div>
-            );
-          })}
-        </div>
-      </section>
-    );
-  } else {
-    // 垂直时间轴
-    const timelineContainerStyle = asStyle({
-      marginTop: '40px',
-      position: 'relative',
-      paddingLeft: '50px',
-    });
 
-    const timelineLineStyle = asStyle({
-      position: 'absolute',
-      top: '0',
-      bottom: '0',
-      left: '11px',
-      width: '4px',
-      backgroundColor: theme.colors.secondary,
-      borderRadius: '2px',
-    });
-
-    return (
-      <section style={slideStyle}>
-        <h2 style={titleStyle}>{title}</h2>
-
-        <div style={timelineContainerStyle}>
-          {/* 时间轴连接线 */}
-          <div style={timelineLineStyle}></div>
-
-          {/* 事件节点 */}
-          {events.map((event, index) => {
-            const baseCardStyle = getCardStyle(theme);
-            const eventNodeStyle = asStyle({
-              position: 'relative',
-              marginBottom: '30px',
-              paddingLeft: '40px',
-            });
-
-            const dotStyle = asStyle({
-              width: '24px',
-              height: '24px',
-              borderRadius: '50%',
-              backgroundColor: theme.colors.primary,
-              border: '4px solid #ffffff',
-              boxShadow: '0 0 0 4px ' + theme.colors.secondary,
-              position: 'absolute',
-              left: '0',
-              top: '8px',
-              zIndex: '2',
-            });
-
-            const eventCardStyle = asStyle({
-              ...baseCardStyle,
-              padding: '16px 20px',
-              display: 'flex',
-              gap: '16px',
-            });
-
-            const yearBadgeStyle = asStyle({
-              fontSize: '20px',
-              fontWeight: 'bold',
-              color: '#ffffff',
-              backgroundColor: theme.colors.primary,
-              padding: '8px 16px',
-              borderRadius: theme.decorations?.borderRadius || '8px',
-              flexShrink: '0',
-              alignSelf: 'flex-start',
-            });
-
-            const eventContentStyle = asStyle({
-              flex: '1',
-            });
-
-            const eventTitleStyle = asStyle({
-              fontSize: theme.sizes.bodySize,
-              fontWeight: 'bold',
-              color: theme.colors.text,
-              marginBottom: '6px',
-            });
-
-            const eventDescStyle = asStyle({
-              fontSize: theme.sizes.smallSize,
-              color: theme.colors.textLight,
-              lineHeight: '1.5',
-            });
-
-            return (
-              <div key={index} style={eventNodeStyle}>
-                {/* 时间点 */}
-                <div style={dotStyle}></div>
-
-                {/* 事件卡片 */}
-                <div style={eventCardStyle}>
-                  <div style={yearBadgeStyle}>{event.year}</div>
-                  <div style={eventContentStyle}>
-                    <div style={eventTitleStyle}>
-                      {event.icon && <span>{event.icon} </span>}
-                      {event.title}
-                    </div>
-                    <div style={eventDescStyle}>{event.description}</div>
-                  </div>
-                </div>
+              {/* 节点 */}
+              <div style={nodeStyle}>
+                {event.icon || '●'}
               </div>
-            );
-          })}
-        </div>
-      </section>
-    );
-  }
+
+              {/* 内容卡片 */}
+              <div style={cardStyle}>
+                <h3 style={{ fontSize: '18px', margin: '0 0 8px 0', color: theme.colors.text }}>{event.title}</h3>
+                <p style={{ fontSize: theme.sizes.smallSize, margin: 0, color: theme.colors.textLight, lineHeight: '1.4' }}>{event.description}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
 };
 
-// 添加display name用于调试
-TimelineLayout.displayName = 'TimelineLayout';
+export function renderTimelineLayoutHTML(model: TimelineModel, theme: ThemeConfig): string {
+  const { title, events, orientation, background_image } = model;
+  const isHorizontal = orientation === 'horizontal';
+
+  const slideStyle = toInlineStyle({
+    ...getBaseSlideStyle(theme),
+    ...(background_image
+      ? {
+        backgroundImage: `url(${background_image})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }
+      : {}),
+  });
+
+  const titleStyle = toInlineStyle({ ...getTitleStyle(theme), marginBottom: '40px' });
+
+  const eventsHTML = events.map((event, index) => {
+    const nodeStyle = toInlineStyle({
+      width: isHorizontal ? '40px' : '48px', height: isHorizontal ? '40px' : '48px',
+      borderRadius: '50%', backgroundColor: theme.colors.accent, color: '#ffffff',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: isHorizontal ? '18px' : '24px', flexShrink: '0',
+    });
+
+    const cardStyle = toInlineStyle({
+      ...getCardStyle(theme),
+      flex: '1', padding: '16px 20px',
+    });
+
+    return `
+    <div style="display: flex; flex-direction: ${isHorizontal ? 'column' : 'row'}; align-items: ${isHorizontal ? 'center' : 'flex-start'}; gap: 16px; flex: ${isHorizontal ? '1' : 'none'}; position: relative; z-index: 1;">
+      <div style="font-size: 24px; font-weight: bold; color: ${theme.colors.primary}; margin-bottom: ${isHorizontal ? '8px' : '0'}; min-width: ${isHorizontal ? 'auto' : '100px'}; text-align: ${isHorizontal ? 'center' : 'right'};">${event.year}</div>
+      <div style="${nodeStyle}">${event.icon || '●'}</div>
+      <div style="${cardStyle}">
+        <h3 style="font-size: 18px; margin: 0 0 8px 0; color: ${theme.colors.text};">${event.title}</h3>
+        <p style="font-size: ${theme.sizes.smallSize}; margin: 0; color: ${theme.colors.textLight}; line-height: 1.4;">${event.description}</p>
+      </div>
+    </div>`;
+  }).join('\n');
+
+  return `
+<section style="${slideStyle}">
+  <h2 style="${titleStyle}">${title}</h2>
+  <div style="display: flex; flex-direction: ${isHorizontal ? 'row' : 'column'}; gap: 20px; padding: ${isHorizontal ? '40px 0' : '0 40px'}; height: calc(100% - 140px); position: relative;">
+    ${eventsHTML}
+  </div>
+</section>`;
+}
 
 export default TimelineLayout;
