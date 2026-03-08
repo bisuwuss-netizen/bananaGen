@@ -54,55 +54,68 @@ import {
   EduSummaryModel,
   EduQACaseModel,
 } from '../types/schema';
-import { CoverLayout } from '../layouts/CoverLayout';
-import { TocLayout } from '../layouts/TocLayout';
-import { TitleContentLayout } from '../layouts/TitleContentLayout';
-import { TitleBulletsLayout } from '../layouts/TitleBulletsLayout';
-import { TwoColumnLayout } from '../layouts/TwoColumnLayout';
-import { ProcessStepsLayout } from '../layouts/ProcessStepsLayout';
-import { EndingLayout } from '../layouts/EndingLayout';
-import { SectionTitleLayout } from '../layouts/SectionTitleLayout';
-import { ImageFullLayout } from '../layouts/ImageFullLayout';
-import { QuoteLayout } from '../layouts/QuoteLayout';
-// 专属布局组件
-import { LearningObjectivesLayout } from '../layouts/LearningObjectivesLayout';
-import { TheoryExplanationLayout } from '../layouts/TheoryExplanationLayout';
-import { AcademicNarrativeLayout } from '../layouts/AcademicNarrativeLayout';
-import { AcademicCaseStudyLayout } from '../layouts/AcademicCaseStudyLayout';
-import { AcademicComparisonLayout } from '../layouts/AcademicComparisonLayout';
-import { AcademicDiagramLayout } from '../layouts/AcademicDiagramLayout';
-import { AcademicPracticeLayout } from '../layouts/AcademicPracticeLayout';
-import { AcademicEndingLayout } from '../layouts/AcademicEndingLayout';
-import { WarmupQuestionLayout } from '../layouts/WarmupQuestionLayout';
-import { PollInteractiveLayout } from '../layouts/PollInteractiveLayout';
-import { TimelineLayout } from '../layouts/TimelineLayout';
-import { PortfolioLayout } from '../layouts/PortfolioLayout';
-import { SafetyNoticeLayout } from '../layouts/SafetyNoticeLayout';
-import { DetailZoomLayout } from '../layouts/DetailZoomLayout';
-// Modern scheme - 现代创新方案
-import { SidebarCardLayout } from '../layouts/SidebarCardLayout';
-import { DarkMathLayout } from '../layouts/DarkMathLayout';
-import { FlowProcessLayout } from '../layouts/FlowProcessLayout';
-import { OverlapLayout } from '../layouts/OverlapLayout';
-import { GridMatrixLayout } from '../layouts/GridMatrixLayout';
-import { DiagonalSplitLayout } from '../layouts/DiagonalSplitLayout';
-import { ConcentricFocusLayout } from '../layouts/ConcentricFocusLayout';
-import { VerticalTimelineLayout } from '../layouts/VerticalTimelineLayout';
-import { TriColumnLayout } from '../layouts/TriColumnLayout';
-import { CinematicOverlayLayout } from '../layouts/CinematicOverlayLayout';
-// Edu dark scheme
-import { EduCoverLayout } from '../layouts/EduCoverLayout';
-import { EduTocLayout } from '../layouts/EduTocLayout';
-import { EduTriCompareLayout } from '../layouts/EduTriCompareLayout';
-import { EduCoreHubLayout } from '../layouts/EduCoreHubLayout';
-import { EduTimelineStepsLayout } from '../layouts/EduTimelineStepsLayout';
-import { EduLogicFlowLayout } from '../layouts/EduLogicFlowLayout';
-import { EduDataBoardLayout } from '../layouts/EduDataBoardLayout';
-import { EduSummaryLayout } from '../layouts/EduSummaryLayout';
-import { EduQACaseLayout } from '../layouts/EduQACaseLayout';
-import { VocationalBulletsLayout } from '../layouts/VocationalBulletsLayout';
-import { VocationalContentLayout } from '../layouts/VocationalContentLayout';
-import { VocationalComparisonLayout } from '../layouts/VocationalComparisonLayout';
+import {
+  CoverLayout,
+  TocLayout,
+  TitleContentLayout,
+  TitleBulletsLayout,
+  TwoColumnLayout,
+  ProcessStepsLayout,
+  EndingLayout,
+  SectionTitleLayout,
+  ImageFullLayout,
+  QuoteLayout,
+} from '../layouts/common';
+import {
+  LearningObjectivesLayout,
+  TheoryExplanationLayout,
+  AcademicNarrativeLayout,
+  AcademicCaseStudyLayout,
+  AcademicComparisonLayout,
+  AcademicDiagramLayout,
+  AcademicPracticeLayout,
+  AcademicEndingLayout,
+} from '../layouts/academic';
+import {
+  WarmupQuestionLayout,
+  PollInteractiveLayout,
+} from '../layouts/interactive';
+import {
+  TimelineLayout,
+  PortfolioLayout,
+} from '../layouts/visual';
+import {
+  SafetyNoticeLayout,
+  DetailZoomLayout,
+} from '../layouts/practical';
+import {
+  SidebarCardLayout,
+  DarkMathLayout,
+  FlowProcessLayout,
+  OverlapLayout,
+  GridMatrixLayout,
+  DiagonalSplitLayout,
+  ConcentricFocusLayout,
+  VerticalTimelineLayout,
+  TriColumnLayout,
+  CinematicOverlayLayout,
+} from '../layouts/modern';
+import {
+  EduCoverLayout,
+  EduTocLayout,
+  EduTriCompareLayout,
+  EduCoreHubLayout,
+  EduTimelineStepsLayout,
+  EduLogicFlowLayout,
+  EduDataBoardLayout,
+  EduSummaryLayout,
+  EduQACaseLayout,
+} from '../layouts/edu-dark';
+import {
+  VocationalBulletsLayout,
+  VocationalContentLayout,
+  VocationalComparisonLayout,
+} from '../layouts/vocational';
 import { getLayoutDisplayName, normalizeLayoutId } from '../layouts';
 
 interface SlideRendererProps {

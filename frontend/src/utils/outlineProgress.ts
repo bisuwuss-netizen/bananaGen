@@ -16,8 +16,8 @@ const DEFAULT_PREVIEW_TITLES = [
 const sanitizePreviewTitle = (raw: string): string => {
   let text = (raw || '')
     .replace(/^[\s>*-]+/, '')
-    .replace(/^\d+[\.\)、:\s-]+/, '')
-    .replace(/^[一二三四五六七八九十]+[\.\)、:\s-]+/, '')
+    .replace(/^\d+[.）、:\s-]+/, '')
+    .replace(/^[一二三四五六七八九十]+[.）、:\s-]+/, '')
     .replace(/^第[一二三四五六七八九十0-9]+[章节部分篇]\s*/, '')
     .replace(/\s+/g, ' ')
     .trim()
@@ -97,7 +97,7 @@ export const buildInitialOutlineTaskProgress = (project: Project): TaskProgress 
     current_step: '准备生成大纲',
     messages: [
       '已开始创建大纲任务。',
-      '正在读取主题、输入文本和参考资料。',
+      '正在读取主题和输入内容。',
     ],
     preview_cards: previewCards,
     generated_cards: [],

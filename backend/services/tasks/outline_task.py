@@ -226,6 +226,7 @@ async def generate_outline_task(
                 reference_files = await _get_reference_files_content(session, project_id)
                 render_mode = project.render_mode or "image"
                 scheme_id = project.scheme_id or "edu_dark"
+                reference_count = len(reference_files)
                 preview_titles = _extract_preview_titles(project) or _DEFAULT_PREVIEW_TITLES
                 preview_cards = _build_preview_cards_from_titles(preview_titles)
                 messages: list[str] = []
@@ -246,14 +247,21 @@ async def generate_outline_task(
                     extra={
                         "render_mode": render_mode,
                         "scheme_id": scheme_id,
-                        "reference_count": len(reference_files),
+                        "reference_count": reference_count,
                         "estimated_total_pages": _estimate_total_pages(preview_titles),
                     },
                 )
 
+                if reference_count > 0:
+                    reference_message = f"已读取 {reference_count} 份已上传资料，正在组织章节结构。"
+                    reference_step = "整理资料与章节线索"
+                else:
+                    reference_message = "未检测到已上传资料，正在基于主题组织章节结构。"
+                    reference_step = "整理章节线索"
+
                 messages = _append_message(
                     messages,
-                    f"已读取 {len(reference_files)} 份参考资料，正在组织章节结构。",
+                    reference_message,
                 )
                 await _set_task_progress(
                     session,
@@ -261,7 +269,7 @@ async def generate_outline_task(
                     total=5,
                     completed=1,
                     percent=18,
-                    current_step="整理参考资料与章节线索",
+                    current_step=reference_step,
                     messages=messages,
                     preview_cards=preview_cards,
                     generated_cards=[],
@@ -269,7 +277,7 @@ async def generate_outline_task(
                     extra={
                         "render_mode": render_mode,
                         "scheme_id": scheme_id,
-                        "reference_count": len(reference_files),
+                        "reference_count": reference_count,
                         "estimated_total_pages": _estimate_total_pages(preview_titles),
                     },
                 )
@@ -292,7 +300,7 @@ async def generate_outline_task(
                     extra={
                         "render_mode": render_mode,
                         "scheme_id": scheme_id,
-                        "reference_count": len(reference_files),
+                        "reference_count": reference_count,
                         "estimated_total_pages": _estimate_total_pages(preview_titles),
                     },
                 )
@@ -361,7 +369,7 @@ async def generate_outline_task(
                     extra={
                         "render_mode": render_mode,
                         "scheme_id": scheme_id,
-                        "reference_count": len(reference_files),
+                        "reference_count": reference_count,
                         "estimated_total_pages": len(pages_data),
                     },
                 )
@@ -407,7 +415,7 @@ async def generate_outline_task(
                             "queued_cards": [],
                             "render_mode": render_mode,
                             "scheme_id": scheme_id,
-                            "reference_count": len(reference_files),
+                            "reference_count": reference_count,
                             "estimated_total_pages": len(pages_data),
                         }
                     )
@@ -481,7 +489,7 @@ async def generate_outline_task(
                         extra={
                             "render_mode": render_mode,
                             "scheme_id": scheme_id,
-                            "reference_count": len(reference_files),
+                            "reference_count": reference_count,
                             "estimated_total_pages": total_pages,
                         },
                     )
@@ -511,7 +519,7 @@ async def generate_outline_task(
                         "queued_cards": [],
                         "render_mode": render_mode,
                         "scheme_id": scheme_id,
-                        "reference_count": len(reference_files),
+                        "reference_count": reference_count,
                         "estimated_total_pages": total_pages,
                     }
                 )

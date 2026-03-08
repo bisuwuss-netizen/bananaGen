@@ -933,6 +933,39 @@ export interface HtmlImageSSEEvent {
   summary?: { total: number; success: number; error: number };
 }
 
+const emitBufferedSseEvents = (
+  buffer: string,
+  onEvent: (event: HtmlImageSSEEvent) => void,
+  flush = false
+): string => {
+  const normalized = buffer.replace(/\r\n/g, '\n');
+  const eventBlocks = normalized.split('\n\n');
+  const trailing = flush ? '' : eventBlocks.pop() || '';
+
+  for (const block of eventBlocks) {
+    if (!block.trim()) {
+      continue;
+    }
+    for (const line of block.split('\n')) {
+      if (!line.startsWith('data: ')) {
+        continue;
+      }
+      const jsonStr = line.slice(6).trim();
+      if (!jsonStr) {
+        continue;
+      }
+      try {
+        const event: HtmlImageSSEEvent = JSON.parse(jsonStr);
+        onEvent(event);
+      } catch (error) {
+        console.error('Failed to parse SSE event:', jsonStr, error);
+      }
+    }
+  }
+
+  return trailing;
+};
+
 /**
  * 批量生成 HTML 模式图片（SSE 流式响应）
  * 每生成一张图片就立即通过回调函数通知调用方
@@ -969,32 +1002,18 @@ export const generateHtmlImagesStreaming = async (
   const decoder = new TextDecoder();
   let buffer = '';
 
-  while (true) {
-    const { done, value } = await reader.read();
-
-    if (done) {
-      break;
+  let done = false;
+  while (!done) {
+    const chunk = await reader.read();
+    if (chunk.done) {
+      buffer += decoder.decode();
+      emitBufferedSseEvents(buffer, onEvent, true);
+      done = true;
+      continue;
     }
 
-    buffer += decoder.decode(value, { stream: true });
-
-    // 处理缓冲区中的完整事件
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || ''; // 保留不完整的最后一行
-
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        const jsonStr = line.slice(6).trim();
-        if (jsonStr) {
-          try {
-            const event: HtmlImageSSEEvent = JSON.parse(jsonStr);
-            onEvent(event);
-          } catch (e) {
-            console.error('Failed to parse SSE event:', jsonStr, e);
-          }
-        }
-      }
-    }
+    buffer += decoder.decode(chunk.value, { stream: true });
+    buffer = emitBufferedSseEvents(buffer, onEvent);
   }
 };
 

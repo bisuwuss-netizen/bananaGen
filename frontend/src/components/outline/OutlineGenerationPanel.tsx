@@ -100,6 +100,7 @@ export const OutlineGenerationPanel: React.FC<OutlineGenerationPanelProps> = ({
 
   const estimatedTotalPages = progress?.estimated_total_pages || Math.max(5, generatedCards.length + queuedCards.length);
   const referenceCount = progress?.reference_count ?? 0;
+  const hasReferenceFiles = referenceCount > 0;
   const renderMode = modeLabelMap[progress?.render_mode || project.render_mode || 'image'] || '图片渲染';
 
   return (
@@ -117,7 +118,7 @@ export const OutlineGenerationPanel: React.FC<OutlineGenerationPanelProps> = ({
                 页面不会空等，先把生成过程和候选结构展示出来
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 md:text-[15px]">
-                {progress?.current_step || '正在分析你的主题、上下文和参考资料，准备输出可编辑的大纲结构。'}
+                {progress?.current_step || '正在分析你的主题和上下文，准备输出可编辑的大纲结构。'}
               </p>
             </div>
 
@@ -133,7 +134,9 @@ export const OutlineGenerationPanel: React.FC<OutlineGenerationPanelProps> = ({
               <div className="rounded-2xl border border-white/80 bg-white/80 p-4">
                 <div className="text-xs uppercase tracking-[0.18em] text-slate-400">总页数 / 模式</div>
                 <div className="mt-2 text-lg font-semibold text-slate-900">{estimatedTotalPages} · {renderMode}</div>
-                <div className="mt-1 text-xs text-slate-400">参考资料 {referenceCount}</div>
+                {hasReferenceFiles ? (
+                  <div className="mt-1 text-xs text-slate-400">已上传资料 {referenceCount}</div>
+                ) : null}
               </div>
             </div>
 

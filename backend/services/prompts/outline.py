@@ -4,6 +4,7 @@ import json
 from textwrap import dedent
 import logging
 
+from services.ai.base import ProjectContext
 from .utils import _format_reference_files_xml
 from .layouts import (
     get_layout_scheme,
@@ -17,7 +18,7 @@ from .language import get_language_instruction
 logger = logging.getLogger(__name__)
 
 
-def _get_outline_source_block(project_context: 'ProjectContext') -> str:
+def _get_outline_source_block(project_context: ProjectContext) -> str:
     if project_context.creation_type == 'outline' and project_context.outline_text:
         return f"用户提供的大纲文本：\n{project_context.outline_text}"
     if project_context.creation_type == 'descriptions' and project_context.description_text:
@@ -25,7 +26,7 @@ def _get_outline_source_block(project_context: 'ProjectContext') -> str:
     return f"用户主题：\n{project_context.idea_prompt or ''}"
 
 
-def get_outline_generation_prompt(project_context: 'ProjectContext', language: str = None, render_mode: str = 'image', scheme_id: str = None) -> str:
+def get_outline_generation_prompt(project_context: ProjectContext, language: str = None, render_mode: str = 'image', scheme_id: str = None) -> str:
     """
     生成 PPT 大纲的 prompt
 
@@ -129,7 +130,7 @@ The user's request: {idea_prompt}. Now generate the outline, don't include any o
     return final_prompt
 
 
-def get_outline_blueprint_prompt(project_context: 'ProjectContext', language: str = None, render_mode: str = 'image', scheme_id: str = None) -> str:
+def get_outline_blueprint_prompt(project_context: ProjectContext, language: str = None, render_mode: str = 'image', scheme_id: str = None) -> str:
     """
     生成用于流式渲染的 outline 骨架。
 
@@ -223,7 +224,7 @@ def get_outline_blueprint_prompt(project_context: 'ProjectContext', language: st
 
 
 def get_outline_page_expansion_prompt(
-    project_context: 'ProjectContext',
+    project_context: ProjectContext,
     page_outline: Dict[str, Any],
     full_outline: List[Dict[str, Any]],
     page_index: int,
@@ -297,7 +298,7 @@ def get_outline_page_expansion_prompt(
 
 
 
-def get_outline_parsing_prompt(project_context: 'ProjectContext', language: str = None, render_mode: str = 'image', scheme_id: str = None) -> str:
+def get_outline_parsing_prompt(project_context: ProjectContext, language: str = None, render_mode: str = 'image', scheme_id: str = None) -> str:
     """
     解析用户提供的大纲文本的 prompt
 
@@ -408,7 +409,7 @@ Now parse the outline text above into the structured format. Return only the JSO
 
 
 
-def get_description_to_outline_prompt(project_context: 'ProjectContext', language: str = None, render_mode: str = 'image', scheme_id: str = None) -> str:
+def get_description_to_outline_prompt(project_context: ProjectContext, language: str = None, render_mode: str = 'image', scheme_id: str = None) -> str:
     """
     从描述文本解析出大纲的 prompt
 

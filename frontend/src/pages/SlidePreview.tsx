@@ -1059,7 +1059,12 @@ export const SlidePreview: React.FC = () => {
       });
 
       // 生成文件名（带时间戳）
-      const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+      const timestamp = new Date()
+        .toISOString()
+        .replaceAll('-', '')
+        .replaceAll(':', '')
+        .replace('T', '')
+        .slice(0, 14);
       const randomNum = Math.floor(Math.random() * 100000);
       const filename = `${timestamp}_${randomNum}.html`;
 

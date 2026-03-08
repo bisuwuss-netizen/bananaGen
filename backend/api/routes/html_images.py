@@ -64,19 +64,6 @@ async def generate_html_images_sse(
     body: GenerateHtmlImagesBody,
     db: AsyncSession = Depends(get_db),
 ):
-    # #region agent log
-    _log_path = "/Users/bisuv/Desktop/02_今日处理中-Today/ai生成ppt项目/banana_ppt/.cursor/debug-3fe128.log"
-    import time as _t
-    def _dlog(msg, data=None, hyp="H1"):
-        try:
-            import json as _j
-            with open(_log_path, "a") as _f:
-                _f.write(_j.dumps({"sessionId":"3fe128","hypothesisId":hyp,"location":"html_images.py","message":msg,"data":data,"timestamp":int(_t.time()*1000)},ensure_ascii=False)+"\n")
-        except Exception:
-            pass
-    _dlog("endpoint_reached", {"project_id": project_id, "slot_count": len(body.slots)}, "H1")
-    # #endregion
-
     project = await db.get(Project, project_id)
     if not project:
         raise HTTPException(404, f"项目 {project_id} 不存在")
@@ -87,42 +74,22 @@ async def generate_html_images_sse(
     slots_raw = [s.model_dump() for s in body.slots]
 
     runtime_cfg = load_runtime_config()
-
-    # #region agent log
-    _dlog("before_optimizer", {"slot_count": len(slots_raw), "runtime_cfg_keys": list(runtime_cfg.keys()) if runtime_cfg else []}, "H2")
-    # #endregion
     try:
         from services.image_prompt_optimizer import optimize_html_image_slots
         with runtime_context(runtime_cfg):
             slots_raw = optimize_html_image_slots(slots_raw, project)
-        # #region agent log
-        _dlog("optimizer_ok", {"optimized_count": len(slots_raw)}, "H2")
-        # #endregion
     except Exception as e:
-        # #region agent log
-        _dlog("optimizer_failed", {"error": str(e)}, "H2")
-        # #endregion
         logger.warning("HTML 图片 prompt 优化失败，回退原始 prompt: %s", e, exc_info=True)
 
     image_model = runtime_cfg.get("IMAGE_MODEL") or app_settings.image_model
     default_aspect_ratio = runtime_cfg.get("DEFAULT_ASPECT_RATIO") or app_settings.default_aspect_ratio
     default_resolution = runtime_cfg.get("DEFAULT_RESOLUTION") or app_settings.default_resolution
 
-    # #region agent log
-    _dlog("before_provider_init", {"image_model": image_model, "aspect": default_aspect_ratio, "resolution": default_resolution}, "H3")
-    # #endregion
-
     from services.ai_providers import get_image_provider
     try:
         with runtime_context(runtime_cfg):
             image_provider = get_image_provider(model=image_model)
-        # #region agent log
-        _dlog("provider_init_ok", {"provider_type": type(image_provider).__name__}, "H3")
-        # #endregion
     except Exception as e:
-        # #region agent log
-        _dlog("provider_init_failed", {"error": str(e)}, "H3")
-        # #endregion
         logger.error("初始化图片生成器失败: model=%s, error=%s", image_model, e, exc_info=True)
         raise HTTPException(503, f"初始化图片生成器失败: {e}")
 

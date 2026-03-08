@@ -127,6 +127,36 @@ def test_refine_outline_allows_empty_project_and_forwards_context(monkeypatch, c
     assert len(persisted_payload["data"]["pages"]) == 2
 
 
+def test_refine_outline_rejects_empty_ai_result_without_deleting_existing_pages(monkeypatch, client):
+    project_id = _create_project(client, render_mode="html", idea_prompt="测试异常保护")
+    original_page = _create_page(client, project_id, 0, "原始封面", ["保留我"])
+    _update_page_metadata(
+        client,
+        project_id,
+        original_page["page_id"],
+        layout_id="cover",
+        status="OUTLINE_GENERATED",
+    )
+
+    _mock_ai_service(monkeypatch, return_value={"pages": []})
+
+    response = client.post(
+        f"/api/projects/{project_id}/refine/outline",
+        json={
+            "user_requirement": "重新改写大纲",
+        },
+    )
+
+    assert response.status_code == 502
+
+    persisted = client.get(f"/api/projects/{project_id}")
+    persisted_payload = assert_success_response(persisted)
+    pages = persisted_payload["data"]["pages"]
+    assert len(pages) == 1
+    assert pages[0]["outline_content"]["title"] == "原始封面"
+    assert pages[0]["page_id"] == original_page["page_id"]
+
+
 def test_refine_descriptions_updates_image_pages_in_order(monkeypatch, client):
     project_id = _create_project(client, render_mode="image")
     page1 = _create_page(client, project_id, 0, "封面", ["主题引入"])
