@@ -69,6 +69,53 @@ async def test_ai_service_call_async_prefers_async_variant(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_generate_outline_blueprint_async_uses_async_json(monkeypatch):
+    provider = DummyTextProvider(async_response='[{"title":"封面","points":["主题"]}]')
+    service = AIService(text_provider=provider, image_provider=DummyImageProvider())
+
+    monkeypatch.setattr(
+        "services.prompts.outline.get_outline_blueprint_prompt",
+        lambda *args, **kwargs: "blueprint prompt",
+    )
+    monkeypatch.setattr(
+        "services.presentation.ppt_quality_guard.apply_outline_quality_guard",
+        lambda outline, **kwargs: outline,
+    )
+
+    ctx = ProjectContext({"idea_prompt": "topic", "scheme_id": "edu_dark"})
+    outline = await service.call_async("generate_outline_blueprint", ctx, language="zh")
+
+    assert outline == [{"title": "封面", "points": ["主题"]}]
+    assert provider.async_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_expand_outline_page_async_merges_page_stub(monkeypatch):
+    provider = DummyTextProvider(async_response='{"title":"背景介绍","points":["现状","问题","目标"]}')
+    service = AIService(text_provider=provider, image_provider=DummyImageProvider())
+
+    monkeypatch.setattr(
+        "services.prompts.outline.get_outline_page_expansion_prompt",
+        lambda **kwargs: "page expansion prompt",
+    )
+
+    ctx = ProjectContext({"idea_prompt": "topic", "scheme_id": "edu_dark"})
+    result = await service.call_async(
+        "expand_outline_page",
+        ctx,
+        {"title": "背景介绍", "part": "第一部分"},
+        [{"title": "背景介绍", "points": ["现状"]}],
+        0,
+        language="zh",
+    )
+
+    assert result["title"] == "背景介绍"
+    assert result["part"] == "第一部分"
+    assert result["points"] == ["现状", "问题", "目标"]
+    assert provider.async_calls == 1
+
+
+@pytest.mark.asyncio
 async def test_generate_page_description_async_uses_async_text_provider(monkeypatch):
     provider = DummyTextProvider(async_response="  page body  ")
     service = AIService(text_provider=provider, image_provider=DummyImageProvider())

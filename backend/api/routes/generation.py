@@ -16,6 +16,7 @@ from schemas.generation import (
     GenerateOutlineRequest,
     GenerateDescriptionsRequest,
     GenerateImagesRequest,
+    GenerateLayoutPlanRequest,
 )
 from config_fastapi import settings as app_settings
 from services.runtime_state import load_runtime_config
@@ -72,68 +73,54 @@ def _reconstruct_outline(pages: list[Page]) -> list[dict]:
     return outline
 
 
-@router.post("/{project_id}/generate/outline", response_model=SuccessResponse)
+@router.post("/{project_id}/generate/outline", response_model=SuccessResponse, status_code=202)
 async def generate_outline(
     project_id: str,
     req: GenerateOutlineRequest,
     db: AsyncSession = Depends(get_db),
 ):
     project = await _get_project_with_pages(db, project_id)
+    task = Task(
+        project_id=project_id,
+        task_type="GENERATE_OUTLINE",
+        status="PENDING",
+    )
+    task.set_progress(
+        {
+            "total": 5,
+            "completed": 0,
+            "failed": 0,
+            "percent": 0,
+            "current_step": "等待开始",
+            "messages": ["已创建大纲生成任务。"],
+            "render_mode": project.render_mode or "image",
+            "scheme_id": project.scheme_id or "edu_dark",
+        }
+    )
+    db.add(task)
+    await db.commit()
 
-    from services.ai_service_manager import get_ai_service_async
-    from services.ai.base import ProjectContext
+    from services.tasks import generate_outline_task, task_manager
 
-    ai_service = await get_ai_service_async()
-    ref_content = await _get_reference_files_content(db, project_id)
-    ctx = ProjectContext(project, ref_content)
-
-    language = req.language or app_settings.output_language
-    render_mode = project.render_mode or "image"
-
-    if render_mode == "html":
-        outline_result = await ai_service.call_async(
-            "generate_structured_outline",
-            topic=project.idea_prompt or "",
-            requirements=project.extra_requirements or "",
-            language=language,
-            scheme_id=project.scheme_id or "edu_dark",
-        )
-    else:
-        outline_result = await ai_service.call_async("generate_outline", ctx, language=language)
-
-    # Save pages from outline
-    if render_mode == "html":
-        pages_data = outline_result.get("pages", [])
-    else:
-        pages_data = ai_service.flatten_outline(outline_result) if isinstance(outline_result, dict) else outline_result
-
-    # Delete existing pages
-    for p in list(project.pages):
-        await db.delete(p)
-    await db.flush()
-
-    created_pages = []
-    for idx, page_data in enumerate(pages_data):
-        page = Page(
+    try:
+        task_manager.submit_task(
+            task.id,
+            generate_outline_task,
             project_id=project_id,
-            order_index=idx,
-            part=page_data.get("part"),
-            status="OUTLINE_GENERATED",
+            language=req.language or app_settings.output_language,
+            runtime_config=load_runtime_config(),
         )
-        if render_mode == "html":
-            page.layout_id = page_data.get("layout_id", "title_content")
-        page.set_outline_content(page_data)
-        db.add(page)
-        created_pages.append(page)
+    except Exception as exc:
+        logger.error("Failed to submit outline task %s: %s", task.id, exc, exc_info=True)
+        task = await db.get(Task, task.id)
+        if task:
+            task.status = "FAILED"
+            task.error_message = f"Submit failed: {exc}"
+            task.completed_at = datetime.now()
+            await db.commit()
+        return SuccessResponse(data={"task_id": task.id, "status": "FAILED", "error": str(exc)})
 
-    project.status = "OUTLINE_GENERATED"
-    project.updated_at = datetime.now()
-    await db.flush()
-
-    return SuccessResponse(data={
-        "outline": outline_result,
-        "pages": [p.to_dict() for p in created_pages],
-    })
+    return SuccessResponse(data={"task_id": task.id, "status": "PENDING"})
 
 
 @router.post("/{project_id}/generate/descriptions", response_model=SuccessResponse, status_code=202)
@@ -153,7 +140,7 @@ async def generate_descriptions(
     )
     task.set_progress({"total": len(project.pages), "completed": 0, "failed": 0})
     db.add(task)
-    await db.flush()
+    await db.commit()
 
     from services.ai_service_manager import get_ai_service
     from services.tasks import generate_descriptions_task, task_manager
@@ -188,6 +175,105 @@ async def generate_descriptions(
     return SuccessResponse(data={"task_id": task.id, "status": "PENDING"})
 
 
+@router.post("/{project_id}/generate/layout-plan", response_model=SuccessResponse)
+async def generate_layout_plan(
+    project_id: str,
+    req: GenerateLayoutPlanRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    project = await _get_project_with_pages(db, project_id)
+    if (project.render_mode or "image") != "html":
+        raise HTTPException(400, "Layout plan is only available in HTML render mode")
+
+    pages = sorted(project.pages, key=lambda p: int(p.order_index) if p.order_index is not None else 999)
+    if not pages:
+        raise HTTPException(400, "No pages found. Generate outline first.")
+
+    from services.presentation.layout_planner import assign_layout_variants, validate_capacity
+    from services.prompts.layouts import LAYOUT_ID_ALIASES
+
+    outline_pages: list[dict] = []
+    for idx, page in enumerate(pages, 1):
+        outline_content = page.get_outline_content() or {}
+        if not isinstance(outline_content, dict):
+            outline_content = {}
+        model = page.get_html_model()
+        if not isinstance(model, dict):
+            model = {}
+        layout_id = page.layout_id or outline_content.get("layout_id", "title_content")
+        outline_pages.append(
+            {
+                "page_id": page.id,
+                "order_index": idx - 1,
+                "layout_id": layout_id,
+                "title": outline_content.get("title", ""),
+                "points": outline_content.get("points", []),
+                "has_image": bool(outline_content.get("has_image", False)),
+                "keywords": outline_content.get("keywords", []),
+                "layout_variant": outline_content.get("layout_variant")
+                or model.get("layout_variant")
+                or model.get("variant"),
+                "html_model": model,
+            }
+        )
+
+    seed = (req.seed or project.idea_prompt or project.id or "").strip()
+    planned_outline = assign_layout_variants(
+        outline=outline_pages,
+        scheme_id=project.scheme_id or "edu_dark",
+        layout_aliases=LAYOUT_ID_ALIASES,
+        seed=seed,
+    )
+
+    planned_by_id = {
+        str(item.get("page_id")): item
+        for item in planned_outline
+        if isinstance(item, dict) and item.get("page_id")
+    }
+
+    layout_plan: list[dict[str, str]] = []
+    for page in pages:
+        plan_item = planned_by_id.get(page.id)
+        if not plan_item:
+            continue
+
+        layout_id = str(plan_item.get("layout_id") or page.layout_id or "title_content").strip() or "title_content"
+        variant = str(plan_item.get("layout_variant") or "a").strip().lower() or "a"
+        variant = validate_capacity(layout_id, variant, plan_item)
+        archetype = str(plan_item.get("layout_archetype") or "").strip()
+
+        outline_content = page.get_outline_content() or {}
+        if not isinstance(outline_content, dict):
+            outline_content = {}
+        outline_content["layout_id"] = layout_id
+        outline_content["layout_variant"] = variant
+        if archetype:
+            outline_content["layout_archetype"] = archetype
+        page.set_outline_content(outline_content)
+
+        html_model = page.get_html_model()
+        if isinstance(html_model, dict):
+            html_model = dict(html_model)
+            html_model["variant"] = variant
+            html_model["layout_variant"] = variant
+            if archetype:
+                html_model["layout_archetype"] = archetype
+            page.set_html_model(html_model)
+
+        page.layout_id = layout_id
+        layout_plan.append(
+            {
+                "page_id": page.id,
+                "layout_id": layout_id,
+                "variant": variant,
+            }
+        )
+
+    project.updated_at = datetime.now()
+    await db.flush()
+    return SuccessResponse(data={"layout_plan": layout_plan})
+
+
 @router.post("/{project_id}/generate/images", response_model=SuccessResponse, status_code=202)
 async def generate_images(
     project_id: str,
@@ -202,7 +288,7 @@ async def generate_images(
         status="PENDING",
     )
     db.add(task)
-    await db.flush()
+    await db.commit()
 
     from services.ai_service_manager import get_ai_service
     from services.tasks import generate_images_task, task_manager

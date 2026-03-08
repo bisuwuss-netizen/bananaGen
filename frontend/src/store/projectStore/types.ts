@@ -1,13 +1,14 @@
 import type {
   Project,
   Task,
+  TaskProgress,
 } from '@/types';
 
 export interface ProjectCoreSlice {
   currentProject: Project | null;
   isGlobalLoading: boolean;
   activeTaskId: string | null;
-  taskProgress: { total: number; completed: number } | null;
+  taskProgress: TaskProgress | null;
   error: string | null;
   pageGeneratingTasks: Record<string, string>;
   pageDescriptionGeneratingTasks: Record<string, boolean>;

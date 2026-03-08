@@ -2,6 +2,7 @@ import type { StateCreator } from 'zustand';
 import * as api from '@/api/endpoints';
 import { openTaskWebSocket } from '@/api/client';
 import { normalizeErrorMessage } from '@/utils';
+import { buildInitialOutlineTaskProgress } from '@/utils/outlineProgress';
 import type {
   ProjectGenerationSlice,
   ProjectStore,
@@ -13,15 +14,68 @@ export const createGenerationSlice: StateCreator<ProjectStore, [], [], ProjectGe
     const { currentProject } = get();
     if (!currentProject) return;
 
-    set({ isGlobalLoading: true, error: null });
+    set({
+      isGlobalLoading: true,
+      error: null,
+      taskProgress: buildInitialOutlineTaskProgress(currentProject),
+    });
     try {
-      await api.generateOutline(currentProject.id!);
-      await get().syncProject();
+      const response = await api.generateOutline(currentProject.id!);
+      const taskId =
+        response.data?.task_id
+        || (response as any)?.task_id
+        || (response as any)?.data?.data?.task_id;
+
+      if (!taskId) {
+        const maybeSyncPayload = Boolean(
+          response.data?.outline
+          || response.data?.pages
+          || (response as any)?.outline
+          || (response as any)?.pages
+        );
+
+        if (maybeSyncPayload) {
+          await get().syncProject(currentProject.id!);
+          set({
+            activeTaskId: null,
+            taskProgress: null,
+            isGlobalLoading: false,
+          });
+          return;
+        }
+
+        await get().syncProject(currentProject.id!);
+        const refreshedProject = get().currentProject;
+        if (
+          refreshedProject
+          && refreshedProject.id === currentProject.id
+          && (
+            refreshedProject.status === 'OUTLINE_GENERATED'
+            || (refreshedProject.pages?.length || 0) > 0
+          )
+        ) {
+          set({
+            activeTaskId: null,
+            taskProgress: null,
+            isGlobalLoading: false,
+          });
+          return;
+        }
+
+        console.warn('[generateOutline] unexpected response payload:', response);
+        throw new Error('未收到任务ID');
+      }
+
+      set({ activeTaskId: taskId });
+      await get().pollTask(taskId);
     } catch (error: any) {
-      set({ error: error.message || '生成大纲失败' });
+      set({
+        error: normalizeErrorMessage(error.message || '生成大纲失败'),
+        activeTaskId: null,
+        taskProgress: null,
+        isGlobalLoading: false,
+      });
       throw error;
-    } finally {
-      set({ isGlobalLoading: false });
     }
   },
 

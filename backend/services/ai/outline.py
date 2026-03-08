@@ -1,11 +1,99 @@
 import re
 import logging
-from typing import List, Dict
+from typing import List, Dict, Any
 
 logger = logging.getLogger(__name__)
 
 
 class OutlineMixin:
+
+    def generate_outline_blueprint(self, project_context, language: str = None, render_mode: str = 'image') -> List[Dict]:
+        from services.prompts.outline import get_outline_blueprint_prompt
+        from services.presentation.ppt_quality_guard import apply_outline_quality_guard
+
+        outline_prompt = get_outline_blueprint_prompt(
+            project_context,
+            language,
+            render_mode,
+            scheme_id=project_context.scheme_id,
+        )
+        outline = self.generate_json(outline_prompt, thinking_budget=700)
+        normalized = self.normalize_outline_layouts(outline, render_mode, project_context.scheme_id)
+        return apply_outline_quality_guard(normalized, render_mode=render_mode, scheme_id=project_context.scheme_id)
+
+    async def generate_outline_blueprint_async(self, project_context, language: str = None, render_mode: str = 'image') -> List[Dict]:
+        from services.prompts.outline import get_outline_blueprint_prompt
+        from services.presentation.ppt_quality_guard import apply_outline_quality_guard
+
+        outline_prompt = get_outline_blueprint_prompt(
+            project_context,
+            language,
+            render_mode,
+            scheme_id=project_context.scheme_id,
+        )
+        outline = await self.generate_json_async(outline_prompt, thinking_budget=700)
+        normalized = self.normalize_outline_layouts(outline, render_mode, project_context.scheme_id)
+        return apply_outline_quality_guard(normalized, render_mode=render_mode, scheme_id=project_context.scheme_id)
+
+    def expand_outline_page(
+        self,
+        project_context,
+        page_outline: Dict[str, Any],
+        full_outline: List[Dict[str, Any]],
+        page_index: int,
+        language: str = None,
+        render_mode: str = 'image',
+    ) -> Dict[str, Any]:
+        from services.prompts.outline import get_outline_page_expansion_prompt
+
+        prompt = get_outline_page_expansion_prompt(
+            project_context=project_context,
+            page_outline=page_outline,
+            full_outline=full_outline,
+            page_index=page_index,
+            language=language,
+            render_mode=render_mode,
+            scheme_id=project_context.scheme_id,
+        )
+        result = self.generate_json(prompt, thinking_budget=420)
+        if not isinstance(result, dict):
+            return dict(page_outline or {})
+
+        merged = dict(page_outline or {})
+        merged.update(result)
+        if merged.get("part") is None and page_outline.get("part"):
+            merged["part"] = page_outline.get("part")
+        return merged
+
+    async def expand_outline_page_async(
+        self,
+        project_context,
+        page_outline: Dict[str, Any],
+        full_outline: List[Dict[str, Any]],
+        page_index: int,
+        language: str = None,
+        render_mode: str = 'image',
+    ) -> Dict[str, Any]:
+        from services.prompts.outline import get_outline_page_expansion_prompt
+
+        prompt = get_outline_page_expansion_prompt(
+            project_context=project_context,
+            page_outline=page_outline,
+            full_outline=full_outline,
+            page_index=page_index,
+            language=language,
+            render_mode=render_mode,
+            scheme_id=project_context.scheme_id,
+        )
+        result = await self.generate_json_async(prompt, thinking_budget=420)
+        if not isinstance(result, dict):
+            return dict(page_outline or {})
+
+        merged = dict(page_outline or {})
+        merged.update(result)
+        if merged.get("part") is None and page_outline.get("part"):
+            merged["part"] = page_outline.get("part")
+        return merged
 
     def generate_outline(self, project_context, language: str = None, render_mode: str = 'image') -> List[Dict]:
         from services.prompts.outline import get_outline_generation_prompt

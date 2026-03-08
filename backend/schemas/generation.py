@@ -24,15 +24,22 @@ class GenerateImagesRequest(BaseModel):
     page_ids: Optional[list[str]] = None
 
 
+class GenerateLayoutPlanRequest(BaseModel):
+    """Generate layout variant plan request body"""
+    seed: Optional[str] = None
+
+
 class RefineOutlineRequest(BaseModel):
     """Refine outline request body"""
     user_requirement: str
+    previous_requirements: list[str] = Field(default_factory=list)
     language: str = "zh"
 
 
 class RefineDescriptionsRequest(BaseModel):
     """Refine descriptions request body"""
     user_requirement: str
+    previous_requirements: list[str] = Field(default_factory=list)
     language: str = "zh"
 
 

@@ -228,13 +228,15 @@ class TestAPIFullFlow:
             timeout=30
         )
         
-        assert response.status_code == 200
+        assert response.status_code == 202
         data = response.json()
         assert data['success'] is True
+        outline_task_id = data['data']['task_id']
         print('✓ Outline generation request submitted\n')
         
         # Step 3: Wait for outline completion
         print('⏳ Step 3: Waiting for outline generation to complete...')
+        wait_for_task_completion(pid, outline_task_id, timeout=API_TIMEOUT)
         wait_for_project_status(pid, 'OUTLINE_GENERATED', timeout=API_TIMEOUT)
         
         # Verify pages were created
@@ -385,4 +387,3 @@ class TestAPIFullFlow:
         response = requests.delete(f"{BASE_URL}/api/projects/{pid}", timeout=10)
         assert response.status_code == 200
         print('✓ Project deleted successfully\n')
-

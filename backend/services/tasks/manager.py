@@ -8,8 +8,6 @@ import os
 from datetime import datetime
 from typing import Any, Callable, Coroutine
 
-from models import Task, db
-
 logger = logging.getLogger(__name__)
 
 
@@ -32,6 +30,7 @@ def _safe_positive_int(value: Any, default: int) -> int:
 
 
 TASK_STALE_TIMEOUT_SECONDS = {
+    "GENERATE_OUTLINE": _env_positive_int("TASK_TIMEOUT_GENERATE_OUTLINE_SECONDS", 20 * 60),
     "GENERATE_MATERIAL": _env_positive_int("TASK_TIMEOUT_GENERATE_MATERIAL_SECONDS", 15 * 60),
     "GENERATE_PAGE_IMAGE": _env_positive_int("TASK_TIMEOUT_GENERATE_PAGE_IMAGE_SECONDS", 20 * 60),
     "GENERATE_DESCRIPTIONS": _env_positive_int("TASK_TIMEOUT_GENERATE_DESCRIPTIONS_SECONDS", 20 * 60),
@@ -121,69 +120,6 @@ def _get_stale_timeout_seconds(task_type: str) -> int:
     return TASK_STALE_TIMEOUT_SECONDS.get(task_type, DEFAULT_TASK_STALE_TIMEOUT_SECONDS)
 
 
-def auto_fail_stale_task(task: Task) -> bool:
-    """Auto-fail stale task to prevent infinite polling."""
-    if not task or task.status not in ("PENDING", "PROCESSING"):
-        return False
-
-    if task_manager.is_task_active(task.id):
-        return False
-
-    now = datetime.utcnow()
-    created_at = task.created_at or now
-    if isinstance(created_at, str):
-        raw = created_at.strip()
-        try:
-            created_at = datetime.fromisoformat(raw.replace("Z", "+00:00"))
-            if created_at.tzinfo is not None:
-                created_at = created_at.astimezone().replace(tzinfo=None)
-        except Exception:
-            logger.warning("Invalid created_at for task %s: %s, fallback to now", task.id, raw)
-            created_at = now
-
-    age_seconds = max(0, int((now - created_at).total_seconds()))
-    timeout_seconds = _get_stale_timeout_seconds(task.task_type)
-    if age_seconds < timeout_seconds:
-        return False
-
-    task.status = "FAILED"
-    task.completed_at = now
-    if not task.error_message:
-        task.error_message = (
-            f"Task timed out after {age_seconds}s and no active worker was found. "
-            f"Marked as FAILED to stop infinite polling."
-        )
-
-    try:
-        progress = task.get_progress()
-        if isinstance(progress, dict):
-            total = int(progress.get("total", 0) or 0)
-            completed = int(progress.get("completed", 0) or 0)
-            failed = int(progress.get("failed", 0) or 0)
-            remaining = max(0, total - completed)
-            progress["failed"] = max(failed, remaining or 1)
-            task.set_progress(progress)
-    except Exception:
-        logger.debug("Failed to normalize progress for stale task %s", task.id, exc_info=True)
-
-    try:
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        logger.error("Failed to commit stale task status for %s", task.id, exc_info=True)
-        return False
-
-    logger.warning(
-        "Auto-failed stale task %s: type=%s, age=%ss, timeout=%ss, project=%s",
-        task.id,
-        task.task_type,
-        age_seconds,
-        timeout_seconds,
-        task.project_id,
-    )
-    return True
-
-
 __all__ = [
     "DEFAULT_TASK_STALE_TIMEOUT_SECONDS",
     "TASK_STALE_TIMEOUT_SECONDS",
@@ -191,6 +127,5 @@ __all__ = [
     "_env_positive_int",
     "_get_stale_timeout_seconds",
     "_safe_positive_int",
-    "auto_fail_stale_task",
     "task_manager",
 ]

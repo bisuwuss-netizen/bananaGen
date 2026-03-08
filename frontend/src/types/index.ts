@@ -4,10 +4,10 @@ import type {
 } from '@/experimental/html-renderer/types/schema';
 
 // 页面状态
-export type PageStatus = 'DRAFT' | 'DESCRIPTION_GENERATED' | 'GENERATING' | 'COMPLETED' | 'FAILED';
+export type PageStatus = 'DRAFT' | 'DESCRIPTION_GENERATED' | 'HTML_MODEL_GENERATED' | 'GENERATING' | 'COMPLETED' | 'FAILED';
 
 // 项目状态
-export type ProjectStatus = 'DRAFT' | 'OUTLINE_GENERATED' | 'DESCRIPTIONS_GENERATED' | 'COMPLETED';
+export type ProjectStatus = 'DRAFT' | 'OUTLINE_GENERATED' | 'DESCRIPTIONS_GENERATED' | 'COMPLETED' | 'FAILED';
 
 // 渲染模式
 export type RenderMode = 'image' | 'html';
@@ -59,8 +59,10 @@ export interface Page {
   part?: string; // 章节名
   outline_content: OutlineContent;
   description_content?: DescriptionContent;
+  has_description_content?: boolean;
   layout_id?: LayoutId;  // HTML模式下的布局ID
   html_model?: LayoutModel;  // HTML模式下的结构化数据
+  has_html_model?: boolean;
   generated_image_url?: string; // 后端返回 generated_image_url
   generated_image_path?: string; // 前端使用的别名
   status: PageStatus;
@@ -89,6 +91,8 @@ export interface Project {
   template_style?: string; // 风格描述文本（无模板图模式）
   scheme_id?: string; // 模板方案/布局体系
   render_mode?: RenderMode; // 渲染模式：image(传统图片生成)，html(HTML渲染模式)
+  preview_page?: Page;
+  latest_generation_task?: Task;
   // 导出设置
   export_extractor_method?: ExportExtractorMethod; // 组件提取方法
   export_inpaint_method?: ExportInpaintMethod; // 背景图获取方法
@@ -96,6 +100,31 @@ export interface Project {
   pages: Page[];
   created_at: string;
   updated_at: string;
+}
+
+export interface OutlinePreviewCard {
+  id?: string;
+  title: string;
+  points?: string[];
+  status?: 'planning' | 'ready';
+  layout_id?: string;
+}
+
+export interface TaskProgress {
+  total: number;
+  completed: number;
+  failed?: number;
+  percent?: number;
+  current_step?: string;
+  messages?: string[];
+  preview_cards?: OutlinePreviewCard[];
+  generated_cards?: OutlinePreviewCard[];
+  queued_cards?: OutlinePreviewCard[];
+  estimated_total_pages?: number;
+  reference_count?: number;
+  render_mode?: string;
+  scheme_id?: string;
+  [key: string]: any;
 }
 
 // 任务状态
@@ -107,12 +136,7 @@ export interface Task {
   id?: string; // 别名
   task_type?: string;
   status: TaskStatus;
-  progress?: {
-    total: number;
-    completed: number;
-    failed?: number;
-    [key: string]: any; // 允许额外的字段，如material_id, image_url等
-  };
+  progress?: TaskProgress;
   error_message?: string;
   result?: any;
   error?: string; // 别名

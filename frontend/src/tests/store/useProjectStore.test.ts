@@ -7,6 +7,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import { useProjectStore } from '@/store/useProjectStore'
+import * as api from '@/api/endpoints'
 
 // Mock API模块
 vi.mock('@/api/endpoints', () => ({
@@ -145,5 +146,50 @@ describe('useProjectStore', () => {
       expect(result.current.currentProject).toBeNull()
     })
   })
-})
 
+  describe('大纲生成兼容回退', () => {
+    it('should accept legacy synchronous outline responses without task_id', async () => {
+      const { result } = renderHook(() => useProjectStore())
+
+      const projectId = 'proj-legacy'
+      const baseProject = {
+        id: projectId,
+        project_id: projectId,
+        status: 'DRAFT',
+        render_mode: 'image',
+        scheme_id: 'edu_dark',
+        idea_prompt: '测试主题',
+        pages: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+
+      vi.mocked(api.generateOutline).mockResolvedValue({
+        data: {
+          outline: [{ title: '封面', points: ['测试'] }],
+          pages: [{ page_id: 'page-1', outline_content: { title: '封面', points: ['测试'] } }],
+        },
+      } as any)
+
+      vi.mocked(api.getProject).mockResolvedValue({
+        data: {
+          ...baseProject,
+          status: 'OUTLINE_GENERATED',
+          pages: [{ page_id: 'page-1', order_index: 0, outline_content: { title: '封面', points: ['测试'] }, status: 'OUTLINE_GENERATED' }],
+        },
+      } as any)
+
+      act(() => {
+        result.current.setCurrentProject(baseProject as any)
+      })
+
+      await act(async () => {
+        await result.current.generateOutline()
+      })
+
+      expect(result.current.isGlobalLoading).toBe(false)
+      expect(result.current.error).toBeNull()
+      expect(result.current.currentProject?.pages).toHaveLength(1)
+    })
+  })
+})
