@@ -19,6 +19,18 @@ from .utils import finalize_generation_task, save_image_with_version
 logger = logging.getLogger(__name__)
 
 
+def _resolve_template_usage(file_service, project_id: str, use_template: bool) -> tuple[str | None, bool]:
+    """Return the effective template path and whether a real template is available."""
+    if not use_template:
+        return None, False
+
+    template_path = file_service.get_template_path(project_id)
+    if not template_path:
+        return None, False
+
+    return template_path, True
+
+
 async def generate_images_task(
     task_id: str,
     project_id: str,
@@ -95,7 +107,11 @@ async def generate_images_task(
                                             page_additional_ref_images = image_urls
                                             has_material_images = True
 
-                                    page_ref_image_path = file_service.get_template_path(project_id) if use_template else None
+                                    page_ref_image_path, has_template = _resolve_template_usage(
+                                        file_service,
+                                        project_id,
+                                        use_template,
+                                    )
                                     prompt = ai_service.generate_image_prompt(
                                         outline,
                                         page_data,
@@ -104,7 +120,7 @@ async def generate_images_task(
                                         has_material_images=has_material_images,
                                         extra_requirements=extra_requirements,
                                         language=language,
-                                        has_template=use_template,
+                                        has_template=has_template,
                                     )
                                     image = await ai_service.call_async(
                                         "generate_image",
@@ -244,7 +260,11 @@ async def generate_single_page_image_task(
                         additional_ref_images = image_urls
                         has_material_images = True
 
-                ref_image_path = file_service.get_template_path(project_id) if use_template else None
+                ref_image_path, has_template = _resolve_template_usage(
+                    file_service,
+                    project_id,
+                    use_template,
+                )
                 page_data = page.get_outline_content() or {}
                 if page.part:
                     page_data["part"] = page.part
@@ -257,7 +277,7 @@ async def generate_single_page_image_task(
                     has_material_images=has_material_images,
                     extra_requirements=extra_requirements,
                     language=language,
-                    has_template=use_template,
+                    has_template=has_template,
                 )
                 image = await ai_service.call_async(
                     "generate_image",

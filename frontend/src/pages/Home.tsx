@@ -43,12 +43,25 @@ export const Home: React.FC = () => {
   const [templateStyle, setTemplateStyle] = useState('');
   const [presetStyles, setPresetStyles] = useState<PresetStyle[]>([]);
   const [isLoadingPresetStyles, setIsLoadingPresetStyles] = useState(false);
-  const [renderMode] = useState<'image' | 'html'>('html');
+  const [renderMode, setRenderMode] = useState<'image' | 'html'>('html');
   const [activePresetPreview, setActivePresetPreview] = useState<PresetStyle | null>(null);
   const [isPromptFocused, setIsPromptFocused] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const presetPreviewTriggerRef = useRef<HTMLButtonElement | null>(null);
+
+  const renderModeOptions = [
+    {
+      value: 'html' as const,
+      label: '可编辑模式',
+      description: '先生成可编辑页面结构，适合继续细调排版与内容。',
+    },
+    {
+      value: 'image' as const,
+      label: '图像模式',
+      description: '直接生成整页视觉稿，适合快速出图和风格化展示。',
+    },
+  ];
 
   // 检查是否有当前项目 & 加载用户模板 & 加载预设风格
   useEffect(() => {
@@ -468,6 +481,8 @@ export const Home: React.FC = () => {
       if (!templateFile && selectedTemplateId) {
         templateFile = await getTemplateFile(selectedTemplateId, userTemplates);
       }
+
+      const templateFileToUse = renderMode === 'html' ? undefined : templateFile || undefined;
       
       // 传递风格描述（HTML 模式不使用模板图片/风格描述）
       const styleDesc =
@@ -478,7 +493,7 @@ export const Home: React.FC = () => {
             : undefined;
 
       const schemeId = renderMode === 'html' ? selectedSchemeId : undefined;
-      await initializeProject(activeTab, content, templateFile || undefined, styleDesc, renderMode, schemeId);
+      await initializeProject(activeTab, content, templateFileToUse, styleDesc, renderMode, schemeId);
       
       // 根据类型跳转到不同页面
       const projectId = localStorage.getItem('currentProjectId');
@@ -645,7 +660,7 @@ export const Home: React.FC = () => {
         </div>*/}
 
         {/* 创建卡片 */}
-        <Card className="app-panel overflow-visible border-white/70 bg-white/95 p-4 shadow-[0_40px_120px_-56px_rgba(15,23,42,0.42)] duration-300 md:p-10 transition-[box-shadow,border-color,background-color]">
+        <Card className="app-panel home-creation-panel overflow-visible border-white/70 bg-white/95 p-4 shadow-[0_40px_120px_-56px_rgba(15,23,42,0.42)] duration-300 md:p-10 transition-[box-shadow,border-color,background-color]">
           {/* 选项卡 */}
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-6 md:mb-8">
             {(Object.keys(tabConfig) as CreationType[]).map((type) => {
@@ -677,6 +692,41 @@ export const Home: React.FC = () => {
                 </span>
               </span>
             </p>
+          </div>
+
+          <div className="mb-6 rounded-3xl border border-banana-200/70 bg-[linear-gradient(135deg,rgba(255,251,235,0.96),rgba(255,244,214,0.92))] p-4 shadow-[0_24px_60px_-42px_rgba(245,146,22,0.45)] md:mb-8 md:p-5">
+            <div className="flex items-center gap-2">
+              <Sparkles size={18} className="text-banana-500" />
+              <h3 className="text-base font-semibold text-gray-900 md:text-lg">
+                选择输出模式
+              </h3>
+            </div>
+            <p className="mt-2 text-sm leading-6 text-gray-600">
+              图像模式适合快速出视觉稿，可编辑模式适合后续继续修改结构和排版。
+            </p>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {renderModeOptions.map((option) => {
+                const isActive = renderMode === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setRenderMode(option.value)}
+                    className={`rounded-2xl border px-4 py-4 text-left transition-[border-color,box-shadow,background-color] ${
+                      isActive
+                        ? 'border-banana-400 bg-white text-gray-900 shadow-[0_18px_40px_-28px_rgba(245,146,22,0.5)]'
+                        : 'border-white/80 bg-white/70 text-gray-700 hover:border-banana-200 hover:bg-white'
+                    }`}
+                    aria-pressed={isActive}
+                  >
+                    <div className="text-sm font-semibold md:text-base">{option.label}</div>
+                    <div className="mt-1 text-xs leading-5 text-gray-500 md:text-sm">
+                      {option.description}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* 输入区 - 带按钮 */}

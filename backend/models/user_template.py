@@ -13,7 +13,7 @@ class UserTemplate(db.Model):
     __tablename__ = 'user_templates'
     
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = db.Column(db.Integer, nullable=True)  # User ID to identify which user uploaded the template
+    user_id = db.Column(db.String(100), nullable=True, index=True)  # 用户ID，用于多用户隔离
     name = db.Column(db.String(200), nullable=True)  # Optional template name
     file_path = db.Column(db.String(500), nullable=False)
     file_size = db.Column(db.Integer, nullable=True)  # File size in bytes
@@ -57,4 +57,3 @@ class UserTemplate(db.Model):
     
     def __repr__(self):
         return f'<UserTemplate {self.id}: {self.name or "Unnamed"}>'
-

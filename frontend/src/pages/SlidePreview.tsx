@@ -1245,13 +1245,14 @@ export const SlidePreview: React.FC = () => {
 
   const handleGenerateAll = async () => {
     const pageIds = getSelectedPageIdsForExport();
+    const shouldUseTemplate = Boolean(currentProject?.template_image_path || currentProject?.template_image_url);
 
     // 检查要生成的页面中是否有已有图片的
     const pagesToGenerate = currentProject?.pages;
     const hasImages = pagesToGenerate?.some((p) => p.generated_image_path);
 
     const executeGenerate = async () => {
-      await generateImages(pageIds);
+      await generateImages(pageIds, shouldUseTemplate);
     };
 
     if (hasImages) {
@@ -1583,6 +1584,7 @@ export const SlidePreview: React.FC = () => {
     if (!currentProject) return;
     const page = currentProject.pages[selectedIndex];
     if (!page.id) return;
+    const shouldUseTemplate = Boolean(currentProject.template_image_path || currentProject.template_image_url);
 
     // 如果该页面正在生成，不重复提交
     if (pageGeneratingTasks[page.id]) {
@@ -1592,7 +1594,7 @@ export const SlidePreview: React.FC = () => {
 
     try {
       // 使用统一的 generateImages，传入单个页面 ID
-      await generateImages([page.id]);
+      await generateImages([page.id], shouldUseTemplate);
       show({ message: '已开始生成图片，请稍候...', type: 'success' });
     } catch (error: any) {
       // 提取后端返回的更具体错误信息

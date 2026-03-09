@@ -73,10 +73,13 @@ def _update_page_description(client, project_id: str, page_id: str, text: str) -
     return payload["data"]
 
 
-def _mock_ai_service(monkeypatch, *, return_value):
+def _mock_ai_service(monkeypatch, *, return_value, flatten_return=None):
     service = MagicMock()
     service.call_async = AsyncMock(return_value=return_value)
-    service.flatten_outline = MagicMock(side_effect=lambda outline: outline)
+    if flatten_return is None:
+        service.flatten_outline = MagicMock(side_effect=lambda outline: outline)
+    else:
+        service.flatten_outline = MagicMock(return_value=flatten_return)
 
     async def _get_ai_service_async():
         return service
@@ -125,6 +128,56 @@ def test_refine_outline_allows_empty_project_and_forwards_context(monkeypatch, c
     persisted = client.get(f"/api/projects/{project_id}")
     persisted_payload = assert_success_response(persisted)
     assert len(persisted_payload["data"]["pages"]) == 2
+
+
+def test_refine_outline_flattens_part_based_ai_result_for_image_mode(monkeypatch, client):
+    project_id = _create_project(client, render_mode="image", idea_prompt="测试删除页面")
+
+    raw_outline = [
+        {
+            "part": "引言",
+            "pages": [
+                {"title": "封面", "points": ["项目背景"]},
+                {"title": "目录", "points": ["目标", "范围"]},
+            ],
+        },
+        {
+            "part": "主体",
+            "pages": [
+                {"title": "核心结论", "points": ["删除第三页后保留剩余页面"]},
+            ],
+        },
+    ]
+    flattened_pages = [
+        {"title": "封面", "points": ["项目背景"], "part": "引言"},
+        {"title": "目录", "points": ["目标", "范围"], "part": "引言"},
+        {"title": "核心结论", "points": ["删除第三页后保留剩余页面"], "part": "主体"},
+    ]
+
+    service = _mock_ai_service(
+        monkeypatch,
+        return_value=raw_outline,
+        flatten_return=flattened_pages,
+    )
+
+    response = client.post(
+        f"/api/projects/{project_id}/refine/outline",
+        json={
+            "user_requirement": "删除第三页",
+        },
+    )
+
+    payload = assert_success_response(response)
+    pages = payload["data"]["pages"]
+
+    service.flatten_outline.assert_called_once_with(raw_outline)
+    assert [page["outline_content"]["title"] for page in pages] == ["封面", "目录", "核心结论"]
+    assert [page["part"] for page in pages] == ["引言", "引言", "主体"]
+
+    persisted = client.get(f"/api/projects/{project_id}")
+    persisted_payload = assert_success_response(persisted)
+    persisted_pages = persisted_payload["data"]["pages"]
+    assert [page["outline_content"]["title"] for page in persisted_pages] == ["封面", "目录", "核心结论"]
 
 
 def test_refine_outline_rejects_empty_ai_result_without_deleting_existing_pages(monkeypatch, client):

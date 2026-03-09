@@ -2,7 +2,7 @@
 import logging
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from deps import get_db
@@ -13,11 +13,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/preset-styles", tags=["preset-styles"])
 
 
+async def _preset_styles_table_exists(db: AsyncSession) -> bool:
+    result = await db.execute(text("SHOW TABLES LIKE 'preset_styles'"))
+    return result.first() is not None
+
+
 @router.get("/", response_model=SuccessResponse)
 async def list_preset_styles(
     status: int = Query(1),
     db: AsyncSession = Depends(get_db),
 ):
+    if not await _preset_styles_table_exists(db):
+        return SuccessResponse(data={"styles": []})
+
     stmt = select(PresetStyle)
     if status is not None:
         stmt = stmt.where(PresetStyle.status == status)

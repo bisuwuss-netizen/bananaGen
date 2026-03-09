@@ -28,6 +28,35 @@ export function normalizeProject(data: any): Project {
   };
 }
 
+function normalizeOutlineContent(outlineContent: any, fallbackPart?: string) {
+  const raw = outlineContent && typeof outlineContent === 'object' ? outlineContent : {};
+  const nestedPages = Array.isArray(raw.pages)
+    ? raw.pages.filter((item: unknown): item is Record<string, unknown> => !!item && typeof item === 'object')
+    : [];
+
+  const title = typeof raw.title === 'string' && raw.title.trim()
+    ? raw.title.trim()
+    : typeof fallbackPart === 'string' && fallbackPart.trim()
+      ? fallbackPart.trim()
+      : typeof nestedPages[0]?.title === 'string' && nestedPages[0].title.trim()
+        ? nestedPages[0].title.trim()
+        : '未命名页面';
+
+  const points = Array.isArray(raw.points)
+    ? raw.points
+        .map((point: unknown) => typeof point === 'string' ? point.trim() : String(point ?? '').trim())
+        .filter(Boolean)
+    : nestedPages
+        .map((page) => typeof page.title === 'string' ? page.title.trim() : '')
+        .filter(Boolean);
+
+  return {
+    ...raw,
+    title,
+    points,
+  };
+}
+
 /**
  * 标准化后端返回的页面数据
  */
@@ -36,6 +65,7 @@ export function normalizePage(data: any): Page {
     ...data,
     id: data.page_id || data.id,
     generated_image_path: data.generated_image_url || data.generated_image_path,
+    outline_content: normalizeOutlineContent(data.outline_content, data.part),
   };
 }
 

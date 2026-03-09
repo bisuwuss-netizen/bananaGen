@@ -160,7 +160,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
               模板系列: {schemeName}
             </span>
             <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
-              {project.render_mode === 'html' ? 'HTML 渲染' : '图片渲染'}
+              {project.render_mode === 'html' ? '可编辑模式' : '图像模式'}
             </span>
           </div>
           <p className="mt-3 max-w-2xl text-xs md:text-sm text-gray-500">

@@ -114,7 +114,11 @@ def _prepare_refined_outline_pages(refined, *, render_mode: str, ai_service) -> 
     if render_mode == "html":
         pages_data = refined.get("pages", []) if isinstance(refined, dict) else refined
     else:
-        pages_data = ai_service.flatten_outline(refined) if isinstance(refined, dict) else refined
+        if isinstance(refined, dict):
+            outline_items = refined.get("pages") if isinstance(refined.get("pages"), list) else [refined]
+        else:
+            outline_items = refined
+        pages_data = ai_service.flatten_outline(outline_items)
 
     if not isinstance(pages_data, list):
         raise HTTPException(502, "AI returned invalid outline payload type")

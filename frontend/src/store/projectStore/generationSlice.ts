@@ -198,7 +198,7 @@ export const createGenerationSlice: StateCreator<ProjectStore, [], [], ProjectGe
     }
   },
 
-  generateImages: async (pageIds) => {
+  generateImages: async (pageIds, useTemplate = true) => {
     const { currentProject, pageGeneratingTasks } = get();
     if (!currentProject) return;
 
@@ -210,7 +210,7 @@ export const createGenerationSlice: StateCreator<ProjectStore, [], [], ProjectGe
     set({ error: null });
 
     try {
-      const response = await api.generateImages(currentProject.id!, undefined, pageIds);
+      const response = await api.generateImages(currentProject.id!, undefined, pageIds, useTemplate);
       const taskId = response.data?.task_id;
       if (taskId) {
         const nextTasks = { ...pageGeneratingTasks };

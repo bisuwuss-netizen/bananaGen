@@ -27,8 +27,8 @@ const getPercent = (progress?: TaskProgress | null): number => {
 };
 
 const modeLabelMap: Record<string, string> = {
-  html: 'HTML 结构化',
-  image: '图片渲染',
+  html: '可编辑模式',
+  image: '图像模式',
 };
 
 const PreviewCardItem: React.FC<{
@@ -101,7 +101,7 @@ export const OutlineGenerationPanel: React.FC<OutlineGenerationPanelProps> = ({
   const estimatedTotalPages = progress?.estimated_total_pages || Math.max(5, generatedCards.length + queuedCards.length);
   const referenceCount = progress?.reference_count ?? 0;
   const hasReferenceFiles = referenceCount > 0;
-  const renderMode = modeLabelMap[progress?.render_mode || project.render_mode || 'image'] || '图片渲染';
+  const renderMode = modeLabelMap[progress?.render_mode || project.render_mode || 'image'] || '图像模式';
 
   return (
     <div className="mx-auto max-w-6xl px-3 py-6 md:px-6 md:py-8">

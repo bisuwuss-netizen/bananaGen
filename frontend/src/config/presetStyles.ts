@@ -36,7 +36,8 @@ export const getPresetStyles = async (): Promise<PresetStyle[]> => {
   loadPromise = (async () => {
     try {
       const response = await listPresetStyles();
-      if (response.success && response.data?.styles) {
+      const isSuccessful = response.success === true || response.status === 'success';
+      if (isSuccessful && response.data?.styles) {
         // 将后端返回的数据转换为前端格式
         cachedStyles = response.data.styles.map(style => ({
           id: style.id,

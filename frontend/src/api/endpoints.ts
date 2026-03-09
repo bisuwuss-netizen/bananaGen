@@ -245,11 +245,16 @@ export const refineDescriptions = async (
  * @param language 输出语言（可选，默认从 sessionStorage 获取）
  * @param pageIds 可选的页面ID列表，如果不提供则生成所有页面
  */
-export const generateImages = async (projectId: string, language?: OutputLanguage, pageIds?: string[]): Promise<ApiResponse> => {
+export const generateImages = async (
+  projectId: string,
+  language?: OutputLanguage,
+  pageIds?: string[],
+  useTemplate: boolean = true,
+): Promise<ApiResponse> => {
   const lang = language || await getStoredOutputLanguage();
   const response = await apiClient.post<ApiResponse>(
     `/api/projects/${projectId}/generate/images`,
-    { language: lang, page_ids: pageIds }
+    { language: lang, page_ids: pageIds, use_template: useTemplate }
   );
   return response.data;
 };
@@ -261,12 +266,13 @@ export const generatePageImage = async (
   projectId: string,
   pageId: string,
   forceRegenerate: boolean = false,
-  language?: OutputLanguage
+  language?: OutputLanguage,
+  useTemplate: boolean = true,
 ): Promise<ApiResponse> => {
   const lang = language || await getStoredOutputLanguage();
   const response = await apiClient.post<ApiResponse>(
     `/api/projects/${projectId}/pages/${pageId}/generate/image`,
-    { force_regenerate: forceRegenerate, language: lang }
+    { force_regenerate: forceRegenerate, language: lang, use_template: useTemplate }
   );
   return response.data;
 };

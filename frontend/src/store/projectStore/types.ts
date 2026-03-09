@@ -46,7 +46,7 @@ export interface ProjectGenerationSlice {
   generateFromDescription: () => Promise<void>;
   generateDescriptions: () => Promise<void>;
   generatePageDescription: (pageId: string) => Promise<void>;
-  generateImages: (pageIds?: string[]) => Promise<void>;
+  generateImages: (pageIds?: string[], useTemplate?: boolean) => Promise<void>;
   editPageImage: (
     pageId: string,
     editPrompt: string,

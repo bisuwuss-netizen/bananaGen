@@ -46,7 +46,11 @@ def get_image_generation_prompt(page_desc: str, outline_text: str,
         extra_req_text = f"\n\n额外要求（请务必遵循）：\n{extra_requirements}\n"
 
     # 根据是否有模板生成不同的设计指南内容（保持原prompt要点顺序）
-    template_style_guideline = "- 配色和设计语言和模板图片严格相似。" if has_template else "- 严格按照风格描述进行设计。"
+    template_style_guideline = (
+        "- 配色和设计语言和模板图片严格相似。"
+        if has_template
+        else "- 若提供了风格描述，严格按照风格描述进行设计；若未提供，则基于页面内容给出统一、专业的视觉风格。"
+    )
     forbidden_template_text_guidline = "- 只参考风格设计，禁止出现模板中的文字。\n" if has_template else ""
 
     # 该处参考了@歸藏的A工具箱
@@ -202,5 +206,4 @@ def get_quality_enhancement_prompt(inpainted_regions: list = None) -> str:
 # {regions_info}
 # """
     return prompt
-
 
