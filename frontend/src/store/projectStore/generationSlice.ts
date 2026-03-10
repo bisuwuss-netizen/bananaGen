@@ -102,6 +102,7 @@ export const createGenerationSlice: StateCreator<ProjectStore, [], [], ProjectGe
     await get().saveAllPages();
     const pages = currentProject.pages.filter((p) => p.id);
     if (pages.length === 0) return;
+    const isHtmlMode = currentProject.render_mode === 'html';
 
     const initialTasks: Record<string, boolean> = {};
     pages.forEach((page) => {
@@ -118,26 +119,52 @@ export const createGenerationSlice: StateCreator<ProjectStore, [], [], ProjectGe
         throw new Error('未收到任务ID');
       }
 
+      let wsMessageCount = 0;
+      let lastSyncedCompleted = 0;
+      let lastSyncedFailed = 0;
+      let isSyncing = false;
       openTaskWebSocket<ProjectTaskPayload>(currentProject.id, taskId, {
         onMessage: async (task) => {
+          wsMessageCount++;
+          const prog = task.progress as any;
+          const currentCompleted = prog?.completed ?? 0;
+          const currentFailed = prog?.failed ?? 0;
+
           if (task.progress) {
             set({ taskProgress: task.progress });
           }
 
-          await get().syncProject();
-          const { currentProject: updatedProject } = get();
-          if (updatedProject) {
-            const updatedTasks: Record<string, boolean> = {};
-            updatedProject.pages.forEach((page) => {
-              if (page.id) {
-                const hasDescription = !!page.description_content;
-                const isGenerating = page.status === 'GENERATING' || (!hasDescription && initialTasks[page.id]);
-                if (isGenerating) {
-                  updatedTasks[page.id] = true;
-                }
+          // 只在 progress 有变化 或 任务终态时才 syncProject，避免请求风暴
+          const progressChanged = currentCompleted !== lastSyncedCompleted || currentFailed !== lastSyncedFailed;
+          const isTerminal = task.status === 'COMPLETED' || task.status === 'FAILED';
+
+          if ((progressChanged || isTerminal) && !isSyncing) {
+            isSyncing = true;
+            lastSyncedCompleted = currentCompleted;
+            lastSyncedFailed = currentFailed;
+
+            try {
+              await get().syncProject();
+              const { currentProject: updatedProject } = get();
+
+              if (updatedProject) {
+                const updatedTasks: Record<string, boolean> = {};
+                updatedProject.pages.forEach((page) => {
+                  if (page.id) {
+                    const hasContent = isHtmlMode
+                      ? !!(page as any).html_model && Object.keys((page as any).html_model || {}).length > 0
+                      : !!page.description_content;
+                    const isGenerating = page.status === 'GENERATING' || (!hasContent && initialTasks[page.id]);
+                    if (isGenerating) {
+                      updatedTasks[page.id] = true;
+                    }
+                  }
+                });
+                set({ pageDescriptionGeneratingTasks: updatedTasks });
               }
-            });
-            set({ pageDescriptionGeneratingTasks: updatedTasks });
+            } finally {
+              isSyncing = false;
+            }
           }
 
           if (task.status === 'COMPLETED') {
@@ -150,6 +177,8 @@ export const createGenerationSlice: StateCreator<ProjectStore, [], [], ProjectGe
               activeTaskId: null,
               error: normalizeErrorMessage(task.error_message || task.error || '生成描述失败'),
             });
+            // 即使任务失败，也同步项目以获取已成功生成的部分内容
+            await get().syncProject();
           }
         },
         onError: () => {

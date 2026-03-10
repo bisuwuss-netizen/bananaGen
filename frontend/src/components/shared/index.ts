@@ -17,6 +17,7 @@ export { MaterialSelector } from './MaterialSelector';
 export { GithubLink } from './GithubLink';
 export { Markdown } from './Markdown';
 export { AiRefineInput } from './AiRefineInput';
+export { AiRefineSidebar } from './AiRefineSidebar';
 export { ShimmerOverlay } from './ShimmerOverlay';
 export { ImagePreviewList } from './ImagePreviewList';
 export { ProjectResourcesList } from './ProjectResourcesList';

@@ -18,7 +18,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Button, Loading, useConfirm, useToast, AiRefineInput, FilePreviewModal, ProjectResourcesList } from '@/components/shared';
+import { Button, Loading, useConfirm, useToast, AiRefineSidebar, FilePreviewModal, ProjectResourcesList } from '@/components/shared';
 import { OutlineCard } from '@/components/outline/OutlineCard';
 import { OutlineGenerationPanel } from '@/components/outline/OutlineGenerationPanel';
 import { useProjectStore } from '@/store/useProjectStore';
@@ -72,6 +72,7 @@ export const OutlineEditor: React.FC = () => {
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
   const [isAiRefining, setIsAiRefining] = useState(false);
   const [previewFileId, setPreviewFileId] = useState<string | null>(null);
+  const [isAiSidebarOpen, setIsAiSidebarOpen] = useState(false);
   const { confirm, ConfirmDialog } = useConfirm();
   const { show, ToastContainer } = useToast();
 
@@ -213,18 +214,6 @@ export const OutlineEditor: React.FC = () => {
             <span className="text-sm md:text-lg font-semibold hidden lg:inline">编辑大纲</span>
           </div>
           
-          {/* 中间：AI 输入框 */}
-          <div className="flex-1 max-w-xl mx-auto hidden md:block md:-translate-x-2 pr-10">
-            <AiRefineInput
-              title=""
-              placeholder="例如：增加一页关于XXX的内容、删除第3页、合并前两页... · Ctrl+Enter提交"
-              onSubmit={handleAiRefineOutline}
-              disabled={false}
-              className="!p-0 !bg-transparent !border-0"
-              onStatusChange={setIsAiRefining}
-            />
-          </div>
-          
           {/* 右侧：操作按钮 */}
           <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
             <Button
@@ -249,18 +238,6 @@ export const OutlineEditor: React.FC = () => {
               <span className="hidden sm:inline">下一步</span>
             </Button>
           </div>
-        </div>
-        
-        {/* 移动端：AI 输入框 */}
-        <div className="mt-2 md:hidden">
-          <AiRefineInput
-            title=""
-            placeholder="例如：增加/删除页面... · Ctrl+Enter"
-            onSubmit={handleAiRefineOutline}
-            disabled={false}
-            className="!p-0 !bg-transparent !border-0"
-            onStatusChange={setIsAiRefining}
-          />
         </div>
       </header>
 
@@ -399,13 +376,13 @@ export const OutlineEditor: React.FC = () => {
                 <div>
                   <div className="text-xs md:text-sm text-gray-500 mb-1">标题</div>
                   <div className="text-base md:text-lg font-semibold text-gray-900">
-                    {selectedPage.outline_content.title}
+                    {selectedPage.outline_content?.title || '(无标题)'}
                   </div>
                 </div>
                 <div>
                   <div className="text-xs md:text-sm text-gray-500 mb-2">要点</div>
                   <ul className="space-y-1.5 md:space-y-2">
-                    {selectedPage.outline_content.points.map((point, idx) => (
+                    {(selectedPage.outline_content?.points || []).map((point, idx) => (
                       <li key={idx} className="flex items-start text-sm md:text-base text-gray-700">
                         <span className="mr-2 text-banana-500 flex-shrink-0">•</span>
                         <span>{point}</span>
@@ -431,13 +408,13 @@ export const OutlineEditor: React.FC = () => {
               <div>
                 <div className="text-xs text-gray-500 mb-1">标题</div>
                 <div className="text-sm font-semibold text-gray-900">
-                  {selectedPage.outline_content.title}
+                  {selectedPage.outline_content?.title || '(无标题)'}
                 </div>
               </div>
               <div>
                 <div className="text-xs text-gray-500 mb-1">要点</div>
                 <ul className="space-y-1">
-                  {selectedPage.outline_content.points.map((point, idx) => (
+                  {(selectedPage.outline_content?.points || []).map((point, idx) => (
                     <li key={idx} className="flex items-start text-xs text-gray-700">
                       <span className="mr-1.5 text-banana-500 flex-shrink-0">•</span>
                       <span>{point}</span>
@@ -453,6 +430,16 @@ export const OutlineEditor: React.FC = () => {
       <ToastContainer />
       
       <FilePreviewModal fileId={previewFileId} onClose={() => setPreviewFileId(null)} />
+      
+      <AiRefineSidebar
+        title="AI 修改大纲"
+        placeholder="例如：增加一页关于XXX的内容、删除第3页、合并前两页..."
+        onSubmit={handleAiRefineOutline}
+        disabled={false}
+        isOpen={isAiSidebarOpen}
+        onToggle={setIsAiSidebarOpen}
+        onStatusChange={setIsAiRefining}
+      />
     </div>
   );
 };

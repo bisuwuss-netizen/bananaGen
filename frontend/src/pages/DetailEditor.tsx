@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, FileText, Sparkles, Home } from 'lucide-react';
-import { Button, Loading, useToast, useConfirm, AiRefineInput, FilePreviewModal, ProjectResourcesList } from '@/components/shared';
+import { Button, Loading, useToast, useConfirm, AiRefineSidebar, FilePreviewModal, ProjectResourcesList } from '@/components/shared';
 import { DescriptionCard } from '@/components/preview/DescriptionCard';
 import { useProjectStore } from '@/store/useProjectStore';
 import { refineDescriptions } from '@/api/endpoints';
@@ -24,6 +24,7 @@ export const DetailEditor: React.FC = () => {
   const { confirm, ConfirmDialog } = useConfirm();
   const [isAiRefining, setIsAiRefining] = React.useState(false);
   const [previewFileId, setPreviewFileId] = useState<string | null>(null);
+  const [isAiSidebarOpen, setIsAiSidebarOpen] = useState(false);
 
   // 加载项目数据
   useEffect(() => {
@@ -188,18 +189,6 @@ export const DetailEditor: React.FC = () => {
             </span>
           </div>
           
-          {/* 中间：AI 修改输入框 */}
-          <div className="flex-1 max-w-xl mx-auto hidden md:block md:-translate-x-3 pr-10">
-            <AiRefineInput
-              title=""
-              placeholder="例如：让描述更详细、删除第2页的某个要点、强调XXX的重要性... · Ctrl+Enter提交"
-              onSubmit={handleAiRefineDescriptions}
-              disabled={!hasPages}
-              className="!p-0 !bg-transparent !border-0"
-              onStatusChange={setIsAiRefining}
-            />
-          </div>
-          
           {/* 右侧：操作按钮 */}
           <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
             <Button
@@ -230,18 +219,6 @@ export const DetailEditor: React.FC = () => {
               <span className="hidden sm:inline">生成PPT</span>
             </Button>
           </div>
-        </div>
-        
-        {/* 移动端：AI 输入框 */}
-        <div className="mt-2 md:hidden">
-          <AiRefineInput
-            title=""
-            placeholder="例如：让描述更详细... · Ctrl+Enter"
-            onSubmit={handleAiRefineDescriptions}
-            disabled={!hasPages}
-            className="!p-0 !bg-transparent !border-0"
-            onStatusChange={setIsAiRefining}
-          />
         </div>
       </header>
 
@@ -323,6 +300,16 @@ export const DetailEditor: React.FC = () => {
       <ToastContainer />
       {ConfirmDialog}
       <FilePreviewModal fileId={previewFileId} onClose={() => setPreviewFileId(null)} />
+      
+      <AiRefineSidebar
+        title={isHtmlMode ? 'AI 修改内容' : 'AI 修改描述'}
+        placeholder="例如：让描述更详细、删除第2页的某个要点、强调XXX的重要性..."
+        onSubmit={handleAiRefineDescriptions}
+        disabled={!hasPages}
+        isOpen={isAiSidebarOpen}
+        onToggle={setIsAiSidebarOpen}
+        onStatusChange={setIsAiRefining}
+      />
     </div>
   );
 };

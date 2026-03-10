@@ -22,12 +22,21 @@ import { HomeCharactersPromptStage } from '@/features/home-characters';
 
 type CreationType = 'idea' | 'outline' | 'description';
 
+// ── 模块级代码：仅在整页加载（刷新/外部导航）时执行 ──
+// SPA 内导航（如从大纲页回退）不会重新执行模块级代码，sessionStorage 保持不变
+sessionStorage.removeItem('home_content');
+sessionStorage.removeItem('home_activeTab');
+sessionStorage.removeItem('home_selectedSchemeId');
+sessionStorage.removeItem('home_lastSubmission');
+// 标记本次是否为整页刷新，供组件 mount 时决定是否清除项目状态
+let _homeFreshPageLoad = true;
+
 export const Home: React.FC = () => {
   const navigate = useNavigate();
-  const { initializeProject, isGlobalLoading } = useProjectStore();
+  const { initializeProject, isGlobalLoading, setCurrentProject } = useProjectStore();
   const { show, ToastContainer } = useToast();
-  
-  // 从 sessionStorage 恢复首页表单状态（解决导航返回后输入丢失的问题）
+
+  // 从 sessionStorage 恢复首页表单状态（SPA 回退时有值，刷新时为空）
   const [activeTab, setActiveTab] = useState<CreationType>(() => {
     const saved = sessionStorage.getItem('home_activeTab');
     return (saved as CreationType) || 'idea';
@@ -59,7 +68,7 @@ export const Home: React.FC = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const presetPreviewTriggerRef = useRef<HTMLButtonElement | null>(null);
 
-  // 将关键表单状态持久化到 sessionStorage，防止导航返回时丢失
+  // 将关键表单状态持久化到 sessionStorage，SPA 回退时可恢复
   useEffect(() => {
     sessionStorage.setItem('home_content', content);
   }, [content]);
@@ -71,6 +80,15 @@ export const Home: React.FC = () => {
   useEffect(() => {
     sessionStorage.setItem('home_selectedSchemeId', selectedSchemeId);
   }, [selectedSchemeId]);
+
+  // 整页刷新时重置项目状态（SPA 回退时跳过）
+  useEffect(() => {
+    if (_homeFreshPageLoad) {
+      _homeFreshPageLoad = false;
+      localStorage.removeItem('currentProjectId');
+      setCurrentProject(null);
+    }
+  }, [setCurrentProject]);
 
   // 检查是否有当前项目 & 加载用户模板 & 加载预设风格
   useEffect(() => {
@@ -485,30 +503,6 @@ export const Home: React.FC = () => {
     }
 
     try {
-      // 检查是否可以复用已有项目（内容、标签、模板方案未变化时直接导航）
-      const lastSubmission = sessionStorage.getItem('home_lastSubmission');
-      if (lastSubmission) {
-        try {
-          const last = JSON.parse(lastSubmission);
-          if (
-            last.content === content.trim() &&
-            last.activeTab === activeTab &&
-            last.selectedSchemeId === selectedSchemeId &&
-            last.projectId
-          ) {
-            // 内容未变化，直接导航到已有项目
-            if (activeTab === 'idea' || activeTab === 'outline') {
-              navigate(`/project/${last.projectId}/outline`);
-            } else if (activeTab === 'description') {
-              navigate(`/project/${last.projectId}/detail`);
-            }
-            return;
-          }
-        } catch {
-          // 解析失败，忽略，正常创建新项目
-        }
-      }
-
       // 如果有模板ID但没有File，按需加载
       let templateFile = selectedTemplate;
       if (!templateFile && selectedTemplateId) {
@@ -575,14 +569,6 @@ export const Home: React.FC = () => {
         console.log('No materials to associate');
       }
       
-      // 保存本次提交参数，以便返回后再次点击"下一步"时复用项目
-      sessionStorage.setItem('home_lastSubmission', JSON.stringify({
-        content: content.trim(),
-        activeTab,
-        selectedSchemeId,
-        projectId,
-      }));
-
       if (activeTab === 'idea' || activeTab === 'outline') {
         navigate(`/project/${projectId}/outline`);
       } else if (activeTab === 'description') {

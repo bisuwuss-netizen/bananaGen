@@ -40,7 +40,8 @@ def _reconstruct_outline(pages: list[Page]) -> list[dict]:
             if p.layout_id:
                 item["layout_id"] = p.layout_id
             outline.append(item)
-    return outline
+    # Flatten in case any outline_content was stored in nested {part, pages} format
+    return _flatten_nested_outline(outline)
 
 
 async def _get_reference_files_content(db: AsyncSession, project_id: str) -> list[dict]:
@@ -110,11 +111,33 @@ def _merge_refined_description(existing_content, refined_text: str, generated_at
     return payload
 
 
+def _flatten_nested_outline(outline) -> list[dict]:
+    """Flatten nested {part, pages} structure WITHOUT modifying content.
+
+    Unlike ai_service.flatten_outline, this does NOT re-populate TOC points
+    or re-order pages — those have already been applied by the quality guard.
+    """
+    if not isinstance(outline, list):
+        outline = [outline] if isinstance(outline, dict) else []
+
+    pages: list[dict] = []
+    for item in outline:
+        if not isinstance(item, dict):
+            continue
+        if "part" in item and isinstance(item.get("pages"), list):
+            for page in item["pages"]:
+                if isinstance(page, dict):
+                    flat = page.copy()
+                    flat["part"] = item.get("part")
+                    pages.append(flat)
+        else:
+            pages.append(item.copy())
+    return pages
+
+
 def _prepare_refined_outline_pages(refined, *, render_mode: str, ai_service) -> list[dict]:
-    if render_mode == "html":
-        pages_data = refined.get("pages", []) if isinstance(refined, dict) else refined
-    else:
-        pages_data = ai_service.flatten_outline(refined) if isinstance(refined, dict) else refined
+    # Pure flatten only: quality guard already processed TOC + ordering
+    pages_data = _flatten_nested_outline(refined)
 
     if not isinstance(pages_data, list):
         raise HTTPException(502, "AI returned invalid outline payload type")

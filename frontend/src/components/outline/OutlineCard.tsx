@@ -26,8 +26,8 @@ export const OutlineCard: React.FC<OutlineCardProps> = ({
 }) => {
   const { confirm, ConfirmDialog } = useConfirm();
   const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(page.outline_content.title);
-  const [editPoints, setEditPoints] = useState(page.outline_content.points.join('\n'));
+  const [editTitle, setEditTitle] = useState(page.outline_content?.title || '');
+  const [editPoints, setEditPoints] = useState((page.outline_content?.points || []).join('\n'));
 
   const handleSave = () => {
     onUpdate({
@@ -40,8 +40,8 @@ export const OutlineCard: React.FC<OutlineCardProps> = ({
   };
 
   const handleCancel = () => {
-    setEditTitle(page.outline_content.title);
-    setEditPoints(page.outline_content.points.join('\n'));
+    setEditTitle(page.outline_content?.title || '');
+    setEditPoints((page.outline_content?.points || []).join('\n'));
     setIsEditing(false);
   };
 
@@ -115,10 +115,10 @@ export const OutlineCard: React.FC<OutlineCardProps> = ({
             /* 查看模式 */
             <div>
               <h4 className="font-semibold text-gray-900 mb-2">
-                {page.outline_content.title}
+                {page.outline_content?.title || '(无标题)'}
               </h4>
               <div className="text-gray-600">
-                <Markdown>{page.outline_content.points.join('\n')}</Markdown>
+                <Markdown>{(page.outline_content?.points || []).join('\n')}</Markdown>
               </div>
             </div>
           )}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from datetime import datetime
@@ -159,6 +160,61 @@ def _estimate_total_pages(preview_titles: list[str]) -> int:
     return 6
 
 
+_AI_CALL_PROGRESS_STEPS = [
+    (40, "AI 正在理解主题与要求…"),
+    (44, "正在构思整体叙事框架…"),
+    (48, "正在规划章节与要点…"),
+    (52, "正在设计每页大纲内容…"),
+    (56, "正在优化结构与逻辑…"),
+    (60, "AI 仍在思考，即将完成…"),
+    (63, "正在审查内容质量…"),
+    (66, "最后润色中…"),
+]
+
+
+async def _run_progress_ticker(
+    task_id: str,
+    *,
+    cancel_event: asyncio.Event,
+    messages: list[str],
+    preview_cards: list[dict[str, Any]],
+    extra: dict[str, Any],
+) -> None:
+    """Smoothly advance progress from 38% → 68% during a long AI call."""
+    for target_pct, step_text in _AI_CALL_PROGRESS_STEPS:
+        await asyncio.sleep(3.0)
+        if cancel_event.is_set():
+            return
+        try:
+            async with async_session_factory() as ticker_session:
+                task = await ticker_session.get(Task, task_id)
+                if not task or task.status not in ("PROCESSING",):
+                    return
+                updated_messages = _append_message(list(messages), step_text)
+                payload: dict[str, Any] = {
+                    "total": extra.get("estimated_total_pages", 5),
+                    "completed": 0,
+                    "failed": 0,
+                    "percent": target_pct,
+                    "current_step": step_text,
+                    "messages": updated_messages,
+                }
+                if preview_cards is not None:
+                    payload["preview_cards"] = preview_cards
+                    payload["generated_cards"] = []
+                    payload["queued_cards"] = preview_cards
+                if extra:
+                    payload.update(extra)
+                payload["percent"] = target_pct
+                task.set_progress(payload)
+                await ticker_session.commit()
+                # Keep messages in sync for caller
+                messages.clear()
+                messages.extend(updated_messages)
+        except Exception:
+            pass  # best-effort; don't break the main task
+
+
 async def _set_task_progress(
     session,
     task: Task,
@@ -286,6 +342,13 @@ async def generate_outline_task(
                 project_context = ProjectContext(project, reference_files)
 
                 messages = _append_message(messages, "正在调用 AI 规划页面结构与叙事顺序。")
+                estimated_total = _estimate_total_pages(preview_titles)
+                ticker_extra = {
+                    "render_mode": render_mode,
+                    "scheme_id": scheme_id,
+                    "reference_count": reference_count,
+                    "estimated_total_pages": estimated_total,
+                }
                 await _set_task_progress(
                     session,
                     task,
@@ -297,57 +360,77 @@ async def generate_outline_task(
                     preview_cards=preview_cards,
                     generated_cards=[],
                     queued_cards=preview_cards,
-                    extra={
-                        "render_mode": render_mode,
-                        "scheme_id": scheme_id,
-                        "reference_count": reference_count,
-                        "estimated_total_pages": _estimate_total_pages(preview_titles),
-                    },
+                    extra=ticker_extra,
                 )
 
-                if render_mode == "html":
-                    outline_result = await ai_service.call_async(
-                        "generate_structured_outline",
-                        topic=project.idea_prompt or "",
-                        requirements=project.extra_requirements or "",
-                        language=language,
-                        scheme_id=scheme_id,
+                # 启动平滑进度推进器 ── 在 AI 调用期间逐步推进进度条
+                ticker_cancel = asyncio.Event()
+                ticker_task = asyncio.create_task(
+                    _run_progress_ticker(
+                        task_id,
+                        cancel_event=ticker_cancel,
+                        messages=messages,  # 共享消息列表，让步骤日志累积
+                        preview_cards=preview_cards,
+                        extra=ticker_extra,
                     )
-                    if isinstance(outline_result, dict):
-                        try:
-                            from services.presentation.layout_planner import (
-                                assign_layout_variants_to_structured_outline,
-                            )
-                            from services.prompts.layouts import LAYOUT_ID_ALIASES
+                )
 
-                            outline_result = assign_layout_variants_to_structured_outline(
-                                outline=outline_result,
-                                scheme_id=scheme_id,
-                                layout_aliases=LAYOUT_ID_ALIASES,
-                                seed=project.idea_prompt or project_id,
+                try:
+                    if render_mode == "html":
+                        outline_result = await ai_service.call_async(
+                            "generate_structured_outline",
+                            topic=project.idea_prompt or "",
+                            requirements=project.extra_requirements or "",
+                            language=language,
+                            scheme_id=scheme_id,
+                        )
+                        if isinstance(outline_result, dict):
+                            try:
+                                from services.presentation.layout_planner import (
+                                    assign_layout_variants_to_structured_outline,
+                                )
+                                from services.prompts.layouts import LAYOUT_ID_ALIASES
+
+                                outline_result = assign_layout_variants_to_structured_outline(
+                                    outline=outline_result,
+                                    scheme_id=scheme_id,
+                                    layout_aliases=LAYOUT_ID_ALIASES,
+                                    seed=project.idea_prompt or project_id,
+                                )
+                            except Exception as planner_err:
+                                logger.warning("Outline variant planning skipped: %s", planner_err)
+                        pages_data = outline_result.get("pages", []) if isinstance(outline_result, dict) else []
+                    else:
+                        blueprint_result = await ai_service.call_async(
+                            "generate_outline_blueprint",
+                            project_context,
+                            language=language,
+                            render_mode=render_mode,
+                        )
+                        # Pure flatten only: quality guard already processed TOC + ordering
+                        from api.routes.refinement import _flatten_nested_outline
+                        if isinstance(blueprint_result, (dict, list)):
+                            pages_data = _flatten_nested_outline(
+                                blueprint_result if isinstance(blueprint_result, list)
+                                else [blueprint_result]
                             )
-                        except Exception as planner_err:
-                            logger.warning("Outline variant planning skipped: %s", planner_err)
-                    pages_data = outline_result.get("pages", []) if isinstance(outline_result, dict) else []
-                else:
-                    blueprint_result = await ai_service.call_async(
-                        "generate_outline_blueprint",
-                        project_context,
-                        language=language,
-                        render_mode=render_mode,
-                    )
-                    pages_data = (
-                        ai_service.flatten_outline(blueprint_result)
-                        if isinstance(blueprint_result, dict)
-                        else blueprint_result
-                    )
+                        else:
+                            pages_data = blueprint_result
+                finally:
+                    # 停止进度推进器
+                    ticker_cancel.set()
+                    ticker_task.cancel()
+                    try:
+                        await ticker_task
+                    except asyncio.CancelledError:
+                        pass
 
                 if not isinstance(pages_data, list) or not pages_data:
                     raise ValueError("Outline generation returned no pages")
 
                 messages = _append_message(
                     messages,
-                    f"已规划 {len(pages_data)} 页，开始逐页生成大纲卡片。",
+                    f"AI 规划完毕，共 {len(pages_data)} 页，开始逐页生成大纲卡片。",
                 )
 
                 initial_queue_cards = _build_preview_cards_from_pages(
@@ -361,7 +444,7 @@ async def generate_outline_task(
                     task,
                     total=total_pages,
                     completed=0,
-                    percent=42,
+                    percent=70,
                     current_step="准备逐页写入",
                     messages=messages,
                     preview_cards=initial_queue_cards or preview_cards,
@@ -436,7 +519,8 @@ async def generate_outline_task(
                         if idx + 1 < total_pages
                         else "正在完成收尾"
                     )
-                    percent = min(99, max(45, round(((idx + 1) / total_pages) * 100)))
+                    # 72% → 99%: 逐页推进进度
+                    percent = min(99, 72 + round(((idx + 1) / total_pages) * 27))
                     await _set_task_progress(
                         session,
                         task,

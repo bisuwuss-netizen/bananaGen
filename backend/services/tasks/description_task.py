@@ -527,8 +527,18 @@ async def generate_descriptions_task(
                         page_id = str(job["db_page_id"])
                         result_data, error = first_pass_map.get(page_id, (None, "页面生成结果缺失"))
 
-                        await update_page_result(page_id, result_data, error)
-                        await session.commit()
+                        try:
+                            await update_page_result(page_id, result_data, error)
+                            await session.commit()
+                        except Exception as commit_exc:
+                            logger.warning("Failed to commit page %s update, rolling back: %s", page_id, commit_exc)
+                            try:
+                                await session.rollback()
+                            except Exception:
+                                pass
+                            completed = max(0, completed - 1)
+                            failed += 1
+                            continue
 
                         if not error and result_data and narrative_tracker:
                             try:
@@ -544,10 +554,16 @@ async def generate_descriptions_task(
                             except Exception as tracker_err:
                                 logger.warning("更新叙事追踪器失败（页 %s）: %s", job["logical_page_id"], tracker_err)
 
-                        task = await session.get(Task, task_id)
-                        if task:
-                            task.update_progress(completed=completed, failed=failed)
-                            await session.commit()
+                        try:
+                            task = await session.get(Task, task_id)
+                            if task:
+                                task.update_progress(completed=completed, failed=failed)
+                                await session.commit()
+                        except Exception:
+                            try:
+                                await session.rollback()
+                            except Exception:
+                                pass
 
                     if narrative_tracker and completed > 0:
                         deterministic_report = narrative_tracker.quality_report()
@@ -613,8 +629,15 @@ async def generate_descriptions_task(
                                 if rewrite_error or not rewrite_data:
                                     continue
 
-                                await update_page_result(page_id, rewrite_data, None, count_stats=False)
-                                await session.commit()
+                                try:
+                                    await update_page_result(page_id, rewrite_data, None, count_stats=False)
+                                    await session.commit()
+                                except Exception as rw_exc:
+                                    logger.warning("Rewrite commit failed for page %s: %s", page_id, rw_exc)
+                                    try:
+                                        await session.rollback()
+                                    except Exception:
+                                        pass
 
                                 try:
                                     narrative_tracker.apply_generated_page(
@@ -661,7 +684,14 @@ async def generate_descriptions_task(
                                     None,
                                     count_stats=False,
                                 )
-                            await session.commit()
+                            try:
+                                await session.commit()
+                            except Exception as patch_exc:
+                                logger.warning("Patched pages commit failed: %s", patch_exc)
+                                try:
+                                    await session.rollback()
+                                except Exception:
+                                    pass
 
                 elif description_batch_size > 1:
                     page_jobs = [(page.id, page_data, i, page.layout_id) for i, (page, page_data) in enumerate(zip(pages, pages_data), 1)]
@@ -708,12 +738,27 @@ async def generate_descriptions_task(
                     
                     for batch_results in results:
                         for page_id, result_data, error in batch_results:
-                            await update_page_result(page_id, result_data, error)
-                        await session.commit()
-                        task = await session.get(Task, task_id)
-                        if task:
-                            task.update_progress(completed=completed, failed=failed)
-                            await session.commit()
+                            try:
+                                await update_page_result(page_id, result_data, error)
+                                await session.commit()
+                            except Exception as commit_exc:
+                                logger.warning("Failed to commit page %s update: %s", page_id, commit_exc)
+                                try:
+                                    await session.rollback()
+                                except Exception:
+                                    pass
+                                completed = max(0, completed - 1)
+                                failed += 1
+                        try:
+                            task = await session.get(Task, task_id)
+                            if task:
+                                task.update_progress(completed=completed, failed=failed)
+                                await session.commit()
+                        except Exception:
+                            try:
+                                await session.rollback()
+                            except Exception:
+                                pass
                 else:
                     sem_single = asyncio.Semaphore(max_workers)
                     
@@ -728,12 +773,27 @@ async def generate_descriptions_task(
                     results = await asyncio.gather(*tasks)
                     
                     for page_id, result_data, error in results:
-                        await update_page_result(page_id, result_data, error)
-                        await session.commit()
-                        task = await session.get(Task, task_id)
-                        if task:
-                            task.update_progress(completed=completed, failed=failed)
+                        try:
+                            await update_page_result(page_id, result_data, error)
                             await session.commit()
+                        except Exception as commit_exc:
+                            logger.warning("Failed to commit page %s update: %s", page_id, commit_exc)
+                            try:
+                                await session.rollback()
+                            except Exception:
+                                pass
+                            completed = max(0, completed - 1)
+                            failed += 1
+                        try:
+                            task = await session.get(Task, task_id)
+                            if task:
+                                task.update_progress(completed=completed, failed=failed)
+                                await session.commit()
+                        except Exception:
+                            try:
+                                await session.rollback()
+                            except Exception:
+                                pass
 
                 from models import Project
                 task = await session.get(Task, task_id)
@@ -755,18 +815,29 @@ async def generate_descriptions_task(
                 import traceback
 
                 logger.error("Task %s FAILED with exception: %s", task_id, traceback.format_exc())
-                task = await session.get(Task, task_id)
-                if task:
-                    task.status = "FAILED"
-                    task.error_message = str(exc)
-                    task.completed_at = datetime.utcnow()
+                try:
+                    await session.rollback()
+                except Exception:
+                    pass
+                try:
+                    task = await session.get(Task, task_id)
+                    if task:
+                        task.status = "FAILED"
+                        task.error_message = str(exc)
+                        task.completed_at = datetime.utcnow()
 
-                from models import Project
-                project = await session.get(Project, project_id)
-                if project:
-                    project.status = "FAILED"
+                    from models import Project
+                    project = await session.get(Project, project_id)
+                    if project:
+                        project.status = "FAILED"
 
-                await session.commit()
+                    await session.commit()
+                except Exception as cleanup_exc:
+                    logger.warning("Failed to mark task %s as FAILED: %s", task_id, cleanup_exc)
+                    try:
+                        await session.rollback()
+                    except Exception:
+                        pass
 
 
 __all__ = ["generate_descriptions_task"]
