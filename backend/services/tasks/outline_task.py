@@ -14,8 +14,12 @@ from sqlalchemy.orm import selectinload
 from deps import async_session_factory
 from models import Page, Project, Task
 from services.runtime_state import load_runtime_config, runtime_context
+from .manager import task_manager
 
 logger = logging.getLogger(__name__)
+
+# HTML 大纲写入非常快，给前端留出一个可感知的逐卡片刷新窗口。
+_HTML_OUTLINE_STREAM_DELAY_SECONDS = 0.2
 
 _DEFAULT_PREVIEW_TITLES = [
     "封面",
@@ -247,6 +251,7 @@ async def _set_task_progress(
         payload.update(extra)
     task.set_progress(payload)
     await session.commit()
+    await task_manager.publish_task_update(task.id, task.to_dict())
 
 
 async def generate_outline_task(
@@ -304,7 +309,7 @@ async def generate_outline_task(
                         "render_mode": render_mode,
                         "scheme_id": scheme_id,
                         "reference_count": reference_count,
-                        "estimated_total_pages": _estimate_total_pages(preview_titles),
+                        "page_count_confirmed": False,
                     },
                 )
 
@@ -334,7 +339,7 @@ async def generate_outline_task(
                         "render_mode": render_mode,
                         "scheme_id": scheme_id,
                         "reference_count": reference_count,
-                        "estimated_total_pages": _estimate_total_pages(preview_titles),
+                        "page_count_confirmed": False,
                     },
                 )
 
@@ -454,7 +459,8 @@ async def generate_outline_task(
                         "render_mode": render_mode,
                         "scheme_id": scheme_id,
                         "reference_count": reference_count,
-                        "estimated_total_pages": total_pages,
+                        "actual_total_pages": total_pages,
+                        "page_count_confirmed": True,
                     },
                 )
 
@@ -536,9 +542,13 @@ async def generate_outline_task(
                             "render_mode": render_mode,
                             "scheme_id": scheme_id,
                             "reference_count": reference_count,
-                            "estimated_total_pages": total_pages,
+                            "actual_total_pages": total_pages,
+                            "page_count_confirmed": True,
                         },
                     )
+
+                    if render_mode == "html" and idx + 1 < total_pages:
+                        await asyncio.sleep(_HTML_OUTLINE_STREAM_DELAY_SECONDS)
 
                 project.status = "OUTLINE_GENERATED"
                 project.updated_at = datetime.utcnow()
@@ -566,10 +576,12 @@ async def generate_outline_task(
                         "render_mode": render_mode,
                         "scheme_id": scheme_id,
                         "reference_count": reference_count,
-                        "estimated_total_pages": total_pages,
+                        "actual_total_pages": total_pages,
+                        "page_count_confirmed": True,
                     }
                 )
                 await session.commit()
+                await task_manager.publish_task_update(task.id, task.to_dict())
             except Exception as exc:
                 logger.exception("Outline generation task %s failed", task_id)
                 task = await session.get(Task, task_id)
@@ -578,6 +590,7 @@ async def generate_outline_task(
                     task.error_message = str(exc)
                     task.completed_at = datetime.utcnow()
                     await session.commit()
+                    await task_manager.publish_task_update(task.id, task.to_dict())
 
 
 __all__ = ["generate_outline_task"]

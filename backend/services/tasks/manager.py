@@ -45,6 +45,7 @@ class TaskManager:
 
     def __init__(self):
         self.active_tasks: dict[str, asyncio.Task] = {}
+        self.task_listeners: dict[str, set[asyncio.Queue]] = {}
 
     def submit_task(self, task_id: str, coro_func: Callable[..., Coroutine[Any, Any, Any]], *args, **kwargs):
         """Submit an async task to run in the background."""
@@ -101,6 +102,34 @@ class TaskManager:
 
     def is_task_active(self, task_id: str) -> bool:
         return task_id in self.active_tasks
+
+    def subscribe_task(self, task_id: str) -> asyncio.Queue:
+        """Register a lightweight listener queue for immediate task updates."""
+        queue: asyncio.Queue = asyncio.Queue(maxsize=1)
+        self.task_listeners.setdefault(task_id, set()).add(queue)
+        return queue
+
+    def unsubscribe_task(self, task_id: str, queue: asyncio.Queue) -> None:
+        listeners = self.task_listeners.get(task_id)
+        if not listeners:
+            return
+        listeners.discard(queue)
+        if not listeners:
+            self.task_listeners.pop(task_id, None)
+
+    async def publish_task_update(self, task_id: str, payload: dict[str, Any]) -> None:
+        """Push the latest task snapshot to active listeners without building backlog."""
+        listeners = tuple(self.task_listeners.get(task_id, ()))
+        for queue in listeners:
+            while not queue.empty():
+                try:
+                    queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    break
+            try:
+                queue.put_nowait(payload)
+            except asyncio.QueueFull:
+                logger.debug("Task update queue full for %s; dropping stale payload", task_id)
 
     async def shutdown(self):
         """Cancel all running tasks and wait for them to finish."""

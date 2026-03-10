@@ -7,6 +7,7 @@ POST /api/v1/services/aigc/multimodal-generation/generation
 import base64
 import asyncio
 import logging
+import time
 from io import BytesIO
 from typing import Optional, List
 
@@ -37,6 +38,9 @@ class QwenImageProvider(ImageProvider):
         self.model = model
         self.timeout = float(cfg.OPENAI_TIMEOUT or 300.0)
         self.max_retries = int(cfg.OPENAI_MAX_RETRIES or 2)
+        self.rate_limit_backoff_seconds = float(
+            getattr(cfg, "QWEN_IMAGE_MIN_INTERVAL_SECONDS", 8.0) or 8.0
+        )
 
         if not self.api_key:
             raise ValueError("DASHSCOPE_API_KEY / OPENAI_API_KEY is required for qwen-image models")
@@ -142,6 +146,17 @@ class QwenImageProvider(ImageProvider):
         image.load()
         return image
 
+    def _retry_delay_seconds(self, error: Exception, attempt: int) -> float:
+        message = str(error or "").lower()
+        if (
+            "429" in message
+            or "throttling.ratequota" in message
+            or "rate limit" in message
+            or "limit_requests" in message
+        ):
+            return max(1.0, self.rate_limit_backoff_seconds)
+        return float(min(2 ** attempt, 5))
+
     async def _download_image_async(self, image_url: str) -> Image.Image:
         if image_url.startswith("data:image"):
             b64 = image_url.split(",", 1)[1]
@@ -215,6 +230,14 @@ class QwenImageProvider(ImageProvider):
                     f"Qwen image API attempt {attempt + 1}/{self.max_retries + 1} failed: "
                     f"{type(e).__name__}: {e}"
                 )
+                if attempt < self.max_retries:
+                    delay_seconds = self._retry_delay_seconds(e, attempt)
+                    if delay_seconds > 0:
+                        logger.info(
+                            "Qwen image API retry cooling down for %.1fs before next attempt",
+                            delay_seconds,
+                        )
+                        time.sleep(delay_seconds)
 
         raise Exception(f"Error generating image with Qwen provider (model={self.model}): {last_error}")
 
@@ -269,6 +292,12 @@ class QwenImageProvider(ImageProvider):
                         f"{type(e).__name__}: {e}"
                     )
                     if attempt < self.max_retries:
-                        await asyncio.sleep(min(2 ** attempt, 5))
+                        delay_seconds = self._retry_delay_seconds(e, attempt)
+                        if delay_seconds > 0:
+                            logger.info(
+                                "Qwen image API retry cooling down for %.1fs before next attempt",
+                                delay_seconds,
+                            )
+                            await asyncio.sleep(delay_seconds)
 
         raise Exception(f"Error generating image with Qwen provider (model={self.model}): {last_error}")

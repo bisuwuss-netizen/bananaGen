@@ -46,6 +46,9 @@ class Config:
     MAX_IMAGE_WORKERS = settings.max_image_workers
     DEFAULT_ASPECT_RATIO = settings.default_aspect_ratio
     DEFAULT_RESOLUTION = settings.default_resolution
+    IMAGE_REQUEST_MIN_INTERVAL_SECONDS = settings.image_request_min_interval_seconds
+    QWEN_IMAGE_MIN_INTERVAL_SECONDS = settings.qwen_image_min_interval_seconds
+    QWEN_IMAGE_MAX_WORKERS = settings.qwen_image_max_workers
     OUTPUT_LANGUAGE = settings.output_language
 
     UPLOAD_FOLDER = settings.upload_folder
