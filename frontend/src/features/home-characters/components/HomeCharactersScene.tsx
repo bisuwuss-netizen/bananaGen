@@ -1,7 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
-import type { HomeCharactersConfig, HomeCharactersMood, PointerState } from '../types';
+import type {
+  CharacterLayoutOverride,
+  HomeCharacterConfig,
+  HomeCharactersConfig,
+  HomeCharactersMood,
+  PointerState,
+  PromptMetrics,
+} from '../types';
 import { CharacterFigure } from './CharacterFigure';
 
 const DEFAULT_POINTER: PointerState = { x: 0.14, y: -0.08 };
@@ -11,9 +18,57 @@ const clamp = (value: number, min: number, max: number) => Math.min(Math.max(val
 interface HomeCharactersSceneProps {
   config: HomeCharactersConfig;
   mood: HomeCharactersMood;
+  variant?: 'default' | 'subtle';
+  promptMetrics?: PromptMetrics | null;
 }
 
-export const HomeCharactersScene: React.FC<HomeCharactersSceneProps> = ({ config, mood }) => {
+const getSubtleLayoutOverride = (
+  character: HomeCharacterConfig,
+  promptMetrics: PromptMetrics | null | undefined
+): CharacterLayoutOverride | undefined => {
+  if (!promptMetrics) {
+    return undefined;
+  }
+
+  const topAnchors: Record<string, { left: number; top: number }> = {
+    'purple-editor': {
+      left: promptMetrics.left + 66,
+      top: promptMetrics.top - 98,
+    },
+    'black-editor': {
+      left: promptMetrics.right - 114,
+      top: promptMetrics.top - 72,
+    },
+    'orange-editor': {
+      left: promptMetrics.left - 100,
+      top: promptMetrics.bottom - 128,
+    },
+    'yellow-editor': {
+      left: promptMetrics.right - 18,
+      top: promptMetrics.bottom - 124,
+    },
+  };
+
+  const anchor = topAnchors[character.id];
+
+  if (!anchor) {
+    return undefined;
+  }
+
+  return {
+    left: anchor.left,
+    top: anchor.top,
+    width: character.width,
+    height: character.height,
+  };
+};
+
+export const HomeCharactersScene: React.FC<HomeCharactersSceneProps> = ({
+  config,
+  mood,
+  variant = 'default',
+  promptMetrics = null,
+}) => {
   const prefersReducedMotion = usePrefersReducedMotion();
   const sceneRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<number | null>(null);
@@ -115,6 +170,11 @@ export const HomeCharactersScene: React.FC<HomeCharactersSceneProps> = ({ config
           pointer={pointer}
           mood={mood}
           motionEnabled={motionEnabled}
+          layoutOverride={
+            variant === 'subtle'
+              ? getSubtleLayoutOverride(character, promptMetrics)
+              : undefined
+          }
         />
       ))}
     </div>

@@ -9,6 +9,7 @@ export interface LayoutScheme {
   description: string;
   tags: string[];
   accent: string;
+  collections: Array<'ai_recommended' | 'classroom' | 'academic' | 'brand'>;
   preview: LayoutSchemePreview;
 }
 
@@ -19,6 +20,7 @@ export const layoutSchemes: LayoutScheme[] = [
     description: '适合教学汇报与研究路演，深色沉浸视觉搭配结构化演进叙事。',
     tags: ['教育', '深色', '叙事'],
     accent: '#06b6d4',
+    collections: ['ai_recommended', 'classroom', 'academic'],
     preview: layoutSchemePreviews.edu_dark,
   },
   {
@@ -27,6 +29,7 @@ export const layoutSchemes: LayoutScheme[] = [
     description: '适合产品发布、技术路演与企业培训，强调清晰结构与高可读性。',
     tags: ['技术', '发布', '清晰'],
     accent: '#0f4c81',
+    collections: ['ai_recommended', 'brand'],
     preview: layoutSchemePreviews.tech_blue,
   },
   {
@@ -35,6 +38,7 @@ export const layoutSchemes: LayoutScheme[] = [
     description: '适合课程讲义和研究汇报，信息密度高，逻辑链条完整。',
     tags: ['学术', '研究', '严谨'],
     accent: '#334155',
+    collections: ['ai_recommended', 'academic'],
     preview: layoutSchemePreviews.academic,
   },
   {
@@ -43,6 +47,7 @@ export const layoutSchemes: LayoutScheme[] = [
     description: '适合教学互动和公开课，强调提问、反馈与节奏切换。',
     tags: ['互动', '课堂', '引导'],
     accent: '#1d9bf0',
+    collections: ['ai_recommended', 'classroom'],
     preview: layoutSchemePreviews.interactive,
   },
   {
@@ -51,6 +56,7 @@ export const layoutSchemes: LayoutScheme[] = [
     description: '适合品牌故事、设计案例和历史主题，强调大图与故事线。',
     tags: ['视觉', '叙事', '案例'],
     accent: '#e11d48',
+    collections: ['brand'],
     preview: layoutSchemePreviews.visual,
   },
   {
@@ -59,6 +65,7 @@ export const layoutSchemes: LayoutScheme[] = [
     description: '适合操作说明和技能培训，强调步骤、风险提示与检查点。',
     tags: ['实操', '流程', '技能'],
     accent: '#0f766e',
+    collections: ['classroom'],
     preview: layoutSchemePreviews.practical,
   },
   {
@@ -67,6 +74,7 @@ export const layoutSchemes: LayoutScheme[] = [
     description: '适合高冲击视觉提案，突出非对称构图和品牌气质。',
     tags: ['现代', '创意', '冲击'],
     accent: '#f97316',
+    collections: ['brand'],
     preview: layoutSchemePreviews.modern,
   },
 ];

@@ -21,6 +21,91 @@ import { getPresetStyles, type PresetStyle } from '@/config/presetStyles';
 import { HomeCharactersPromptStage } from '@/features/home-characters';
 
 type CreationType = 'idea' | 'outline' | 'description';
+type RenderMode = 'image' | 'html';
+type TemplateCategoryId = 'ai_recommended' | 'classroom' | 'academic' | 'brand';
+
+const templateCategoryOptions: Array<{
+  id: TemplateCategoryId;
+  label: string;
+  hint: string;
+}> = [
+  {
+    id: 'ai_recommended',
+    label: '🌟 AI 推荐',
+    hint: '先看最适合教师快速开稿的模板。',
+  },
+  {
+    id: 'classroom',
+    label: '👩‍🏫 课堂互动',
+    hint: '适合公开课、授课课件和培训演示。',
+  },
+  {
+    id: 'academic',
+    label: '📊 学术汇报',
+    hint: '适合研究、讲义和结构严谨的内容表达。',
+  },
+  {
+    id: 'brand',
+    label: '🏢 品牌宣传',
+    hint: '适合品牌故事、发布会和高冲击视觉展示。',
+  },
+];
+
+const getPresetSearchText = (preset: PresetStyle) =>
+  `${preset.name} ${preset.description} ${preset.previewImage ?? ''}`.toLowerCase();
+
+const presetCategoryKeywords: Record<Exclude<TemplateCategoryId, 'ai_recommended'>, string[]> = {
+  classroom: ['课堂', '教学', '教育', '培训', '讲义', '互动', 'lesson', 'teach', 'course'],
+  academic: ['学术', '研究', '论文', 'academic', 'formal', 'study', 'theory', '讲解'],
+  brand: [
+    '品牌',
+    '宣传',
+    '发布',
+    'creative',
+    'luxury',
+    'premium',
+    'business',
+    'tech',
+    'modern',
+    'vibrant',
+    'marketing',
+  ],
+};
+
+const matchesPresetCategory = (
+  preset: PresetStyle,
+  categoryId: TemplateCategoryId,
+  index: number
+) => {
+  if (categoryId === 'ai_recommended') {
+    return index < 6;
+  }
+
+  const searchText = getPresetSearchText(preset);
+  return presetCategoryKeywords[categoryId].some((keyword) =>
+    searchText.includes(keyword.toLowerCase())
+  );
+};
+
+const renderModeOptions: Array<{
+  value: RenderMode;
+  label: string;
+  title: string;
+  description: string;
+}> = [
+  {
+    value: 'html',
+    label: '可编辑',
+    title: '可编辑模式',
+    description: '先生成可编辑页面结构，适合继续细调排版与内容。',
+  },
+  {
+    value: 'image',
+    label: '图像',
+    title: '图像模式',
+    description: '直接生成整页视觉稿，适合快速出图和风格化展示。',
+  },
+];
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -43,25 +128,14 @@ export const Home: React.FC = () => {
   const [templateStyle, setTemplateStyle] = useState('');
   const [presetStyles, setPresetStyles] = useState<PresetStyle[]>([]);
   const [isLoadingPresetStyles, setIsLoadingPresetStyles] = useState(false);
-  const [renderMode, setRenderMode] = useState<'image' | 'html'>('html');
+  const [renderMode, setRenderMode] = useState<RenderMode>('html');
+  const [activeTemplateCategory, setActiveTemplateCategory] =
+    useState<TemplateCategoryId>('ai_recommended');
   const [activePresetPreview, setActivePresetPreview] = useState<PresetStyle | null>(null);
   const [isPromptFocused, setIsPromptFocused] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const presetPreviewTriggerRef = useRef<HTMLButtonElement | null>(null);
-
-  const renderModeOptions = [
-    {
-      value: 'html' as const,
-      label: '可编辑模式',
-      description: '先生成可编辑页面结构，适合继续细调排版与内容。',
-    },
-    {
-      value: 'image' as const,
-      label: '图像模式',
-      description: '直接生成整页视觉稿，适合快速出图和风格化展示。',
-    },
-  ];
 
   // 检查是否有当前项目 & 加载用户模板 & 加载预设风格
   useEffect(() => {
@@ -134,6 +208,28 @@ export const Home: React.FC = () => {
     () => presetStyles.find((preset) => preset.description === templateStyle)?.id ?? null,
     [presetStyles, templateStyle]
   );
+
+  const activeRenderModeOption = useMemo(
+    () => renderModeOptions.find((option) => option.value === renderMode) ?? renderModeOptions[0],
+    [renderMode]
+  );
+
+  const activeTemplateCategoryMeta = useMemo(
+    () =>
+      templateCategoryOptions.find((category) => category.id === activeTemplateCategory) ??
+      templateCategoryOptions[0],
+    [activeTemplateCategory]
+  );
+
+  const filteredPresetStyles = useMemo(() => {
+    if (activeTemplateCategory === 'ai_recommended') {
+      return presetStyles.slice(0, 6);
+    }
+
+    return presetStyles.filter((preset, index) =>
+      matchesPresetCategory(preset, activeTemplateCategory, index)
+    );
+  }, [activeTemplateCategory, presetStyles]);
 
   const applyPresetStyle = (preset: PresetStyle) => {
     setTemplateStyle(preset.description);
@@ -682,61 +778,57 @@ export const Home: React.FC = () => {
             })}
           </div>
 
-          {/* 描述 */}
-          <div className="relative">
-            <p className="text-sm md:text-base mb-4 md:mb-6 leading-relaxed">
-              <span className="inline-flex items-center gap-2 text-gray-600">
-                <Lightbulb size={16} className="text-banana-500 flex-shrink-0" />
-                <span className="font-semibold">
-                  {tabConfig[activeTab].description}
-                </span>
-              </span>
-            </p>
-          </div>
-
-          <div className="mb-6 rounded-3xl border border-banana-200/70 bg-[linear-gradient(135deg,rgba(255,251,235,0.96),rgba(255,244,214,0.92))] p-4 shadow-[0_24px_60px_-42px_rgba(245,146,22,0.45)] md:mb-8 md:p-5">
-            <div className="flex items-center gap-2">
-              <Sparkles size={18} className="text-banana-500" />
-              <h3 className="text-base font-semibold text-gray-900 md:text-lg">
-                选择输出模式
-              </h3>
-            </div>
-            <p className="mt-2 text-sm leading-6 text-gray-600">
-              图像模式适合快速出视觉稿，可编辑模式适合后续继续修改结构和排版。
-            </p>
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {renderModeOptions.map((option) => {
-                const isActive = renderMode === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setRenderMode(option.value)}
-                    className={`rounded-2xl border px-4 py-4 text-left transition-[border-color,box-shadow,background-color] ${
-                      isActive
-                        ? 'border-banana-400 bg-white text-gray-900 shadow-[0_18px_40px_-28px_rgba(245,146,22,0.5)]'
-                        : 'border-white/80 bg-white/70 text-gray-700 hover:border-banana-200 hover:bg-white'
-                    }`}
-                    aria-pressed={isActive}
-                  >
-                    <div className="text-sm font-semibold md:text-base">{option.label}</div>
-                    <div className="mt-1 text-xs leading-5 text-gray-500 md:text-sm">
-                      {option.description}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           {/* 输入区 - 带按钮 */}
           <div className="relative mb-4">
+            <div className="mb-4 min-w-0">
+              <div className="inline-flex items-center gap-2 rounded-full border border-banana-200/70 bg-banana-50/80 px-3 py-1 text-xs font-semibold text-banana-700">
+                <Lightbulb size={14} className="flex-shrink-0" />
+                输入你的想法
+              </div>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-gray-600 md:text-[15px]">
+                {tabConfig[activeTab].description}
+              </p>
+            </div>
+
             <HomeCharactersPromptStage
               isPromptFocused={isPromptFocused}
               hasPromptContent={Boolean(content.trim())}
+              variant="subtle"
             >
               <div className="relative mb-2 group">
                 <div className="absolute -inset-3 rounded-[28px] bg-[radial-gradient(circle_at_top,rgba(245,146,22,0.18),transparent_65%)] opacity-70 blur-2xl transition-opacity duration-300 group-hover:opacity-100"></div>
+                <div className="absolute right-4 top-6 z-10 max-w-[212px] rounded-[20px] border border-slate-200/80 bg-white/92 p-1 shadow-[0_18px_36px_-28px_rgba(15,23,42,0.35)] backdrop-blur-xl">
+                  <div className="mb-1 flex items-center justify-between px-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                      输出模式
+                    </span>
+                    <span className="text-[10px] font-medium text-slate-500">
+                      {activeRenderModeOption.title}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1">
+                    {renderModeOptions.map((option) => {
+                      const isActive = renderMode === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          title={option.description}
+                          onClick={() => setRenderMode(option.value)}
+                          aria-pressed={isActive}
+                          className={`rounded-2xl px-3 py-2 text-sm font-semibold transition-[background-color,color,box-shadow] duration-200 ${
+                            isActive
+                              ? 'bg-banana-500 text-white shadow-[0_14px_28px_-18px_rgba(245,146,22,0.7)]'
+                              : 'text-slate-600 hover:bg-banana-50 hover:text-banana-700'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <Textarea
                   ref={textareaRef}
                   placeholder={tabConfig[activeTab].placeholder}
@@ -746,8 +838,15 @@ export const Home: React.FC = () => {
                   onBlur={() => setIsPromptFocused(false)}
                   onPaste={handlePaste}
                   rows={activeTab === 'idea' ? 4 : 8}
-                  className="relative min-h-[180px] rounded-[24px] pr-20 md:pr-28 pb-12 md:pb-14 text-sm md:text-base border-2 border-banana-200/80 bg-white/98 shadow-[0_26px_54px_-38px_rgba(245,146,22,0.45)] focus:border-banana-400 focus:shadow-[0_30px_60px_-36px_rgba(245,146,22,0.48)] transition-[border-color,box-shadow] duration-200"
+                  className="relative min-h-[180px] rounded-[24px] border-2 border-banana-200/80 bg-white/98 pb-12 pr-24 pt-28 text-sm shadow-[0_26px_54px_-38px_rgba(245,146,22,0.45)] transition-[border-color,box-shadow] duration-200 focus:border-banana-400 focus:shadow-[0_30px_60px_-36px_rgba(245,146,22,0.48)] md:pr-28 md:pt-24 md:text-base"
                 />
+
+                <p className="pointer-events-none absolute left-5 top-5 z-[1] max-w-[44%] text-[11px] font-medium uppercase tracking-[0.22em] text-slate-400 md:text-xs">
+                  直接在这里描述你的主题、场景和风格目标
+                </p>
+                <p className="pointer-events-none absolute right-5 top-[88px] z-[1] hidden max-w-[220px] text-xs leading-5 text-slate-500 md:block">
+                  {activeRenderModeOption.description}
+                </p>
 
                 {/* 左下角：上传文件按钮（回形针图标） */}
                 <button
@@ -847,7 +946,7 @@ export const Home: React.FC = () => {
                 onChange={setSelectedSchemeId}
               />
             ) : useTemplateStyle ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <Textarea
                   placeholder="描述您想要的 PPT 风格，例如：简约商务风格，使用蓝色和白色配色，字体清晰大方..."
                   value={templateStyle}
@@ -856,59 +955,162 @@ export const Home: React.FC = () => {
                   className="text-sm border-2 border-gray-200 focus:border-banana-400 transition-colors duration-200"
                 />
 
-                {/* 预设风格按钮 */}
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-gray-600">
-                    快速选择预设风格：
-                  </p>
+                <div className="flex flex-col gap-3 rounded-[24px] border border-slate-200/70 bg-white/88 px-4 py-4 shadow-[0_18px_42px_-36px_rgba(15,23,42,0.35)] md:flex-row md:items-center md:justify-between">
+                  <div className="min-w-0">
+                    <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+                      <Sparkles size={13} />
+                      风格筛选
+                    </div>
+                    <p className="mt-2 text-sm text-slate-500">
+                      {activeTemplateCategoryMeta.hint}
+                    </p>
+                  </div>
                   <div className="flex flex-wrap gap-2">
-                    {isLoadingPresetStyles ? (
-                      <p className="text-xs text-gray-500">加载预设风格中...</p>
-                    ) : presetStyles.length === 0 ? (
-                      <p className="text-xs text-gray-500">暂无预设风格</p>
-                    ) : (
-                      presetStyles.map((preset) => {
-                        const isActive = activePresetStyleId === preset.id;
-                        const isPreviewOpen = activePresetPreview?.id === preset.id;
-
-                        return (
-                          <div key={preset.id} className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              aria-pressed={isActive}
-                              onClick={() => applyPresetStyle(preset)}
-                              className={`rounded-full border-2 px-3 py-1.5 text-xs font-medium duration-200 transition-[border-color,background-color,box-shadow,color] ${
-                                isActive
-                                  ? 'border-banana-400 bg-banana-50 text-banana-700 shadow-sm'
-                                  : 'border-gray-200 text-gray-700 hover:border-banana-400 hover:bg-banana-50 hover:shadow-sm'
-                              }`}
-                            >
-                              {preset.name}
-                            </button>
-
-                            {preset.previewImage && (
-                              <button
-                                type="button"
-                                aria-label={`预览 ${preset.name} 风格`}
-                                aria-haspopup="dialog"
-                                aria-expanded={isPreviewOpen}
-                                aria-controls={isPreviewOpen ? 'preset-style-preview-dialog' : undefined}
-                                onClick={(event) => openPresetPreview(preset, event.currentTarget)}
-                                className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-gray-500 duration-200 hover:border-banana-300 hover:bg-banana-50 hover:text-banana-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-banana-300/80 focus-visible:ring-offset-2 transition-[border-color,background-color,color,box-shadow]"
-                              >
-                                <Eye size={12} />
-                                预览
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })
-                    )}
+                    {templateCategoryOptions.map((category) => {
+                      const isActive = activeTemplateCategory === category.id;
+                      return (
+                        <button
+                          key={category.id}
+                          type="button"
+                          aria-pressed={isActive}
+                          title={category.hint}
+                          onClick={() => setActiveTemplateCategory(category.id)}
+                          className={`rounded-full border px-4 py-2 text-sm font-medium transition-[border-color,background-color,color,box-shadow] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-banana-300/80 focus-visible:ring-offset-2 ${
+                            isActive
+                              ? 'border-banana-400 bg-banana-500 text-white shadow-[0_12px_28px_-18px_rgba(245,146,22,0.6)]'
+                              : 'border-slate-200 bg-white text-slate-600 hover:border-banana-300 hover:bg-banana-50 hover:text-banana-700'
+                          }`}
+                        >
+                          {category.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
+                {isLoadingPresetStyles ? (
+                  <p className="text-xs text-gray-500">加载预设风格中...</p>
+                ) : presetStyles.length === 0 ? (
+                  <p className="text-xs text-gray-500">暂无预设风格</p>
+                ) : filteredPresetStyles.length === 0 ? (
+                  <div className="rounded-[24px] border border-dashed border-slate-200 bg-slate-50/80 px-5 py-8 text-center text-sm text-slate-500">
+                    当前分类下暂无可用风格，切换别的分类试试看。
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {filteredPresetStyles.map((preset) => {
+                      const isActive = activePresetStyleId === preset.id;
+                      const isPreviewOpen = activePresetPreview?.id === preset.id;
+                      const cardTags = [
+                        activeTemplateCategoryMeta.label.replace(/^[^\u4e00-\u9fa5A-Za-z]+/, ''),
+                        ...(preset.description
+                          ? preset.description
+                              .split(/[，,、]/)
+                              .map((item) => item.trim())
+                              .filter(Boolean)
+                              .slice(0, 2)
+                          : []),
+                      ].slice(0, 3);
+
+                      return (
+                        <article key={preset.id} className="group relative">
+                          <button
+                            type="button"
+                            aria-pressed={isActive}
+                            onClick={() => applyPresetStyle(preset)}
+                            className={`w-full overflow-hidden rounded-[30px] border text-left transition-[border-color,box-shadow,transform] duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-banana-300/80 focus-visible:ring-offset-2 ${
+                              isActive
+                                ? 'border-banana-400 bg-white shadow-[0_24px_70px_-38px_rgba(245,146,22,0.55)]'
+                                : 'border-slate-200/90 bg-white/92 shadow-[0_18px_48px_-38px_rgba(15,23,42,0.42)] hover:-translate-y-1 hover:border-banana-200 hover:shadow-[0_28px_72px_-40px_rgba(15,23,42,0.45)]'
+                            }`}
+                          >
+                            <div className="relative flex min-h-[320px] flex-col">
+                              <div className="relative flex-[7] overflow-hidden bg-slate-900">
+                                {preset.previewImage ? (
+                                  <img
+                                    src={preset.previewImage}
+                                    alt={`${preset.name} 模板缩略图`}
+                                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03] group-focus-within:scale-[1.03]"
+                                  />
+                                ) : (
+                                  <div className="h-full w-full bg-[linear-gradient(135deg,#f59e0b_0%,#f97316_38%,#111827_100%)]" />
+                                )}
+                                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.08)_0%,rgba(15,23,42,0.12)_38%,rgba(15,23,42,0.72)_100%)]" />
+                                <div className="absolute left-4 top-4 rounded-full border border-white/18 bg-slate-950/42 px-3 py-1.5 text-[11px] font-medium text-white/92 backdrop-blur-md">
+                                  {isActive ? '当前风格' : '图像模板'}
+                                </div>
+                                <div className="absolute inset-x-0 bottom-0 px-4 pb-4">
+                                  <div className="rounded-[22px] border border-white/10 bg-white/10 px-4 py-3 backdrop-blur-md">
+                                    <div className="text-[11px] uppercase tracking-[0.22em] text-white/62">
+                                      Visual Series
+                                    </div>
+                                    <h4 className="mt-1 text-xl font-semibold text-white">{preset.name}</h4>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-[3] items-center justify-between gap-4 bg-white/94 px-4 py-4">
+                                <p className="text-xs font-medium text-slate-500">点击卡片即可应用这条风格描述</p>
+                                <span
+                                  className={`rounded-full px-3 py-1 text-xs font-medium ${
+                                    isActive
+                                      ? 'bg-banana-500 text-white'
+                                      : 'border border-slate-200 text-slate-500'
+                                  }`}
+                                >
+                                  {isActive ? '已应用' : '可应用'}
+                                </span>
+                              </div>
+                            </div>
+                          </button>
+
+                          <div className="pointer-events-none absolute inset-0 rounded-[30px] bg-[linear-gradient(180deg,rgba(15,23,42,0.05)_0%,rgba(15,23,42,0.72)_46%,rgba(15,23,42,0.96)_100%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100">
+                            <div className="absolute inset-x-0 bottom-0 rounded-b-[30px] border-t border-white/10 bg-slate-950/78 px-5 pb-5 pt-4 backdrop-blur-xl">
+                              <p className="text-sm leading-6 text-white/86">
+                                {preset.description || '适合快速生成风格统一的视觉稿。'}
+                              </p>
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                {cardTags.map((tag) => (
+                                  <span
+                                    key={`${preset.id}-${tag}`}
+                                    className="rounded-full border border-white/14 bg-white/8 px-2.5 py-1 text-[11px] font-medium text-white/74"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                              <div className="mt-4 flex items-center justify-between gap-3">
+                                <span className="text-xs font-medium text-white/68">
+                                  点击卡片应用，预览按钮查看样张
+                                </span>
+                                {preset.previewImage ? (
+                                  <button
+                                    type="button"
+                                    aria-label={`预览 ${preset.name} 风格`}
+                                    aria-haspopup="dialog"
+                                    aria-expanded={isPreviewOpen}
+                                    aria-controls={isPreviewOpen ? 'preset-style-preview-dialog' : undefined}
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      openPresetPreview(preset, event.currentTarget);
+                                    }}
+                                    className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-white/16 bg-white/12 px-3.5 py-2 text-xs font-medium text-white transition-[background-color,border-color,color] duration-200 hover:border-white/40 hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-banana-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                                  >
+                                    <Eye size={14} />
+                                    预览模板
+                                  </button>
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+
                 <p className="text-xs text-gray-500">
-                  💡 提示：点击名称可快速应用风格，点击“预览”可查看样张后再决定是否采用
+                  点击卡片可直接应用风格；悬停时再查看标签、描述和“预览模板”。
                 </p>
               </div>
             ) : (

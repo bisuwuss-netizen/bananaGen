@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 import type {
+  CharacterLayoutOverride,
   HomeCharacterConfig,
   HomeCharactersMood,
   PointerState,
@@ -70,6 +71,7 @@ interface CharacterFigureProps {
   pointer: PointerState;
   mood: HomeCharactersMood;
   motionEnabled: boolean;
+  layoutOverride?: CharacterLayoutOverride;
 }
 
 export const CharacterFigure: React.FC<CharacterFigureProps> = ({
@@ -79,12 +81,13 @@ export const CharacterFigure: React.FC<CharacterFigureProps> = ({
   pointer,
   mood,
   motionEnabled,
+  layoutOverride,
 }) => {
-  const showOpenEyes = mood === 'engaged';
-  const isBlinking = useBlinkState(motionEnabled && showOpenEyes && character.blink_enabled);
+  const showOpenEyes = true;
+  const isBlinking = useBlinkState(motionEnabled && mood === 'engaged' && character.blink_enabled);
 
   const moodIntensity = mood === 'engaged' ? 1 : mood === 'ready' ? 0.45 : 0;
-  const extraHeight = mood === 'engaged' ? character.focus_height_delta : 0;
+  const extraHeight = mood === 'engaged' && !layoutOverride ? character.focus_height_delta : 0;
   const faceShiftX = motionEnabled && showOpenEyes
     ? clamp(pointer.x * character.max_face_x * character.face_x_factor, -character.max_face_x, character.max_face_x)
     : 0;
@@ -108,7 +111,7 @@ export const CharacterFigure: React.FC<CharacterFigureProps> = ({
   const fillAlpha = mood === 'engaged' ? 0.32 : mood === 'ready' ? 0.24 : 0.16;
   const strokeAlpha = mood === 'engaged' ? 0.84 : mood === 'ready' ? 0.68 : 0.5;
   const shadowAlpha = mood === 'engaged' ? 0.22 : mood === 'ready' ? 0.16 : 0.09;
-  const pupilAlpha = mood === 'engaged' ? 0.96 : mood === 'ready' ? 0.84 : 0.7;
+  const pupilAlpha = mood === 'engaged' ? 0.96 : mood === 'ready' ? 0.88 : 0.86;
   const fillColorTop = hexToRgba(character.background, Math.min(fillAlpha + 0.08, 0.42));
   const fillColorBottom = hexToRgba(character.background, fillAlpha);
   const strokeColor = hexToRgba(character.background, strokeAlpha);
@@ -121,6 +124,19 @@ export const CharacterFigure: React.FC<CharacterFigureProps> = ({
     character.mouth_left !== null &&
     character.mouth_top !== undefined &&
     character.mouth_top !== null;
+  const baseFigureStyle = layoutOverride
+    ? {
+        left: `${layoutOverride.left}px`,
+        top: `${layoutOverride.top}px`,
+        width: `${layoutOverride.width}px`,
+        height: `${layoutOverride.height}px`,
+      }
+    : {
+        left: `${(character.left / sceneWidth) * 100}%`,
+        bottom: `${(character.bottom / sceneHeight) * 100}%`,
+        width: `${(character.width / sceneWidth) * 100}%`,
+        height: `${((character.height + extraHeight) / sceneHeight) * 100}%`,
+      };
 
   return (
     <div
@@ -128,10 +144,7 @@ export const CharacterFigure: React.FC<CharacterFigureProps> = ({
       data-testid="home-character-figure"
       data-character-id={character.id}
       style={{
-        left: `${(character.left / sceneWidth) * 100}%`,
-        bottom: `${(character.bottom / sceneHeight) * 100}%`,
-        width: `${(character.width / sceneWidth) * 100}%`,
-        height: `${((character.height + extraHeight) / sceneHeight) * 100}%`,
+        ...baseFigureStyle,
         zIndex: character.layer,
         borderRadius: character.border_radius,
         background: `linear-gradient(180deg, ${fillColorTop} 0%, ${fillColorBottom} 100%)`,

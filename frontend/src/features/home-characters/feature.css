@@ -23,6 +23,39 @@
   width: min(100%, calc(100% - 0.45rem));
 }
 
+.home-characters-prompt-stage--subtle {
+  margin-bottom: 0.3rem;
+  padding: 1.08rem 0.2rem 0.22rem;
+}
+
+.home-characters-prompt-stage--subtle .home-characters-prompt-stage__glow {
+  inset: 0.62rem 0.95rem 0 0.95rem;
+  background:
+    radial-gradient(62% 92% at 50% 10%, rgba(245, 146, 22, 0.1), transparent 72%),
+    radial-gradient(58% 84% at 50% 100%, rgba(162, 189, 206, 0.08), transparent 74%);
+}
+
+.home-characters-prompt-stage--subtle .home-characters-prompt-stage__input-shell {
+  width: min(100%, calc(100% - 1.6rem));
+}
+
+.home-characters-prompt-stage--subtle .home-characters-feature {
+  opacity: 0.74;
+}
+
+.home-characters-prompt-stage--subtle .home-characters-feature__scene {
+  transform: scale(0.93);
+  transform-origin: center top;
+}
+
+.home-characters-prompt-stage--subtle .home-characters-feature__scene::before {
+  opacity: 0.56;
+}
+
+.home-characters-prompt-stage--subtle .home-characters-feature__figure {
+  filter: saturate(1.18) contrast(1.04);
+}
+
 .home-characters-feature {
   position: absolute;
   inset: 0;
@@ -107,6 +140,14 @@
 
   .home-characters-feature {
     display: block;
+  }
+
+  .home-characters-prompt-stage--subtle {
+    padding: 1.18rem 0.2rem 0.24rem;
+  }
+
+  .home-characters-prompt-stage--subtle .home-characters-prompt-stage__input-shell {
+    width: min(100%, calc(100% - 8.25rem));
   }
 }
 

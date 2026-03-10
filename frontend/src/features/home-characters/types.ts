@@ -56,3 +56,17 @@ export interface PointerState {
 }
 
 export type HomeCharactersMood = 'idle' | 'ready' | 'engaged';
+
+export interface PromptMetrics {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+export interface CharacterLayoutOverride {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
