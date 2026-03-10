@@ -84,6 +84,13 @@ export const OutlineEditor: React.FC = () => {
     }
   }, [projectId, currentProject, syncProject]);
 
+  // 大纲生成中时自动关闭 AI 修改侧边栏
+  useEffect(() => {
+    if (isGlobalLoading && isAiSidebarOpen) {
+      setIsAiSidebarOpen(false);
+    }
+  }, [isGlobalLoading]);
+
 
   // 拖拽传感器配置
   const sensors = useSensors(
@@ -435,7 +442,7 @@ export const OutlineEditor: React.FC = () => {
         title="AI 修改大纲"
         placeholder="例如：增加一页关于XXX的内容、删除第3页、合并前两页..."
         onSubmit={handleAiRefineOutline}
-        disabled={false}
+        disabled={isGlobalLoading}
         isOpen={isAiSidebarOpen}
         onToggle={setIsAiSidebarOpen}
         onStatusChange={setIsAiRefining}

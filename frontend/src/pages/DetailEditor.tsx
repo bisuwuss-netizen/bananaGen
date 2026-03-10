@@ -41,6 +41,13 @@ export const DetailEditor: React.FC = () => {
     }
   }, [projectId, currentProject?.id]); // 只在 projectId 或项目ID变化时更新
 
+  // 内容生成中时自动关闭 AI 修改侧边栏
+  const isGeneratingAny = Object.keys(pageDescriptionGeneratingTasks).length > 0;
+  useEffect(() => {
+    if (isGeneratingAny && isAiSidebarOpen) {
+      setIsAiSidebarOpen(false);
+    }
+  }, [isGeneratingAny]);
 
   const redirectHomepage = () => {
     window.redirect_homepage?.({
@@ -305,7 +312,7 @@ export const DetailEditor: React.FC = () => {
         title={isHtmlMode ? 'AI 修改内容' : 'AI 修改描述'}
         placeholder="例如：让描述更详细、删除第2页的某个要点、强调XXX的重要性..."
         onSubmit={handleAiRefineDescriptions}
-        disabled={!hasPages}
+        disabled={!hasPages || isGeneratingAny}
         isOpen={isAiSidebarOpen}
         onToggle={setIsAiSidebarOpen}
         onStatusChange={setIsAiRefining}
