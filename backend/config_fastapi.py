@@ -83,6 +83,9 @@ class Settings(BaseSettings):
     # --- Image Generation ---
     default_aspect_ratio: str = "16:9"
     default_resolution: str = "2K"
+    image_request_min_interval_seconds: float = 0.0
+    qwen_image_min_interval_seconds: float = 8.0
+    qwen_image_max_workers: int = 1
     image_prompt_rewrite_enabled: bool = True
     image_prompt_rewrite_model: str = ""
     image_prompt_rewrite_max_slots: int = 24

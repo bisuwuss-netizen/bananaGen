@@ -8,6 +8,9 @@ import type {
   TaskProgress,
 } from '@/types';
 import {
+  getOutlineProgressMessages,
+  getOutlineProgressStageText,
+  hasConfirmedOutlinePageCount,
   resolveGeneratedOutlineCards,
   resolveQueuedOutlineCards,
 } from '@/utils/outlineProgress';
@@ -94,14 +97,23 @@ export const OutlineGenerationPanel: React.FC<OutlineGenerationPanelProps> = ({
     () => resolveQueuedOutlineCards(project, progress),
     [project, progress]
   );
-  const messages = progress?.messages?.length
-    ? progress.messages
-    : ['正在初始化生成链路，请稍候。'];
-
-  const estimatedTotalPages = progress?.estimated_total_pages || Math.max(5, generatedCards.length + queuedCards.length);
+  const messages = useMemo(() => getOutlineProgressMessages(progress), [progress]);
+  const stageText = getOutlineProgressStageText(progress);
+  const hasConfirmedPageCount = hasConfirmedOutlinePageCount(progress);
+  const actualTotalPages = hasConfirmedPageCount
+    ? (progress?.actual_total_pages || generatedCards.length + queuedCards.length)
+    : null;
   const referenceCount = progress?.reference_count ?? 0;
   const hasReferenceFiles = referenceCount > 0;
-  const renderMode = modeLabelMap[progress?.render_mode || project.render_mode || 'image'] || '图片渲染';
+  const resolvedRenderMode = progress?.render_mode || project.render_mode || 'image';
+  const isHtmlOutlineMode = resolvedRenderMode === 'html';
+  const renderMode = modeLabelMap[resolvedRenderMode] || '图片渲染';
+  const queueSectionTitle = hasConfirmedPageCount ? '排队中的页面' : '正在规划的页面结构';
+  const queueSectionMeta = hasConfirmedPageCount ? `${queuedCards.length} 张` : isHtmlOutlineMode ? '结构整体规划中' : '页数待确定';
+  const previewHeading = isHtmlOutlineMode ? 'HTML 结构化大纲会在规划完成后整体出现' : '大纲卡片正在逐页长出来';
+  const generatedPlaceholderText = isHtmlOutlineMode
+    ? 'HTML 结构化模式会先整体规划页面结构，再统一展示可编辑大纲。'
+    : '第一张卡片生成后会立即出现在这里。';
 
   return (
     <div className="mx-auto max-w-6xl px-3 py-6 md:px-6 md:py-8">
@@ -118,7 +130,7 @@ export const OutlineGenerationPanel: React.FC<OutlineGenerationPanelProps> = ({
                 AI 正在为您规划大纲结构
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 md:text-[15px]">
-                {progress?.current_step || '正在分析你的主题和上下文，准备输出可编辑的大纲结构。'}
+                {stageText}
               </p>
             </div>
 
@@ -129,11 +141,18 @@ export const OutlineGenerationPanel: React.FC<OutlineGenerationPanelProps> = ({
               </div>
               <div className="rounded-2xl border border-white/80 bg-white/80 p-4">
                 <div className="text-xs uppercase tracking-[0.18em] text-slate-400">待生成页数</div>
-                <div className="mt-2 text-2xl font-semibold text-slate-900">{queuedCards.length}</div>
+                <div className={`mt-2 font-semibold text-slate-900 ${hasConfirmedPageCount ? 'text-2xl' : 'text-lg'}`}>
+                  {hasConfirmedPageCount ? queuedCards.length : '待确定'}
+                </div>
               </div>
               <div className="rounded-2xl border border-white/80 bg-white/80 p-4">
                 <div className="text-xs uppercase tracking-[0.18em] text-slate-400">总页数 / 模式</div>
-                <div className="mt-2 text-lg font-semibold text-slate-900">{estimatedTotalPages} · {renderMode}</div>
+                <div className="mt-2 text-lg font-semibold text-slate-900">
+                  {hasConfirmedPageCount ? `${actualTotalPages} · ${renderMode}` : `待规划 · ${renderMode}`}
+                </div>
+                {!hasConfirmedPageCount ? (
+                  <div className="mt-1 text-xs text-slate-400">结构确定后再显示真实页数</div>
+                ) : null}
                 {hasReferenceFiles ? (
                   <div className="mt-1 text-xs text-slate-400">已上传资料 {referenceCount}</div>
                 ) : null}
@@ -184,10 +203,10 @@ export const OutlineGenerationPanel: React.FC<OutlineGenerationPanelProps> = ({
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Preview</div>
-              <h3 className="mt-1 text-lg font-semibold text-slate-900 md:text-xl">大纲卡片正在逐页长出来</h3>
+              <h3 className="mt-1 text-lg font-semibold text-slate-900 md:text-xl">{previewHeading}</h3>
             </div>
             <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">
-              {generatedCards.length}/{estimatedTotalPages} 已完成
+              {hasConfirmedPageCount && actualTotalPages ? `${generatedCards.length}/${actualTotalPages} 已完成` : '页数规划中'}
             </div>
           </div>
 
@@ -208,15 +227,15 @@ export const OutlineGenerationPanel: React.FC<OutlineGenerationPanelProps> = ({
               </div>
             ) : (
               <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-5 text-sm text-slate-500">
-                第一张卡片生成后会立即出现在这里。
+                {generatedPlaceholderText}
               </div>
             )}
           </div>
 
           <div className="mt-6">
             <div className="mb-3 flex items-center justify-between">
-              <div className="text-sm font-medium text-slate-700">排队中的页面</div>
-              <div className="text-xs text-slate-400">{queuedCards.length} 张</div>
+              <div className="text-sm font-medium text-slate-700">{queueSectionTitle}</div>
+              <div className="text-xs text-slate-400">{queueSectionMeta}</div>
             </div>
             <div className="space-y-3">
               {queuedCards.map((card, index) => (

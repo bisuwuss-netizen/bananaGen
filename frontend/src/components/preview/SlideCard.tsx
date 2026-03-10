@@ -11,6 +11,7 @@ interface SlideCardProps {
   onClick: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onRetry?: () => void;
   isGenerating?: boolean;
 }
 
@@ -21,6 +22,7 @@ export const SlideCard: React.FC<SlideCardProps> = ({
   onClick,
   onEdit,
   onDelete,
+  onRetry,
   isGenerating = false,
 }) => {
   const { confirm, ConfirmDialog } = useConfirm();
@@ -29,6 +31,7 @@ export const SlideCard: React.FC<SlideCardProps> = ({
     : '';
   
   const generating = isGenerating || page.status === 'GENERATING';
+  const canRetry = !generating && !page.generated_image_path && page.status === 'FAILED' && typeof onRetry === 'function';
 
   return (
     <div
@@ -79,6 +82,18 @@ export const SlideCard: React.FC<SlideCardProps> = ({
             <div className="text-center">
               {/*<div className="text-3xl mb-1">🍌</div>*/}
               <div className="text-xs">未生成</div>
+              {canRetry ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRetry();
+                  }}
+                  className="mt-2 rounded-full bg-white px-3 py-1 text-xs font-medium text-banana-700 shadow-sm transition-colors hover:bg-banana-50"
+                >
+                  再次生成
+                </button>
+              ) : null}
             </div>
           </div>
         )}
@@ -103,4 +118,3 @@ export const SlideCard: React.FC<SlideCardProps> = ({
     </div>
   );
 };
-

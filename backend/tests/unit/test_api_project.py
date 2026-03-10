@@ -3,6 +3,10 @@
 """
 
 import pytest
+from unittest.mock import AsyncMock, Mock
+
+from api.routes.projects import create_project
+from schemas.project import CreateProjectRequest
 from conftest import assert_success_response, assert_error_response
 
 
@@ -50,6 +54,35 @@ class TestProjectCreate:
         })
         
         assert response.status_code in [400, 422]
+
+    @pytest.mark.asyncio
+    async def test_create_project_commits_before_returning(self, monkeypatch):
+        """测试创建项目接口会在返回前显式提交，避免前端紧接着查询时出现 404"""
+
+        class FakeProject:
+            def __init__(self, **kwargs):
+                self.id = 'project-commit-check'
+                self.status = kwargs['status']
+
+        db = AsyncMock()
+        db.add = Mock()
+        db.flush = AsyncMock()
+        db.commit = AsyncMock()
+
+        monkeypatch.setattr('api.routes.projects.Project', FakeProject)
+
+        req = CreateProjectRequest(
+            creation_type='idea',
+            idea_prompt='测试创建后立即读取',
+            render_mode='html',
+            scheme_id='academic',
+        )
+
+        payload = await create_project(req=req, user_id='1', db=db)
+
+        assert payload.data['project_id'] == 'project-commit-check'
+        db.flush.assert_awaited_once()
+        db.commit.assert_awaited_once()
 
 
 class TestProjectGet:

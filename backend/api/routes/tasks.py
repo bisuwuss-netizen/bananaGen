@@ -103,25 +103,48 @@ async def stream_task_status(
 ):
     """Push task progress updates without client polling."""
     await websocket.accept()
+    update_queue = task_manager.subscribe_task(task_id)
 
     try:
+        async with async_session_factory() as db:
+            task = await _load_task(db, project_id, task_id)
+            if not task:
+                await websocket.send_json(
+                    {"task_id": task_id, "status": "FAILED", "error_message": "Task not found"}
+                )
+                return
+
+            if await _auto_fail_stale_task_async(db, task):
+                await db.commit()
+                await db.refresh(task)
+
+            initial_payload = task.to_dict()
+            await websocket.send_json(initial_payload)
+            if task.status in ("COMPLETED", "FAILED"):
+                return
+
         while True:
-            async with async_session_factory() as db:
-                task = await _load_task(db, project_id, task_id)
-                if not task:
-                    await websocket.send_json(
-                        {"task_id": task_id, "status": "FAILED", "error_message": "Task not found"}
-                    )
-                    return
+            try:
+                payload = await asyncio.wait_for(update_queue.get(), timeout=1.0)
+            except asyncio.TimeoutError:
+                async with async_session_factory() as db:
+                    task = await _load_task(db, project_id, task_id)
+                    if not task:
+                        await websocket.send_json(
+                            {"task_id": task_id, "status": "FAILED", "error_message": "Task not found"}
+                        )
+                        return
 
-                if await _auto_fail_stale_task_async(db, task):
-                    await db.commit()
-                    await db.refresh(task)
+                    if await _auto_fail_stale_task_async(db, task):
+                        await db.commit()
+                        await db.refresh(task)
 
-                await websocket.send_json(task.to_dict())
-                if task.status in ("COMPLETED", "FAILED"):
-                    return
+                    payload = task.to_dict()
 
-            await asyncio.sleep(1.0)
+            await websocket.send_json(payload)
+            if payload.get("status") in ("COMPLETED", "FAILED"):
+                return
     except WebSocketDisconnect:
         logger.debug("Task WebSocket disconnected: %s", task_id)
+    finally:
+        task_manager.unsubscribe_task(task_id, update_queue)

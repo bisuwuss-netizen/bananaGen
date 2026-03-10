@@ -13,6 +13,10 @@ const DEFAULT_PREVIEW_TITLES = [
   '总结',
 ];
 
+const DEFAULT_STAGE_TEXT = '正在分析你的主题和上下文，准备输出可编辑的大纲结构。';
+const DEFAULT_PROGRESS_MESSAGES = ['已收到生成请求，正在准备大纲生成链路。'];
+const CONFIRMED_PAGE_COUNT_STEPS = new Set(['准备逐页写入', '正在完成收尾', '大纲已生成']);
+
 const sanitizePreviewTitle = (raw: string): string => {
   let text = (raw || '')
     .replace(/^[\s>*-]+/, '')
@@ -102,10 +106,131 @@ export const buildInitialOutlineTaskProgress = (project: Project): TaskProgress 
     preview_cards: previewCards,
     generated_cards: [],
     queued_cards: previewCards,
-    estimated_total_pages: Math.max(5, Math.min(12, previewCards.length + 2)),
+    page_count_confirmed: false,
     render_mode: project.render_mode || 'image',
     scheme_id: project.scheme_id || 'edu_dark',
   };
+};
+
+export const hasConfirmedOutlinePageCount = (progress?: TaskProgress | null): boolean => {
+  if (!progress) {
+    return false;
+  }
+
+  if (progress.page_count_confirmed === true) {
+    return true;
+  }
+
+  if (typeof progress.actual_total_pages === 'number' && progress.actual_total_pages > 0) {
+    return true;
+  }
+
+  if ((progress.generated_cards?.length || 0) > 0) {
+    return true;
+  }
+
+  const raw = String(progress.current_step || '').trim();
+  return CONFIRMED_PAGE_COUNT_STEPS.has(raw) || /^正在生成第\s*\d+\s*页$/.test(raw);
+};
+
+export const getOutlineProgressStageText = (progress?: TaskProgress | null): string => {
+  const raw = String(progress?.current_step || '').trim();
+  const isHtmlMode = (progress?.render_mode || '').trim() === 'html';
+  if (!raw) {
+    return DEFAULT_STAGE_TEXT;
+  }
+
+  if (raw === '等待开始' || raw === '准备生成大纲') {
+    return '正在准备大纲生成链路';
+  }
+  if (raw === '分析主题与约束') {
+    return '正在理解主题、目标和输入约束';
+  }
+  if (raw === '整理资料与章节线索') {
+    return '正在梳理参考资料，提炼可用章节线索';
+  }
+  if (raw === '整理章节线索') {
+    return '正在基于主题梳理章节线索';
+  }
+  if (raw === '生成页面结构') {
+    return isHtmlMode
+      ? '正在一次性生成 HTML 结构化大纲，完成后会统一展示结果'
+      : '正在规划整份 PPT 的页面结构和叙事顺序';
+  }
+  if (raw === '准备逐页写入') {
+    return isHtmlMode
+      ? '结构已确定，正在整理 HTML 结构化结果'
+      : '结构已确定，开始逐页生成大纲卡片';
+  }
+  if (raw === '正在完成收尾') {
+    return '正在整理最终结果，马上进入可编辑状态';
+  }
+  if (raw === '大纲已生成') {
+    return '大纲已生成，即将进入编辑状态';
+  }
+
+  const generatingMatch = raw.match(/^正在生成第\s*(\d+)\s*页$/);
+  if (generatingMatch) {
+    return `正在生成第 ${generatingMatch[1]} 页大纲卡片，请稍候`;
+  }
+
+  return raw;
+};
+
+const humanizeOutlineProgressMessage = (message: string): string => {
+  const raw = String(message || '').trim();
+  if (!raw) {
+    return '';
+  }
+
+  if (raw === '已创建大纲生成任务。') {
+    return '已创建大纲生成任务，正在排队启动。';
+  }
+  if (raw === '已开始创建大纲任务。') {
+    return '已开始创建大纲任务。';
+  }
+  if (raw === '正在读取主题和输入内容。') {
+    return '正在读取主题、资料和输入内容。';
+  }
+  if (raw === '已接收大纲生成请求，正在分析输入内容。') {
+    return '已收到生成请求，正在理解你的主题、受众和表达目标。';
+  }
+
+  const referenceMatch = raw.match(/^已读取\s+(\d+)\s+份已上传资料，正在组织章节结构。$/);
+  if (referenceMatch) {
+    return `已读取 ${referenceMatch[1]} 份参考资料，正在提炼章节线索。`;
+  }
+
+  if (raw === '未检测到已上传资料，正在基于主题组织章节结构。') {
+    return '未检测到参考资料，正在基于主题构思章节结构。';
+  }
+  if (raw === '正在调用 AI 规划页面结构与叙事顺序。') {
+    return 'AI 正在规划整份 PPT 的页面顺序与叙事节奏。';
+  }
+
+  const plannedMatch = raw.match(/^已规划\s+(\d+)\s+页，开始逐页生成大纲卡片。$/);
+  if (plannedMatch) {
+    return `已确定约 ${plannedMatch[1]} 页结构，开始逐页生成可编辑大纲卡片。`;
+  }
+
+  const completedMatch = raw.match(/^第\s+(\d+)\/(\d+)\s+页已完成：(.+)$/);
+  if (completedMatch) {
+    return `第 ${completedMatch[1]}/${completedMatch[2]} 页大纲已生成：${completedMatch[3].trim()}`;
+  }
+
+  const doneMatch = raw.match(/^大纲生成完成，已创建\s+(\d+)\s+页。$/);
+  if (doneMatch) {
+    return `大纲生成完成，共生成 ${doneMatch[1]} 页。`;
+  }
+
+  return raw;
+};
+
+export const getOutlineProgressMessages = (progress?: TaskProgress | null): string[] => {
+  const source = progress?.messages?.length ? progress.messages : DEFAULT_PROGRESS_MESSAGES;
+  return source
+    .map(humanizeOutlineProgressMessage)
+    .filter(Boolean);
 };
 
 export const resolveGeneratedOutlineCards = (

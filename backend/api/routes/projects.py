@@ -107,6 +107,7 @@ async def create_project(
     )
     db.add(project)
     await db.flush()
+    await db.commit()
 
     logger.info(f"Created project {project.id} (type={req.creation_type}, mode={req.render_mode})")
     return SuccessResponse(data={"project_id": project.id, "status": project.status})

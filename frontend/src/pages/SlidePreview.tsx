@@ -33,7 +33,7 @@ import {
 import { useProjectStore } from '@/store/useProjectStore';
 import { useExportTasksStore, type ExportTaskType } from '@/store/useExportTasksStore';
 import { getImageUrl } from '@/api/client';
-import { getPageImageVersions, setCurrentImageVersion, updateProject, updatePage, uploadTemplate, exportPPTX as apiExportPPTX, exportPDF as apiExportPDF, exportEditablePPTX as apiExportEditablePPTX, generateHtmlImagesStreaming, generateLayoutPlan, type HtmlImageSlot, type HtmlImageSSEEvent } from '@/api/endpoints';
+import { getPageImageVersions, setCurrentImageVersion, updateProject, updatePage, uploadTemplate, exportPPTX as apiExportPPTX, exportPDF as apiExportPDF, exportEditablePPTX as apiExportEditablePPTX, generateHtmlImagesStreaming, generateLayoutPlan, generatePageImage, type HtmlImageSlot, type HtmlImageSSEEvent } from '@/api/endpoints';
 import { fileToBase64 } from '@/experimental/html-renderer/utils/htmlExporter';
 import type { Page, ImageVersion, DescriptionContent, ExportExtractorMethod, ExportInpaintMethod, LayoutId } from '@/types';
 import { normalizeErrorMessage } from '@/utils';
@@ -79,6 +79,7 @@ export const SlidePreview: React.FC = () => {
     currentProject,
     syncProject,
     generateImages,
+    pollImageTask,
     editPageImage,
     deletePageById,
     isGlobalLoading,
@@ -1566,20 +1567,31 @@ export const SlidePreview: React.FC = () => {
     }
   }, [uploadTarget, show]);
 
-  const handleRegeneratePage = useCallback(async () => {
-    if (!currentProject) return;
-    const page = currentProject.pages[selectedIndex];
-    if (!page.id) return;
+  const handleRegeneratePageById = useCallback(async (pageId?: string) => {
+    if (!pageId || !projectId) return;
 
-    // 如果该页面正在生成，不重复提交
-    if (pageGeneratingTasks[page.id]) {
+    if (pageGeneratingTasks[pageId]) {
       show({ message: '该页面正在生成中，请稍候...', type: 'info' });
       return;
     }
 
     try {
-      // 使用统一的 generateImages，传入单个页面 ID
-      await generateImages([page.id]);
+      const response = await generatePageImage(projectId, pageId, true);
+      const taskId = response.data?.task_id;
+
+      if (taskId) {
+        useProjectStore.setState((state) => ({
+          pageGeneratingTasks: {
+            ...state.pageGeneratingTasks,
+            [pageId]: taskId,
+          },
+        }));
+        await syncProject(projectId);
+        void pollImageTask(taskId, [pageId]);
+      } else {
+        await syncProject(projectId);
+      }
+
       show({ message: '已开始生成图片，请稍候...', type: 'success' });
     } catch (error: any) {
       // 提取后端返回的更具体错误信息
@@ -1609,7 +1621,13 @@ export const SlidePreview: React.FC = () => {
         type: 'error',
       });
     }
-  }, [currentProject, selectedIndex, pageGeneratingTasks, generateImages, show]);
+  }, [pageGeneratingTasks, pollImageTask, projectId, show, syncProject]);
+
+  const handleRegeneratePage = useCallback(async () => {
+    if (!currentProject) return;
+    const page = currentProject.pages[selectedIndex];
+    await handleRegeneratePageById(page?.id);
+  }, [currentProject, selectedIndex, handleRegeneratePageById]);
 
   const handleSwitchVersion = async (versionId: string) => {
     if (!currentProject || !selectedPage?.id || !projectId) return;
@@ -2344,6 +2362,10 @@ export const SlidePreview: React.FC = () => {
                       handleEditPage();
                     }}
                     onDelete={() => page.id && deletePageById(page.id)}
+                    onRetry={() => {
+                      setSelectedIndex(index);
+                      void handleRegeneratePageById(page.id);
+                    }}
                     isGenerating={page.id ? !!pageGeneratingTasks[page.id] : false}
                   />
                 )}
@@ -2413,7 +2435,9 @@ export const SlidePreview: React.FC = () => {
                               ? '正在生成中...'
                               : selectedPage?.status === 'GENERATING'
                                 ? '正在生成中...'
-                                : '尚未生成图片'}
+                                : selectedPage?.status === 'FAILED'
+                                  ? '生成失败，请重试'
+                                  : '尚未生成图片'}
                           </p>
                           {(!selectedPage?.id || !pageGeneratingTasks[selectedPage.id]) &&
                             selectedPage?.status !== 'GENERATING' && (
@@ -2421,7 +2445,7 @@ export const SlidePreview: React.FC = () => {
                                 variant="primary"
                                 onClick={handleRegeneratePage}
                               >
-                                生成此页
+                                {selectedPage?.status === 'FAILED' ? '再次生成此页' : '生成此页'}
                               </Button>
                             )}
                         </div>

@@ -6,17 +6,53 @@ import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import List
+from typing import Any, List
 
 from sqlalchemy import select
 
 from deps import async_session_factory
 from models import Material, Page, Task
+from services.image_request_policy import (
+    get_shared_image_request_gate,
+    resolve_image_request_policy,
+)
 from services.runtime_state import load_runtime_config, runtime_context
 
+from .manager import task_manager
 from .utils import finalize_generation_task, save_image_with_version
 
 logger = logging.getLogger(__name__)
+
+
+async def _publish_image_task_progress(
+    session,
+    task: Task,
+    *,
+    total: int,
+    completed: int,
+    failed: int,
+    completed_page_ids: set[str],
+    failed_page_ids: set[str],
+    current_page_id: str | None = None,
+    current_page_status: str | None = None,
+) -> None:
+    progress: dict[str, Any] = task.get_progress() if hasattr(task, "get_progress") else {}
+    progress.update(
+        {
+            "total": total,
+            "completed": completed,
+            "failed": failed,
+            "completed_page_ids": sorted(completed_page_ids),
+            "failed_page_ids": sorted(failed_page_ids),
+        }
+    )
+    if current_page_id:
+        progress["current_page_id"] = current_page_id
+    if current_page_status:
+        progress["current_page_status"] = current_page_status
+    task.set_progress(progress)
+    await session.commit()
+    await task_manager.publish_task_update(task.id, task.to_dict())
 
 
 async def generate_images_task(
@@ -45,9 +81,17 @@ async def generate_images_task(
                 if not task:
                     return
                 task.status = "PROCESSING"
-                await session.commit()
-
                 ai_service = await get_ai_service_async()
+                image_model = resolved_runtime_config.get("IMAGE_MODEL")
+                image_policy = resolve_image_request_policy(
+                    requested_workers=max_workers,
+                    image_model=image_model,
+                    runtime_config=resolved_runtime_config,
+                )
+                image_request_gate = get_shared_image_request_gate(
+                    image_model=image_model,
+                    runtime_config=resolved_runtime_config,
+                )
 
                 query = select(Page).where(Page.project_id == project_id)
                 if page_ids:
@@ -58,12 +102,27 @@ async def generate_images_task(
                 pages = result.scalars().all()
                 
                 pages_data = ai_service.flatten_outline(outline)
-                task.set_progress({"total": len(pages), "completed": 0, "failed": 0})
-                await session.commit()
+                page_data_by_order = {
+                    int(index): page_data
+                    for index, page_data in enumerate(pages_data)
+                }
+                total_pages = len(pages)
+                completed_page_ids: set[str] = set()
+                failed_page_ids: set[str] = set()
+                await _publish_image_task_progress(
+                    session,
+                    task,
+                    total=total_pages,
+                    completed=0,
+                    failed=0,
+                    completed_page_ids=completed_page_ids,
+                    failed_page_ids=failed_page_ids,
+                )
 
                 completed = 0
                 failed = 0
-                semaphore = asyncio.Semaphore(max_workers)
+                semaphore = asyncio.Semaphore(image_policy.max_workers)
+                progress_lock = asyncio.Lock()
 
                 async def generate_single_image(page_id, page_data, page_index):
                     nonlocal completed, failed
@@ -106,14 +165,15 @@ async def generate_images_task(
                                         language=language,
                                         has_template=use_template,
                                     )
-                                    image = await ai_service.call_async(
-                                        "generate_image",
-                                        prompt,
-                                        page_ref_image_path,
-                                        aspect_ratio,
-                                        resolution,
-                                        additional_ref_images=page_additional_ref_images if page_additional_ref_images else None,
-                                    )
+                                    async with image_request_gate.acquire():
+                                        image = await ai_service.call_async(
+                                            "generate_image",
+                                            prompt,
+                                            page_ref_image_path,
+                                            aspect_ratio,
+                                            resolution,
+                                            additional_ref_images=page_additional_ref_images if page_additional_ref_images else None,
+                                        )
                                     if not image:
                                         raise ValueError("Failed to generate image")
 
@@ -125,14 +185,25 @@ async def generate_images_task(
                                         file_service,
                                         page_obj=page_obj,
                                     )
-                                    
-                                    # Update global counters safely (since it's a single thread event loop)
-                                    completed += 1
-                                    
-                                    parent_task = await thread_session.get(Task, task_id)
-                                    if parent_task:
-                                        parent_task.update_progress(completed=completed, failed=failed)
-                                        await thread_session.commit()
+
+                                    async with progress_lock:
+                                        completed += 1
+                                        completed_page_ids.add(page_id)
+                                        failed_page_ids.discard(page_id)
+
+                                        parent_task = await thread_session.get(Task, task_id)
+                                        if parent_task:
+                                            await _publish_image_task_progress(
+                                                thread_session,
+                                                parent_task,
+                                                total=total_pages,
+                                                completed=completed,
+                                                failed=failed,
+                                                completed_page_ids=completed_page_ids,
+                                                failed_page_ids=failed_page_ids,
+                                                current_page_id=page_id,
+                                                current_page_status="COMPLETED",
+                                            )
                                         
                                     return (page_id, image_path, None)
                                 except Exception as exc:
@@ -144,18 +215,34 @@ async def generate_images_task(
                                         page_obj.status = "FAILED"
                                         await thread_session.commit()
 
-                                    failed += 1
-                                    parent_task = await thread_session.get(Task, task_id)
-                                    if parent_task:
-                                        parent_task.update_progress(completed=completed, failed=failed)
-                                        await thread_session.commit()
+                                    async with progress_lock:
+                                        failed += 1
+                                        failed_page_ids.add(page_id)
+                                        completed_page_ids.discard(page_id)
+
+                                        parent_task = await thread_session.get(Task, task_id)
+                                        if parent_task:
+                                            await _publish_image_task_progress(
+                                                thread_session,
+                                                parent_task,
+                                                total=total_pages,
+                                                completed=completed,
+                                                failed=failed,
+                                                completed_page_ids=completed_page_ids,
+                                                failed_page_ids=failed_page_ids,
+                                                current_page_id=page_id,
+                                                current_page_status="FAILED",
+                                            )
                                         
                                     return (page_id, None, str(exc))
 
-                tasks = [
-                    generate_single_image(page.id, page_data, i)
-                    for i, (page, page_data) in enumerate(zip(pages, pages_data), 1)
-                ]
+                tasks = []
+                for page in pages:
+                    page_order = int(page.order_index or 0)
+                    page_data = page_data_by_order.get(page_order)
+                    if page_data is None:
+                        raise ValueError(f"Missing outline data for page {page.id} (order_index={page_order})")
+                    tasks.append(generate_single_image(page.id, page_data, page_order + 1))
 
                 await asyncio.gather(*tasks)
 
@@ -169,7 +256,16 @@ async def generate_images_task(
                         failed=failed,
                         finished_at=datetime.utcnow(),
                     )
+                    progress = task.get_progress()
+                    progress.update(
+                        {
+                            "completed_page_ids": sorted(completed_page_ids),
+                            "failed_page_ids": sorted(failed_page_ids),
+                        }
+                    )
+                    task.set_progress(progress)
                     await session.commit()
+                    await task_manager.publish_task_update(task.id, task.to_dict())
 
                 project = await session.get(Project, project_id)
                 if project:
@@ -182,6 +278,9 @@ async def generate_images_task(
                     task.status = "FAILED"
                     task.error_message = str(exc)
                     task.completed_at = datetime.utcnow()
+                    progress = task.get_progress()
+                    progress["current_page_status"] = "FAILED"
+                    task.set_progress(progress)
 
                 from models import Project
                 project = await session.get(Project, project_id)
@@ -189,6 +288,8 @@ async def generate_images_task(
                     project.status = "FAILED"
 
                 await session.commit()
+                if task:
+                    await task_manager.publish_task_update(task.id, task.to_dict())
 
 
 async def generate_single_page_image_task(
@@ -226,6 +327,10 @@ async def generate_single_page_image_task(
                 await session.commit()
 
                 ai_service = await get_ai_service_async()
+                image_request_gate = get_shared_image_request_gate(
+                    image_model=resolved_runtime_config.get("IMAGE_MODEL"),
+                    runtime_config=resolved_runtime_config,
+                )
 
                 desc_content = page.get_description_content()
                 if not desc_content:
@@ -259,14 +364,15 @@ async def generate_single_page_image_task(
                     language=language,
                     has_template=use_template,
                 )
-                image = await ai_service.call_async(
-                    "generate_image",
-                    prompt,
-                    ref_image_path,
-                    aspect_ratio,
-                    resolution,
-                    additional_ref_images=additional_ref_images if additional_ref_images else None,
-                )
+                async with image_request_gate.acquire():
+                    image = await ai_service.call_async(
+                        "generate_image",
+                        prompt,
+                        ref_image_path,
+                        aspect_ratio,
+                        resolution,
+                        additional_ref_images=additional_ref_images if additional_ref_images else None,
+                    )
                 if not image:
                     raise ValueError("Failed to generate image")
 
@@ -276,8 +382,19 @@ async def generate_single_page_image_task(
                 if task:
                     task.status = "COMPLETED"
                     task.completed_at = datetime.utcnow()
-                    task.set_progress({"total": 1, "completed": 1, "failed": 0})
+                    task.set_progress(
+                        {
+                            "total": 1,
+                            "completed": 1,
+                            "failed": 0,
+                            "completed_page_ids": [page_id],
+                            "failed_page_ids": [],
+                            "current_page_id": page_id,
+                            "current_page_status": "COMPLETED",
+                        }
+                    )
                     await session.commit()
+                    await task_manager.publish_task_update(task.id, task.to_dict())
             except Exception as exc:
                 import traceback
                 logger.error("Task %s FAILED: %s", task_id, traceback.format_exc())
@@ -286,11 +403,24 @@ async def generate_single_page_image_task(
                     task.status = "FAILED"
                     task.error_message = str(exc)
                     task.completed_at = datetime.now()
+                    task.set_progress(
+                        {
+                            "total": 1,
+                            "completed": 0,
+                            "failed": 1,
+                            "completed_page_ids": [],
+                            "failed_page_ids": [page_id],
+                            "current_page_id": page_id,
+                            "current_page_status": "FAILED",
+                        }
+                    )
 
                 page = await session.get(Page, page_id)
                 if page:
                     page.status = "FAILED"
                 await session.commit()
+                if task:
+                    await task_manager.publish_task_update(task.id, task.to_dict())
 
 
 async def generate_material_image_task(
@@ -321,14 +451,19 @@ async def generate_material_image_task(
                 await session.commit()
 
                 ai_service = await get_ai_service_async()
-                image = await ai_service.call_async(
-                    "generate_image",
-                    prompt=prompt,
-                    ref_image_path=ref_image_path,
-                    aspect_ratio=aspect_ratio,
-                    resolution=resolution,
-                    additional_ref_images=additional_ref_images or None,
+                image_request_gate = get_shared_image_request_gate(
+                    image_model=resolved_runtime_config.get("IMAGE_MODEL"),
+                    runtime_config=resolved_runtime_config,
                 )
+                async with image_request_gate.acquire():
+                    image = await ai_service.call_async(
+                        "generate_image",
+                        prompt=prompt,
+                        ref_image_path=ref_image_path,
+                        aspect_ratio=aspect_ratio,
+                        resolution=resolution,
+                        additional_ref_images=additional_ref_images or None,
+                    )
                 if not image:
                     raise ValueError("Failed to generate image")
 
@@ -359,6 +494,7 @@ async def generate_material_image_task(
                     }
                 )
                 await session.commit()
+                await task_manager.publish_task_update(task.id, task.to_dict())
             except Exception as exc:
                 import traceback
                 logger.error("Task %s FAILED: %s", task_id, traceback.format_exc())
@@ -368,6 +504,7 @@ async def generate_material_image_task(
                     task.error_message = str(exc)
                     task.completed_at = datetime.now()
                     await session.commit()
+                    await task_manager.publish_task_update(task.id, task.to_dict())
             finally:
                 if temp_dir:
                     import shutil

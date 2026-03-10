@@ -89,10 +89,27 @@ export const createTaskSlice: StateCreator<ProjectStore, [], [], ProjectTaskSlic
     const { currentProject } = get();
     if (!currentProject) return;
 
-    openTaskWebSocket<ProjectTaskPayload>(currentProject.id!, taskId, {
+    const socket = openTaskWebSocket<ProjectTaskPayload>(currentProject.id!, taskId, {
       onMessage: async (task) => {
         const { pageGeneratingTasks } = get();
         const newTasks = { ...pageGeneratingTasks };
+        const progress = task.progress && typeof task.progress !== 'string'
+          ? task.progress
+          : task.progress
+            ? JSON.parse(task.progress)
+            : null;
+        const completedPageIds = Array.isArray(progress?.completed_page_ids) ? progress.completed_page_ids : [];
+        const failedPageIds = Array.isArray(progress?.failed_page_ids) ? progress.failed_page_ids : [];
+
+        [...completedPageIds, ...failedPageIds].forEach((id) => {
+          if (newTasks[id] === taskId) {
+            delete newTasks[id];
+          }
+        });
+
+        if (completedPageIds.length > 0 || failedPageIds.length > 0) {
+          set({ pageGeneratingTasks: newTasks });
+        }
 
         if (task.status === 'COMPLETED') {
           pageIds.forEach((id) => {
@@ -102,6 +119,7 @@ export const createTaskSlice: StateCreator<ProjectStore, [], [], ProjectTaskSlic
           });
           set({ pageGeneratingTasks: newTasks });
           await get().syncProject();
+          socket.close();
           return;
         }
 
@@ -116,6 +134,7 @@ export const createTaskSlice: StateCreator<ProjectStore, [], [], ProjectTaskSlic
             error: normalizeErrorMessage(task.error_message || task.error || '批量生成失败'),
           });
           await get().syncProject();
+          socket.close();
           return;
         }
 

@@ -121,6 +121,12 @@ export interface TaskProgress {
   generated_cards?: OutlinePreviewCard[];
   queued_cards?: OutlinePreviewCard[];
   estimated_total_pages?: number;
+  actual_total_pages?: number;
+  page_count_confirmed?: boolean;
+  completed_page_ids?: string[];
+  failed_page_ids?: string[];
+  current_page_id?: string;
+  current_page_status?: string;
   reference_count?: number;
   render_mode?: string;
   scheme_id?: string;

@@ -52,7 +52,10 @@ export const Home: React.FC = () => {
   const [templateStyle, setTemplateStyle] = useState('');
   const [presetStyles, setPresetStyles] = useState<PresetStyle[]>([]);
   const [isLoadingPresetStyles, setIsLoadingPresetStyles] = useState(false);
-  const [renderMode] = useState<'image' | 'html'>('html');
+  const [renderMode, setRenderMode] = useState<'image' | 'html'>(() => {
+    const saved = sessionStorage.getItem('home_renderMode');
+    return saved === 'image' ? 'image' : 'html';
+  });
   const [activePresetPreview, setActivePresetPreview] = useState<PresetStyle | null>(null);
   const [isPromptFocused, setIsPromptFocused] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -71,6 +74,10 @@ export const Home: React.FC = () => {
   useEffect(() => {
     sessionStorage.setItem('home_selectedSchemeId', selectedSchemeId);
   }, [selectedSchemeId]);
+
+  useEffect(() => {
+    sessionStorage.setItem('home_renderMode', renderMode);
+  }, [renderMode]);
 
   // 检查是否有当前项目 & 加载用户模板 & 加载预设风格
   useEffect(() => {
@@ -485,30 +492,6 @@ export const Home: React.FC = () => {
     }
 
     try {
-      // 检查是否可以复用已有项目（内容、标签、模板方案未变化时直接导航）
-      const lastSubmission = sessionStorage.getItem('home_lastSubmission');
-      if (lastSubmission) {
-        try {
-          const last = JSON.parse(lastSubmission);
-          if (
-            last.content === content.trim() &&
-            last.activeTab === activeTab &&
-            last.selectedSchemeId === selectedSchemeId &&
-            last.projectId
-          ) {
-            // 内容未变化，直接导航到已有项目
-            if (activeTab === 'idea' || activeTab === 'outline') {
-              navigate(`/project/${last.projectId}/outline`);
-            } else if (activeTab === 'description') {
-              navigate(`/project/${last.projectId}/detail`);
-            }
-            return;
-          }
-        } catch {
-          // 解析失败，忽略，正常创建新项目
-        }
-      }
-
       // 如果有模板ID但没有File，按需加载
       let templateFile = selectedTemplate;
       if (!templateFile && selectedTemplateId) {
@@ -574,14 +557,6 @@ export const Home: React.FC = () => {
       } else {
         console.log('No materials to associate');
       }
-      
-      // 保存本次提交参数，以便返回后再次点击"下一步"时复用项目
-      sessionStorage.setItem('home_lastSubmission', JSON.stringify({
-        content: content.trim(),
-        activeTab,
-        selectedSchemeId,
-        projectId,
-      }));
 
       if (activeTab === 'idea' || activeTab === 'outline') {
         navigate(`/project/${projectId}/outline`);
@@ -812,6 +787,41 @@ export const Home: React.FC = () => {
 
           {/* 模板选择 */}
           <div className="mb-6 md:mb-8 pt-4 border-t border-gray-100">
+            <div className="mb-5">
+              <div className="mb-2 flex items-center gap-2">
+                <Lightbulb size={16} className="text-banana-500" />
+                <span className="text-sm font-medium text-gray-900">生成模式</span>
+              </div>
+              <div className="inline-flex rounded-2xl border border-gray-200 bg-gray-50 p-1">
+                {([
+                  { value: 'html', label: 'HTML 结构化' },
+                  { value: 'image', label: 'Image 图片生成' },
+                ] as const).map((modeOption) => {
+                  const isActive = renderMode === modeOption.value;
+                  return (
+                    <button
+                      key={modeOption.value}
+                      type="button"
+                      aria-pressed={isActive}
+                      onClick={() => setRenderMode(modeOption.value)}
+                      className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'bg-white text-banana-700 shadow-sm'
+                          : 'text-gray-500 hover:text-gray-900'
+                      }`}
+                    >
+                      {modeOption.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                {renderMode === 'html'
+                  ? '当前使用教学模板，先生成结构化大纲，再进入编辑。'
+                  : '当前使用图片模式，可选模板图或文字风格来生成页面。'}
+              </p>
+            </div>
+
             <div className="flex items-center justify-between mb-3 md:mb-4">
               <div className="flex items-center gap-2">
                 <Palette size={18} className="text-banana-500 flex-shrink-0" />

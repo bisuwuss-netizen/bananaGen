@@ -18,6 +18,7 @@ from tenacity import RetryError
 from config_fastapi import settings as app_settings
 from deps import get_db
 from models.project import Project
+from services.image_request_policy import get_shared_image_request_gate
 from services.runtime_state import load_runtime_config, runtime_context
 
 logger = logging.getLogger(__name__)
@@ -84,6 +85,10 @@ async def generate_html_images_sse(
     image_model = runtime_cfg.get("IMAGE_MODEL") or app_settings.image_model
     default_aspect_ratio = runtime_cfg.get("DEFAULT_ASPECT_RATIO") or app_settings.default_aspect_ratio
     default_resolution = runtime_cfg.get("DEFAULT_RESOLUTION") or app_settings.default_resolution
+    image_request_gate = get_shared_image_request_gate(
+        image_model=image_model,
+        runtime_config=runtime_cfg,
+    )
 
     from services.ai_providers import get_image_provider
     try:
@@ -129,20 +134,21 @@ async def generate_html_images_sse(
                 logger.info("正在生成图片 %s/%s: page_id=%s, slot_path=%s", i + 1, total, page_id, slot_path)
 
                 has_async = hasattr(image_provider, "generate_image_async")
-                if has_async:
-                    image = await image_provider.generate_image_async(
-                        prompt=prompt,
-                        aspect_ratio=default_aspect_ratio,
-                        resolution=default_resolution,
-                    )
-                else:
-                    import asyncio
-                    image = await asyncio.to_thread(
-                        image_provider.generate_image,
-                        prompt=prompt,
-                        aspect_ratio=default_aspect_ratio,
-                        resolution=default_resolution,
-                    )
+                async with image_request_gate.acquire():
+                    if has_async:
+                        image = await image_provider.generate_image_async(
+                            prompt=prompt,
+                            aspect_ratio=default_aspect_ratio,
+                            resolution=default_resolution,
+                        )
+                    else:
+                        import asyncio
+                        image = await asyncio.to_thread(
+                            image_provider.generate_image,
+                            prompt=prompt,
+                            aspect_ratio=default_aspect_ratio,
+                            resolution=default_resolution,
+                        )
 
                 if image is None:
                     error_event = {
