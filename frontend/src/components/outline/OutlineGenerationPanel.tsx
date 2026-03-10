@@ -115,7 +115,7 @@ export const OutlineGenerationPanel: React.FC<OutlineGenerationPanelProps> = ({
           <div className="mt-4 flex flex-col gap-3">
             <div>
               <h2 className="page-title text-2xl font-semibold tracking-tight text-slate-900 md:text-[30px]">
-                页面不会空等，先把生成过程和候选结构展示出来
+                AI 正在为您规划大纲结构
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 md:text-[15px]">
                 {progress?.current_step || '正在分析你的主题和上下文，准备输出可编辑的大纲结构。'}

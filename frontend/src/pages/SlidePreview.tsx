@@ -1337,9 +1337,6 @@ export const SlidePreview: React.FC = () => {
       );
     } catch (error) {
       console.error('生成 HTML 图片失败:', error);
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/f63d39ca-6fcd-4fcb-87bf-224f2267b8e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3fe128'},body:JSON.stringify({sessionId:'3fe128',location:'SlidePreview.tsx:handleGenerateHtmlImages',message:'generate_html_images_error',data:{error:String(error),name:(error as any)?.name,status:(error as any)?.status},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
-      // #endregion
       show({ message: normalizeErrorMessage(error, '图片生成失败'), type: 'error' });
     } finally {
       setIsGeneratingHtmlImages(false);
@@ -1349,10 +1346,6 @@ export const SlidePreview: React.FC = () => {
   const handleGenerateCurrentHtmlImages = useCallback(async () => {
     if (!currentProject || !isHtmlMode) return;
     const slots = buildHtmlImageSlots(currentProject.pages, selectedIndex);
-    // #region agent log
-    const curPage = currentProject.pages[selectedIndex];
-    fetch('http://127.0.0.1:7249/ingest/f63d39ca-6fcd-4fcb-87bf-224f2267b8e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b939cf'},body:JSON.stringify({sessionId:'b939cf',location:'SlidePreview.tsx:handleGenerateCurrentHtmlImages',message:'generate current page slots',data:{selectedIndex,layoutId:curPage?.layout_id,slotCount:slots.length,slotPaths:slots.map(s=>s.slot_path)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
 
     if (slots.length === 0) {
       show({ message: '当前页没有需要生成图片的插槽', type: 'info' });
@@ -1412,9 +1405,6 @@ export const SlidePreview: React.FC = () => {
       );
     } catch (error) {
       console.error('生成 HTML 图片失败:', error);
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/f63d39ca-6fcd-4fcb-87bf-224f2267b8e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3fe128'},body:JSON.stringify({sessionId:'3fe128',location:'SlidePreview.tsx:handleGenerateCurrentHtmlImages',message:'generate_current_error',data:{error:String(error),name:(error as any)?.name},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
-      // #endregion
       show({ message: normalizeErrorMessage(error, '图片生成失败'), type: 'error' });
     } finally {
       setIsGeneratingHtmlImages(false);
@@ -1476,9 +1466,6 @@ export const SlidePreview: React.FC = () => {
       );
     } catch (error) {
       console.error('生成背景图失败:', error);
-      // #region agent log
-      fetch('http://127.0.0.1:7249/ingest/f63d39ca-6fcd-4fcb-87bf-224f2267b8e0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'3fe128'},body:JSON.stringify({sessionId:'3fe128',location:'SlidePreview.tsx:handleGenerateHtmlBackgrounds',message:'generate_bg_error',data:{error:String(error),name:(error as any)?.name,status:(error as any)?.status},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
-      // #endregion
       show({ message: normalizeErrorMessage(error, '背景图生成失败'), type: 'error' });
     } finally {
       setIsGeneratingHtmlBackgrounds(false);

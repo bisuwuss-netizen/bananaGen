@@ -26,7 +26,10 @@ async def _load_task(
     project_id: str,
     task_id: str,
 ) -> Task | None:
-    query = select(Task).where(Task.id == task_id, Task.project_id == project_id)
+    if project_id in ("none", "global", "_none"):
+        query = select(Task).where(Task.id == task_id, Task.project_id.is_(None))
+    else:
+        query = select(Task).where(Task.id == task_id, Task.project_id == project_id)
     result = await db.execute(query)
     return result.scalar_one_or_none()
 

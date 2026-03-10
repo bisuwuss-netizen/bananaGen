@@ -38,15 +38,45 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
   const [previewMaterial, setPreviewMaterial] = useState<Material | null>(null);
   const [failedImageUrls, setFailedImageUrls] = useState<Set<string>>(new Set());
 
-  const promptTemplates = [
-    '蓝紫色渐变背景，带细线几何图形与柔和光晕，科技感，PPT封面背景',
-    '极简抽象几何背景，浅色系，留白丰富，适合商务汇报',
-    '医疗健康主题插画：医生与医疗设备，扁平风，干净明亮',
-    '金融数据可视化背景：K线/网格/发光曲线，深蓝色科技风',
-    '教育课堂场景插画：老师与学生，暖色调，卡通扁平风',
-    '新能源环保概念图：风电与光伏，清新绿色，现代插画',
-    '城市天际线商务背景：日出/日落，柔焦，现代感',
-    '专业领域图片：人工智能芯片与电路板，细节清晰，科技质感'
+  const promptTemplateGroups = [
+    {
+      label: '通用背景',
+      templates: [
+        '蓝紫色渐变背景，带细线几何图形与柔和光晕，科技感，PPT封面背景',
+        '极简抽象几何背景，浅色系，留白丰富，适合商务汇报',
+        '城市天际线商务背景：日出/日落，柔焦，现代感',
+      ],
+    },
+    {
+      label: '科技与AI',
+      templates: [
+        '人工智能芯片与电路板，细节清晰，深色科技质感',
+        '金融数据可视化背景：K线/网格/发光曲线，深蓝色科技风',
+        '数字网络连接节点背景，蓝色粒子光点，未来感',
+      ],
+    },
+    {
+      label: '教育与学术',
+      templates: [
+        '教育课堂场景插画：老师与学生，暖色调，卡通扁平风',
+        '书本与实验器材平铺插画，学术氛围，浅米色底',
+        '黑板粉笔风格背景，手绘公式与图表，复古教育感',
+      ],
+    },
+    {
+      label: '医疗与健康',
+      templates: [
+        '医疗健康主题插画：医生与医疗设备，扁平风，干净明亮',
+        '分子结构与DNA双螺旋，浅蓝绿色，生物科技感',
+      ],
+    },
+    {
+      label: '环保与能源',
+      templates: [
+        '新能源环保概念图：风电与光伏，清新绿色，现代插画',
+        '自然山水风景背景，晨雾远山，清新淡雅，留白丰富',
+      ],
+    },
   ];
 
   const handleRefImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -142,7 +172,7 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
   }, [isOpen, projectId]);
 
   const pollMaterialTask = async (taskId: string) => {
-    const targetProjectId = projectId || 'global'; // 使用'global'作为Task的project_id
+    const targetProjectId = projectId || 'none'; // 使用'none'匹配后端NULL project_id
     await new Promise<void>((resolve) => {
       taskSocketRef.current?.close();
       taskSocketRef.current = openTaskWebSocket<Task>(targetProjectId, taskId, {
@@ -196,7 +226,7 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
 
     setIsGenerating(true);
     try {
-      // 如果没有projectId，使用'none'表示生成全局素材（后端会转换为'global'用于Task）
+      // 如果没有projectId，使用'none'表示生成全局素材（后端将task的project_id设为NULL）
       const targetProjectId = projectId || 'none';
       const resp = await generateMaterialImage(targetProjectId, prompt.trim(), refImage as File, extraImages);
       const taskId = resp.data?.task_id;
@@ -281,16 +311,27 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
           onChange={(e) => setPrompt(e.target.value)}
           rows={3}
         />
-        <div className="flex flex-wrap gap-2">
-          {promptTemplates.map((tpl) => (
-            <button
-              key={tpl}
-              type="button"
-              onClick={() => setPrompt((prev) => (prev?.trim() ? `${prev}\n${tpl}` : tpl))}
-              className="px-3 py-1.5 text-xs rounded-full border border-gray-200 text-gray-600 hover:border-banana-400 hover:text-banana-600 hover:bg-banana-50 transition-colors"
-            >
-              {tpl}
-            </button>
+        <div className="space-y-3">
+          {promptTemplateGroups.map((group) => (
+            <div key={group.label}>
+              <div className="text-xs font-medium text-gray-400 mb-1.5">{group.label}</div>
+              <div className="flex flex-wrap gap-2">
+                {group.templates.map((tpl) => (
+                  <button
+                    key={tpl}
+                    type="button"
+                    onClick={() => setPrompt(tpl)}
+                    className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
+                      prompt === tpl
+                        ? 'border-banana-400 bg-banana-50 text-banana-600'
+                        : 'border-gray-200 text-gray-600 hover:border-banana-400 hover:text-banana-600 hover:bg-banana-50'
+                    }`}
+                  >
+                    {tpl}
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
 

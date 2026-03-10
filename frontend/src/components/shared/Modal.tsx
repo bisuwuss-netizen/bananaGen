@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/utils';
 
@@ -26,7 +27,7 @@ export const Modal: React.FC<ModalProps> = ({
     xl: 'max-w-4xl',
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* 遮罩 */}
       <div
@@ -62,7 +63,8 @@ export const Modal: React.FC<ModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

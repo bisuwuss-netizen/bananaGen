@@ -87,6 +87,10 @@ export const DescriptionCard: React.FC<DescriptionCardProps> = ({
     addPart(htmlModel.pull_quote, '引述：');
     addPart(htmlModel.hint, '提示：');
     addPart(htmlModel.question, '❓ ');
+    addPart(htmlModel.answer, '💬 ');
+    addPart(htmlModel.badge);
+    addPart(htmlModel.center_label);
+    addPart(htmlModel.insight, '💡 ');
 
     if (htmlModel.metric && typeof htmlModel.metric === 'object') {
       const metric = htmlModel.metric as { value?: unknown; label?: unknown };
@@ -137,7 +141,7 @@ export const DescriptionCard: React.FC<DescriptionCardProps> = ({
         const title = normalizeText(item.title ?? item.name ?? item.text);
         const desc = normalizeText(item.description ?? item.subtitle);
         const head = [title, desc].filter(Boolean).join(' - ');
-        addPart(`${item.index ?? idx + 1}. ${head}`.trim());
+        addPart(`${item.index ?? idx + 1}\\. ${head}`.trim());
         if (Array.isArray(item.features)) {
           item.features.forEach((feature) => addPart(feature, '  • '));
         }
@@ -149,7 +153,7 @@ export const DescriptionCard: React.FC<DescriptionCardProps> = ({
         const number = normalizeText(step.number || idx + 1);
         const label = normalizeText(step.label || step.title);
         const desc = normalizeText(step.description);
-        addPart(`${number}. ${[label, desc].filter(Boolean).join(': ')}`.trim());
+        addPart(`${number}\\. ${[label, desc].filter(Boolean).join(': ')}`.trim());
       });
     }
 
@@ -166,10 +170,52 @@ export const DescriptionCard: React.FC<DescriptionCardProps> = ({
       (htmlModel.columns as Record<string, unknown>[]).forEach((col, idx) => {
         const title = normalizeText(col.title);
         const desc = normalizeText(col.description);
-        addPart(`${col.number ?? idx + 1}. ${[title, desc].filter(Boolean).join(': ')}`.trim());
+        addPart(`${col.number ?? idx + 1}\\. ${[title, desc].filter(Boolean).join(': ')}`.trim());
         if (Array.isArray(col.points)) {
           col.points.forEach((point) => addPart(point, '  • '));
         }
+      });
+    }
+
+    if (Array.isArray(htmlModel.stages)) {
+      (htmlModel.stages as Record<string, unknown>[]).forEach((stage, idx) => {
+        const title = normalizeText(stage.title);
+        const desc = normalizeText(stage.description);
+        addPart(`${idx + 1}\\. ${[title, desc].filter(Boolean).join(': ')}`.trim());
+      });
+    }
+
+    if (Array.isArray(htmlModel.nodes)) {
+      (htmlModel.nodes as Record<string, unknown>[]).forEach((node) => {
+        const title = normalizeText(node.title);
+        const desc = normalizeText(node.description);
+        addPart([title, desc].filter(Boolean).join(' - '), '• ');
+      });
+    }
+
+    if (Array.isArray(htmlModel.metrics)) {
+      (htmlModel.metrics as Record<string, unknown>[]).forEach((m) => {
+        const value = normalizeText(m.value);
+        const label = normalizeText(m.label);
+        const note = normalizeText(m.note);
+        addPart(`${value} ${label}${note ? ` (${note})` : ''}`.trim(), '📊 ');
+      });
+    }
+
+    if (Array.isArray(htmlModel.bars)) {
+      (htmlModel.bars as Record<string, unknown>[]).forEach((bar) => {
+        const label = normalizeText(bar.label);
+        const baseline = normalizeText(bar.baseline);
+        const current = normalizeText(bar.current);
+        addPart(`${label}: ${baseline} → ${current}`.trim(), '📈 ');
+      });
+    }
+
+    if (Array.isArray(htmlModel.analysis)) {
+      (htmlModel.analysis as Record<string, unknown>[]).forEach((item) => {
+        const title = normalizeText(item.title);
+        const content = normalizeText(item.content);
+        addPart([title, content].filter(Boolean).join(': '), '• ');
       });
     }
 
@@ -224,7 +270,6 @@ export const DescriptionCard: React.FC<DescriptionCardProps> = ({
       addPart(`"${normalizeText(htmlModel.quote)}"`);
       addPart(htmlModel.author, '— ');
     }
-
     return parts.join('\n\n') || '暂无可展示内容';
   };
 

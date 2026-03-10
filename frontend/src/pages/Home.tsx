@@ -27,11 +27,20 @@ export const Home: React.FC = () => {
   const { initializeProject, isGlobalLoading } = useProjectStore();
   const { show, ToastContainer } = useToast();
   
-  const [activeTab, setActiveTab] = useState<CreationType>('idea');
-  const [content, setContent] = useState('');
+  // 从 sessionStorage 恢复首页表单状态（解决导航返回后输入丢失的问题）
+  const [activeTab, setActiveTab] = useState<CreationType>(() => {
+    const saved = sessionStorage.getItem('home_activeTab');
+    return (saved as CreationType) || 'idea';
+  });
+  const [content, setContent] = useState(() => {
+    return sessionStorage.getItem('home_content') || '';
+  });
+
   const [selectedTemplate, setSelectedTemplate] = useState<File | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
-  const [selectedSchemeId, setSelectedSchemeId] = useState<string>('edu_dark');
+  const [selectedSchemeId, setSelectedSchemeId] = useState<string>(() => {
+    return sessionStorage.getItem('home_selectedSchemeId') || 'edu_dark';
+  });
   const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [userTemplates, setUserTemplates] = useState<UserTemplate[]>([]);
@@ -49,6 +58,19 @@ export const Home: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const presetPreviewTriggerRef = useRef<HTMLButtonElement | null>(null);
+
+  // 将关键表单状态持久化到 sessionStorage，防止导航返回时丢失
+  useEffect(() => {
+    sessionStorage.setItem('home_content', content);
+  }, [content]);
+
+  useEffect(() => {
+    sessionStorage.setItem('home_activeTab', activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    sessionStorage.setItem('home_selectedSchemeId', selectedSchemeId);
+  }, [selectedSchemeId]);
 
   // 检查是否有当前项目 & 加载用户模板 & 加载预设风格
   useEffect(() => {
@@ -463,6 +485,30 @@ export const Home: React.FC = () => {
     }
 
     try {
+      // 检查是否可以复用已有项目（内容、标签、模板方案未变化时直接导航）
+      const lastSubmission = sessionStorage.getItem('home_lastSubmission');
+      if (lastSubmission) {
+        try {
+          const last = JSON.parse(lastSubmission);
+          if (
+            last.content === content.trim() &&
+            last.activeTab === activeTab &&
+            last.selectedSchemeId === selectedSchemeId &&
+            last.projectId
+          ) {
+            // 内容未变化，直接导航到已有项目
+            if (activeTab === 'idea' || activeTab === 'outline') {
+              navigate(`/project/${last.projectId}/outline`);
+            } else if (activeTab === 'description') {
+              navigate(`/project/${last.projectId}/detail`);
+            }
+            return;
+          }
+        } catch {
+          // 解析失败，忽略，正常创建新项目
+        }
+      }
+
       // 如果有模板ID但没有File，按需加载
       let templateFile = selectedTemplate;
       if (!templateFile && selectedTemplateId) {
@@ -529,6 +575,14 @@ export const Home: React.FC = () => {
         console.log('No materials to associate');
       }
       
+      // 保存本次提交参数，以便返回后再次点击"下一步"时复用项目
+      sessionStorage.setItem('home_lastSubmission', JSON.stringify({
+        content: content.trim(),
+        activeTab,
+        selectedSchemeId,
+        projectId,
+      }));
+
       if (activeTab === 'idea' || activeTab === 'outline') {
         navigate(`/project/${projectId}/outline`);
       } else if (activeTab === 'description') {

@@ -34,6 +34,7 @@ dependencies = [
     "pydantic-settings>=2.13.1",
     "aiomysql>=0.3.2",
     "greenlet>=3.2.4",
+    "websockets>=15.0",
 ]
 
 [project.optional-dependencies]

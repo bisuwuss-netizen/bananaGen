@@ -172,7 +172,7 @@ async def generate_material_image(
     if not prompt:
         raise HTTPException(400, "prompt is required")
 
-    task_project_id = project_id if project_id != "none" else "global"
+    task_project_id = project_id if project_id != "none" else None
 
     task = Task(
         project_id=task_project_id,
