@@ -109,7 +109,13 @@ async def create_project(
     await db.flush()
     await db.commit()
 
-    logger.info(f"Created project {project.id} (type={req.creation_type}, mode={req.render_mode})")
+    logger.info(
+        f"Created project {project.id} (type={req.creation_type}, mode={req.render_mode}, "
+        f"has_description_text={bool(req.description_text)}, "
+        f"has_outline_text={bool(req.outline_text)}, "
+        f"has_idea_prompt={bool(req.idea_prompt)}, "
+        f"description_text_length={len(req.description_text) if req.description_text else 0})"
+    )
     return SuccessResponse(data={"project_id": project.id, "status": project.status})
 
 
@@ -154,7 +160,15 @@ async def update_project(
     
     Original: project_controller.py update_project() (lines 320-398)
     """
-    project = await db.get(Project, project_id)
+    # 使用 selectinload 预先加载 pages 关系，避免在 to_dict() 时触发懒加载
+    query = (
+        select(Project)
+        .options(selectinload(Project.pages))
+        .where(Project.id == project_id)
+    )
+    result = await db.execute(query)
+    project = result.scalar_one_or_none()
+    
     if not project:
         raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
 
@@ -178,8 +192,9 @@ async def update_project(
 
     project.updated_at = datetime.now()
     await db.flush()
+    await db.commit()
 
-    return SuccessResponse(data=_project_to_dict(project))
+    return SuccessResponse(data=_project_to_dict(project, include_pages=True))
 
 
 @router.delete("/{project_id}", response_model=SuccessResponse)

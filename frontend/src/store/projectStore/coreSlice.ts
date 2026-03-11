@@ -27,6 +27,8 @@ export const createCoreSlice: StateCreator<ProjectStore, [], [], ProjectCoreSlic
         request.outline_text = content;
       } else if (type === 'description') {
         request.description_text = content;
+        // 确保 creation_type 被正确设置
+        request.creation_type = 'descriptions';
       }
 
       if (templateStyle?.trim()) {
@@ -44,6 +46,18 @@ export const createCoreSlice: StateCreator<ProjectStore, [], [], ProjectCoreSlic
       if (!projectId) {
         throw new Error('项目创建失败：未返回项目ID');
       }
+      
+      // 调试日志：记录项目创建信息
+      console.log('[initializeProject] 项目创建成功:', {
+        projectId,
+        type,
+        creation_type: request.creation_type || (type === 'description' ? 'descriptions' : type === 'outline' ? 'outline' : 'idea'),
+        has_description_text: !!request.description_text,
+        has_outline_text: !!request.outline_text,
+        has_idea_prompt: !!request.idea_prompt,
+        description_text_length: request.description_text?.length || 0,
+        render_mode: renderMode,
+      });
 
       if (templateImage) {
         try {
@@ -55,7 +69,10 @@ export const createCoreSlice: StateCreator<ProjectStore, [], [], ProjectCoreSlic
 
       if (type === 'description') {
         try {
-          await api.generateFromDescription(projectId, content);
+          // 无论是 HTML 模式还是图片模式，从描述生成都应该调用 generateOutline 任务
+          // 因为 outline_task 已经支持从描述生成，会解析描述并生成大纲
+          // 图片模式下也会生成大纲，只是后续生成PPT时会生成图片而不是HTML
+          await api.generateOutline(projectId);
         } catch (error) {
           console.error('[初始化项目] 从描述生成失败:', error);
         }
@@ -64,6 +81,16 @@ export const createCoreSlice: StateCreator<ProjectStore, [], [], ProjectCoreSlic
       const projectResponse = await api.getProject(projectId);
       const project = normalizeProject(projectResponse.data);
       if (project) {
+        // 调试日志：记录同步的项目数据
+        console.log('[initializeProject] 同步项目数据:', {
+          projectId: project.id,
+          creation_type: project.creation_type,
+          has_description_text: !!project.description_text,
+          has_outline_text: !!project.outline_text,
+          has_idea_prompt: !!project.idea_prompt,
+          description_text_preview: project.description_text?.substring(0, 50) || '无',
+          render_mode: project.render_mode,
+        });
         set({ currentProject: project });
         localStorage.setItem('currentProjectId', project.id!);
       }

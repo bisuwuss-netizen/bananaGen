@@ -80,7 +80,21 @@ export const OutlineEditor: React.FC = () => {
   useEffect(() => {
     if (projectId && (!currentProject || currentProject.id !== projectId)) {
       // 直接使用 projectId 同步项目数据
+      console.log('[OutlineEditor] 同步项目数据:', { projectId, currentProjectId: currentProject?.id });
       syncProject(projectId);
+    } else if (projectId && currentProject && currentProject.id === projectId) {
+      // 调试日志：记录当前项目数据
+      console.log('[OutlineEditor] 当前项目数据:', {
+        projectId: currentProject.id,
+        creation_type: currentProject.creation_type,
+        has_description_text: !!currentProject.description_text,
+        has_outline_text: !!currentProject.outline_text,
+        has_idea_prompt: !!currentProject.idea_prompt,
+        description_text_preview: currentProject.description_text?.substring(0, 50) || '无',
+        outline_text_preview: currentProject.outline_text?.substring(0, 50) || '无',
+        idea_prompt_preview: currentProject.idea_prompt?.substring(0, 50) || '无',
+        render_mode: currentProject.render_mode,
+      });
     }
   }, [projectId, currentProject, syncProject]);
 

@@ -28,6 +28,59 @@ def _get_filtered_pages_sync(pages: list[Page], page_ids: list[str] | None) -> l
     return [p for p in pages if p.id in id_set]
 
 
+def _extract_image_paths_from_pages(
+    pages: list[Page],
+    project: Project,
+    file_service: "FileService",
+) -> list[str]:
+    """从页面中提取图片路径，支持HTML模式和图片模式"""
+    image_paths = []
+    render_mode = project.render_mode or "image"
+    
+    if render_mode == "html":
+        # HTML模式：从html_model中提取图片路径
+        for page in pages:
+            html_model = page.get_html_model() if hasattr(page, 'get_html_model') else None
+            if not html_model or not isinstance(html_model, dict):
+                continue
+            
+            # 递归查找所有图片路径
+            def find_image_paths(obj: any, paths: list = None) -> list:
+                if paths is None:
+                    paths = []
+                if isinstance(obj, str):
+                    # 检查是否是图片URL路径（以/files/开头）
+                    if obj.startswith('/files/'):
+                        # 转换为文件系统路径
+                        # /files/{project_id}/pages/{filename} -> {project_id}/pages/{filename}
+                        relative_path = obj.replace('/files/', '').lstrip('/')
+                        abs_path = file_service.get_absolute_path(relative_path)
+                        if os.path.exists(abs_path):
+                            paths.append(abs_path)
+                elif isinstance(obj, dict):
+                    for value in obj.values():
+                        find_image_paths(value, paths)
+                elif isinstance(obj, list):
+                    for item in obj:
+                        find_image_paths(item, paths)
+                return paths
+            
+            page_image_paths = find_image_paths(html_model)
+            if page_image_paths:
+                # 如果找到多个图片，使用第一个（通常是主图）
+                image_paths.append(page_image_paths[0])
+            elif page.generated_image_path:
+                # 回退到generated_image_path
+                image_paths.append(file_service.get_absolute_path(page.generated_image_path))
+    else:
+        # 图片模式：使用generated_image_path
+        for page in pages:
+            if page.generated_image_path:
+                image_paths.append(file_service.get_absolute_path(page.generated_image_path))
+    
+    return image_paths
+
+
 @router.get("/{project_id}/export/pptx", response_model=SuccessResponse)
 async def export_pptx(
     project_id: str,
@@ -56,10 +109,7 @@ async def export_pptx(
     from services.presentation.export_service import ExportService
 
     file_service = FileService(settings.upload_folder)
-    image_paths = []
-    for page in pages:
-        if page.generated_image_path:
-            image_paths.append(file_service.get_absolute_path(page.generated_image_path))
+    image_paths = _extract_image_paths_from_pages(pages, project, file_service)
 
     if not image_paths:
         raise HTTPException(400, "No generated images found")
@@ -108,10 +158,7 @@ async def export_pdf(
     from services.presentation.export_service import ExportService
 
     file_service = FileService(settings.upload_folder)
-    image_paths = []
-    for page in pages:
-        if page.generated_image_path:
-            image_paths.append(file_service.get_absolute_path(page.generated_image_path))
+    image_paths = _extract_image_paths_from_pages(pages, project, file_service)
 
     if not image_paths:
         raise HTTPException(400, "No generated images found")

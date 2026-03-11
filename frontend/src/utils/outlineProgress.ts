@@ -154,12 +154,12 @@ export const getOutlineProgressStageText = (progress?: TaskProgress | null): str
   }
   if (raw === '生成页面结构') {
     return isHtmlMode
-      ? '正在一次性生成 HTML 结构化大纲，完成后会统一展示结果'
+      ? '正在一次性生成结构化大纲，完成后会统一展示结果'
       : '正在规划整份 PPT 的页面结构和叙事顺序';
   }
   if (raw === '准备逐页写入') {
     return isHtmlMode
-      ? '结构已确定，正在整理 HTML 结构化结果'
+      ? '结构已确定，正在整理结构化结果'
       : '结构已确定，开始逐页生成大纲卡片';
   }
   if (raw === '正在完成收尾') {

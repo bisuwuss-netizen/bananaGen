@@ -12,6 +12,7 @@ import {
   Check,
   FileText,
   Loader2,
+  RefreshCw,
 } from 'lucide-react';
 import { Button, Loading, Textarea, useToast, useConfirm, Markdown } from '@/components/shared';
 import { getTemplateFile } from '@/components/shared/TemplateSelector';
@@ -33,7 +34,7 @@ import {
 import { useProjectStore } from '@/store/useProjectStore';
 import { useExportTasksStore, type ExportTaskType } from '@/store/useExportTasksStore';
 import { getImageUrl } from '@/api/client';
-import { getPageImageVersions, setCurrentImageVersion, updateProject, updatePage, uploadTemplate, exportPPTX as apiExportPPTX, exportPDF as apiExportPDF, exportEditablePPTX as apiExportEditablePPTX, generateHtmlImagesStreaming, generateLayoutPlan, generatePageImage, type HtmlImageSlot, type HtmlImageSSEEvent } from '@/api/endpoints';
+import { getPageImageVersions, setCurrentImageVersion, updateProject, updatePage, uploadTemplate, exportPPTX as apiExportPPTX, exportPDF as apiExportPDF, exportEditablePPTX as apiExportEditablePPTX, generateHtmlImagesStreaming, generateLayoutPlan, generatePageImage, saveHtmlImage, type HtmlImageSlot, type HtmlImageSSEEvent } from '@/api/endpoints';
 import { fileToBase64 } from '@/experimental/html-renderer/utils/htmlExporter';
 import type { Page, ImageVersion, DescriptionContent, ExportExtractorMethod, ExportInpaintMethod, LayoutId } from '@/types';
 import { normalizeErrorMessage } from '@/utils';
@@ -800,6 +801,7 @@ export const SlidePreview: React.FC = () => {
     convertPageToPayload,
     inferTwoColumnPartType,
     shouldUseOptionalImageSlot,
+    resolveLayoutVariant,
     currentProject?.scheme_id,
     currentProject?.idea_prompt,
     currentProject?.extra_requirements,
@@ -861,32 +863,16 @@ export const SlidePreview: React.FC = () => {
     currentProject?.template_style,
   ]);
 
+  // 使用 buildHtmlImageSlots 来计算总数，确保与实际生成逻辑完全一致
   const totalImageSlots = useMemo(() => {
     if (!isHtmlMode || !currentProject?.pages) return 0;
-    return currentProject.pages.reduce((sum, page, index) => {
-      const payload = convertPageToPayload(page, index);
-      if (!payload) return sum;
-      const model = payload.model as any;
-      const layoutId = normalizeLayoutId(payload.layout_id as LayoutId);
-      const descriptors = collectHtmlImageSlotDescriptors(layoutId, model, {
-        optionalImageEnabled: shouldUseOptionalImageSlot(page, model),
-        inferTwoColumnPartType,
-        variantId: resolveLayoutVariant(
-          model,
-          typeof page.outline_content?.layout_variant === 'string'
-            ? page.outline_content.layout_variant
-            : undefined,
-        ),
-      });
-      return sum + descriptors.filter((descriptor) => !descriptor.src).length;
-    }, 0);
+    // 直接使用 buildHtmlImageSlots 来计算，确保与实际生成逻辑完全一致
+    const slots = buildHtmlImageSlots(currentProject.pages);
+    return slots.length;
   }, [
     isHtmlMode,
     currentProject?.pages,
-    convertPageToPayload,
-    inferTwoColumnPartType,
-    resolveLayoutVariant,
-    shouldUseOptionalImageSlot,
+    buildHtmlImageSlots,
   ]);
 
   // 当前选中页面的PagePayload（用于HTML渲染）
@@ -1119,6 +1105,92 @@ export const SlidePreview: React.FC = () => {
     }
   }, [currentProject?.id, currentProject?.extra_requirements, currentProject?.template_style]);
 
+  // 从html_model恢复已保存的图片
+  useEffect(() => {
+    if (!currentProject || !isHtmlMode) return;
+
+    const restoredImages: Record<string, Record<string, string>> = {};
+
+    currentProject.pages.forEach((page) => {
+      if (!page.id || !page.html_model) return;
+
+      const model = page.html_model as Record<string, unknown>;
+      
+      // 递归查找所有图片路径
+      const findImagePaths = (obj: any, path: string = ''): Array<{ path: string; value: string }> => {
+        const results: Array<{ path: string; value: string }> = [];
+        
+        if (typeof obj === 'string') {
+          // 检查是否是图片URL路径（以/files/开头）或base64
+          if (obj.startsWith('/files/') || obj.startsWith('http://') || obj.startsWith('https://') || obj.startsWith('data:image/')) {
+            results.push({ path, value: obj });
+          }
+        } else if (Array.isArray(obj)) {
+          obj.forEach((item, index) => {
+            results.push(...findImagePaths(item, path ? `${path}[${index}]` : `[${index}]`));
+          });
+        } else if (obj && typeof obj === 'object') {
+          Object.entries(obj).forEach(([key, value]) => {
+            const newPath = path ? `${path}.${key}` : key;
+            results.push(...findImagePaths(value, newPath));
+          });
+        }
+        
+        return results;
+      };
+
+      const imagePaths = findImagePaths(model);
+      
+      if (imagePaths.length > 0) {
+        restoredImages[page.id] = {};
+        imagePaths.forEach(({ path, value }) => {
+          // 将文件路径转换为完整的URL
+          // 如果value是/files/...格式，使用getImageUrl转换为完整URL
+          // 如果value已经是base64或完整URL，直接使用
+          if (value.startsWith('/files/')) {
+            // 使用getImageUrl转换为完整URL
+            restoredImages[page.id][path] = getImageUrl(value, page.updated_at);
+          } else if (value.startsWith('data:image/') || value.startsWith('http://') || value.startsWith('https://')) {
+            // 已经是base64或完整URL，直接使用
+            restoredImages[page.id][path] = value;
+          } else {
+            // 其他情况，尝试使用getImageUrl
+            restoredImages[page.id][path] = getImageUrl(value, page.updated_at);
+          }
+        });
+      }
+    });
+
+    // 合并已恢复的图片
+    // 如果图片已经在html_model中保存（即从服务器加载的），优先使用服务器保存的版本
+    if (Object.keys(restoredImages).length > 0) {
+      setHtmlPageImages((prev) => {
+        const merged = { ...prev };
+        Object.entries(restoredImages).forEach(([pageId, images]) => {
+          if (!merged[pageId]) {
+            merged[pageId] = {};
+          }
+          // 如果图片已经在html_model中保存（从服务器加载），使用服务器版本
+          // 这样可以确保切换页面后图片不会消失
+          Object.entries(images).forEach(([slotPath, imageUrl]) => {
+            const currentValue = merged[pageId][slotPath];
+            // 如果服务器有保存的版本，优先使用服务器版本（更可靠，不会因为切换页面而丢失）
+            // 只有当本地有base64格式的图片且服务器没有保存的版本时，才保留本地版本
+            if (imageUrl && (imageUrl.startsWith('/files/') || imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
+              // 服务器有保存的版本，使用服务器版本
+              merged[pageId][slotPath] = imageUrl;
+            } else if (!currentValue && imageUrl) {
+              // 如果当前没有值，使用服务器版本
+              merged[pageId][slotPath] = imageUrl;
+            }
+            // 如果当前值是base64格式且服务器没有保存的版本，保持不变（用户正在编辑）
+          });
+        });
+        return merged;
+      });
+    }
+  }, [currentProject?.id, currentProject?.pages, isHtmlMode]);
+
   // 加载当前页面的历史版本
   useEffect(() => {
     const loadVersions = async () => {
@@ -1300,7 +1372,7 @@ export const SlidePreview: React.FC = () => {
               break;
 
             case 'image':
-              // 收到一张新图片，立即更新状态
+              // 收到一张新图片，立即更新状态并保存到服务器
               if (event.page_id && event.slot_path && event.image_base64) {
                 setHtmlPageImages(prev => {
                   const newImages = { ...prev };
@@ -1310,6 +1382,25 @@ export const SlidePreview: React.FC = () => {
                   newImages[event.page_id!][event.slot_path!] = event.image_base64!;
                   return newImages;
                 });
+                // 自动保存图片到服务器
+                if (currentProject?.id) {
+                  saveHtmlImage(
+                    currentProject.id,
+                    event.page_id,
+                    event.slot_path,
+                    event.image_base64
+                  ).then((response) => {
+                    // 保存成功后，同步更新项目数据
+                    if (response.data) {
+                      syncProject(currentProject.id!).catch((error) => {
+                        console.error('同步项目数据失败:', error);
+                      });
+                    }
+                  }).catch((error) => {
+                    console.error('保存HTML图片失败:', error);
+                    // 不显示错误提示，避免干扰用户体验
+                  });
+                }
                 successCount++;
               }
               break;
@@ -1382,6 +1473,24 @@ export const SlidePreview: React.FC = () => {
                   newImages[event.page_id!][event.slot_path!] = event.image_base64!;
                   return newImages;
                 });
+                // 自动保存图片到服务器
+                if (currentProject?.id) {
+                  saveHtmlImage(
+                    currentProject.id,
+                    event.page_id,
+                    event.slot_path,
+                    event.image_base64
+                  ).then((response) => {
+                    // 保存成功后，同步更新项目数据
+                    if (response.data) {
+                      syncProject(currentProject.id!).catch((error) => {
+                        console.error('同步项目数据失败:', error);
+                      });
+                    }
+                  }).catch((error) => {
+                    console.error('保存HTML图片失败:', error);
+                  });
+                }
                 successCount++;
               }
               break;
@@ -1544,7 +1653,7 @@ export const SlidePreview: React.FC = () => {
   // 处理文件选择
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !uploadTarget) return;
+    if (!file || !uploadTarget || !currentProject?.id) return;
 
     try {
       const base64 = await fileToBase64(file);
@@ -1558,14 +1667,30 @@ export const SlidePreview: React.FC = () => {
         return newImages;
       });
 
-      show({ message: '图片上传成功', type: 'success' });
+      // 自动保存图片到服务器
+      try {
+        const response = await saveHtmlImage(
+          currentProject.id,
+          uploadTarget.pageId,
+          uploadTarget.slotPath,
+          base64
+        );
+        // 保存成功后，同步更新项目数据
+        if (response.data) {
+          await syncProject(currentProject.id);
+        }
+        show({ message: '图片上传成功', type: 'success' });
+      } catch (saveError) {
+        console.error('保存图片失败:', saveError);
+        show({ message: '图片已上传但保存失败，请重试', type: 'warning' });
+      }
     } catch (error) {
       console.error('图片上传失败:', error);
       show({ message: '图片上传失败', type: 'error' });
     } finally {
       setUploadTarget(null);
     }
-  }, [uploadTarget, show]);
+  }, [uploadTarget, show, currentProject]);
 
   const handleRegeneratePageById = useCallback(async (pageId?: string) => {
     if (!pageId || !projectId) return;
@@ -2212,10 +2337,36 @@ export const SlidePreview: React.FC = () => {
           if (fromHistory) {
             navigate('/history');
           } else {
-            navigate(`/project/${projectId}/detail`);
+            // 根据项目状态返回到合适的编辑阶段
+            if (currentProject?.render_mode === 'html') {
+              // HTML 模式：返回到 detail 编辑阶段
+              navigate(`/project/${projectId}/detail`);
+            } else {
+              // 图片模式：如果有描述内容，返回到 detail；否则返回到 outline
+              const hasDescriptions = currentProject?.pages.some(p => p.description_content);
+              if (hasDescriptions) {
+                navigate(`/project/${projectId}/detail`);
+              } else {
+                navigate(`/project/${projectId}/outline`);
+              }
+            }
           }
         }}
-        onGoPreviousStep={() => navigate(`/project/${projectId}/detail`)}
+        onGoPreviousStep={() => {
+          // 根据项目状态返回到合适的编辑阶段
+          if (currentProject?.render_mode === 'html') {
+            // HTML 模式：返回到 detail 编辑阶段
+            navigate(`/project/${projectId}/detail`);
+          } else {
+            // 图片模式：如果有描述内容，返回到 detail；否则返回到 outline
+            const hasDescriptions = currentProject?.pages.some(p => p.description_content);
+            if (hasDescriptions) {
+              navigate(`/project/${projectId}/detail`);
+            } else {
+              navigate(`/project/${projectId}/outline`);
+            }
+          }
+        }}
         onToggleExportMenu={() => {
           setShowExportMenu(!showExportMenu);
           setShowExportTasksPanel(false);
@@ -2420,12 +2571,38 @@ export const SlidePreview: React.FC = () => {
                       </div>
                     ) : selectedPage?.generated_image_path ? (
                       /* 传统图片模式：显示生成的图片 */
-                      <img
-                        src={imageUrl}
-                        alt={`Slide ${selectedIndex + 1}`}
-                        className="w-full h-full object-contain select-none"
-                        draggable={false}
-                      />
+                      <div className="relative w-full h-full group">
+                        <img
+                          src={imageUrl}
+                          alt={`Slide ${selectedIndex + 1}`}
+                          className="w-full h-full object-contain select-none"
+                          draggable={false}
+                        />
+                        {/* 重新生成按钮 - 悬浮在右上角 */}
+                        {(!selectedPage?.id || !pageGeneratingTasks[selectedPage.id]) &&
+                          selectedPage?.status !== 'GENERATING' && (
+                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={handleRegeneratePage}
+                                className="shadow-lg"
+                                disabled={!!pageGeneratingTasks[selectedPage?.id || '']}
+                              >
+                                <RefreshCw className="w-4 h-4 mr-1" />
+                                重新生成
+                              </Button>
+                            </div>
+                          )}
+                        {/* 生成中状态提示 */}
+                        {(selectedPage?.id && pageGeneratingTasks[selectedPage.id]) ||
+                        selectedPage?.status === 'GENERATING' ? (
+                          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg flex items-center gap-2">
+                            <Loader2 className="w-4 h-4 animate-spin text-banana-600" />
+                            <span className="text-sm text-gray-700">正在生成中...</span>
+                          </div>
+                        ) : null}
+                      </div>
                     ) : (
                       /* 传统模式但没有图片 */
                       <div className="w-full h-full flex items-center justify-center bg-gray-100">

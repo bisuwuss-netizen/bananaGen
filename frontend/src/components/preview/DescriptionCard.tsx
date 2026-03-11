@@ -4,6 +4,7 @@ import { Card, ContextualStatusBadge, Button, Modal, Textarea, Skeleton, Markdow
 import { useDescriptionGeneratingState } from '@/hooks/useGeneratingState';
 import type { Page, DescriptionContent, LayoutId } from '@/types';
 import { getLayoutDisplayName } from '@/experimental/html-renderer/layouts';
+import { HtmlModelFormEditor } from './HtmlModelFormEditor';
 
 export interface DescriptionCardProps {
   page: Page;
@@ -286,14 +287,26 @@ export const DescriptionCard: React.FC<DescriptionCardProps> = ({
   const generating = useDescriptionGeneratingState(isGenerating, isAiRefining);
 
   const handleEdit = () => {
-    // 在打开编辑对话框时，从当前的 page 获取最新值
-    const currentText = getDescriptionText(page.description_content);
-    setEditContent(currentText);
-    setIsEditing(true);
+    if (isHtmlMode && hasHtmlModel) {
+      // HTML模式：打开表单编辑器
+      setIsEditing(true);
+    } else {
+      // 图片模式：编辑描述文本
+      const currentText = getDescriptionText(page.description_content);
+      setEditContent(currentText);
+      setIsEditing(true);
+    }
+  };
+
+  const handleFormModelChange = (newModel: Record<string, unknown>) => {
+    // 表单模式下的更新（实时保存）
+    onUpdate({
+      html_model: newModel,
+    });
   };
 
   const handleSave = () => {
-    // 保存时使用 text 格式（后端期望的格式）
+    // 图片模式：保存描述文本
     onUpdate({
       description_content: {
         text: editContent,
@@ -366,15 +379,26 @@ export const DescriptionCard: React.FC<DescriptionCardProps> = ({
         {/* 操作栏 */}
         <div className="border-t border-gray-100 px-4 py-3 flex justify-end gap-2 mt-auto">
           {isHtmlMode && hasHtmlModel && (
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={<Code size={16} />}
-              onClick={() => setIsViewingJson(true)}
-              disabled={generating}
-            >
-              查看JSON
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Code size={16} />}
+                onClick={() => setIsViewingJson(true)}
+                disabled={generating}
+              >
+                查看JSON
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Edit2 size={16} />}
+                onClick={handleEdit}
+                disabled={generating}
+              >
+                编辑
+              </Button>
+            </>
           )}
           {!isHtmlMode && (
             <Button
@@ -399,27 +423,38 @@ export const DescriptionCard: React.FC<DescriptionCardProps> = ({
         </div>
       </Card>
 
-      {/* 编辑对话框（传统模式） */}
+      {/* 编辑对话框 */}
       <Modal
         isOpen={isEditing}
         onClose={() => setIsEditing(false)}
-        title="编辑页面描述"
-        size="lg"
+        title={isHtmlMode && hasHtmlModel ? `编辑结构化内容 - 第 ${index + 1} 页` : "编辑页面描述"}
+        size="xl"
       >
         <div className="space-y-4">
-          <Textarea
-            label="描述内容"
-            value={editContent}
-            onChange={(e) => setEditContent(e.target.value)}
-            rows={12}
-          />
-          <div className="flex justify-end gap-3 pt-4">
+          {isHtmlMode && hasHtmlModel ? (
+            // HTML模式：表单编辑器
+            <HtmlModelFormEditor
+              model={page.html_model as Record<string, unknown>}
+              onChange={handleFormModelChange}
+            />
+          ) : (
+            // 图片模式：文本编辑器
+            <Textarea
+              label="描述内容"
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              rows={12}
+            />
+          )}
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <Button variant="ghost" onClick={() => setIsEditing(false)}>
-              取消
+              {isHtmlMode && hasHtmlModel ? '完成' : '取消'}
             </Button>
-            <Button variant="primary" onClick={handleSave}>
-              保存
-            </Button>
+            {!isHtmlMode && (
+              <Button variant="primary" onClick={handleSave}>
+                保存
+              </Button>
+            )}
           </div>
         </div>
       </Modal>

@@ -87,8 +87,9 @@ export const History: React.FC = () => {
       // 同步项目数据
       await syncProject(projectId);
       
-      // 根据项目状态跳转到不同页面
-      const route = getProjectRoute(project);
+      // 从历史项目进入时，优先跳转到预览页面（PPT展示阶段）
+      // 如果项目还没有完成，则跳转到对应的编辑阶段
+      const route = getProjectRoute(project, false);
       navigate(route, { state: { from: 'history' } });
     } catch (err: any) {
       console.error('打开项目失败:', err);

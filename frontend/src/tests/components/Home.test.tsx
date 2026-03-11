@@ -126,7 +126,7 @@ describe('Home submit flow', () => {
   it('keeps both html and image modes available on the home page', async () => {
     render(<Home />);
 
-    expect(screen.getByRole('button', { name: 'HTML 结构化' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '结构化生成' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Image 图片生成' })).toBeInTheDocument();
     expect(screen.getByText('选择教学模板')).toBeInTheDocument();
     expect(screen.getByTestId('scheme-selector')).toBeInTheDocument();

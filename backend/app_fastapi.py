@@ -11,7 +11,28 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
 _project_root = Path(__file__).parent.parent
-load_dotenv(dotenv_path=_project_root / ".env", override=False)
+
+# Try to load .env with UTF-8 encoding first, then fallback to other encodings
+# This handles .env files with invalid UTF-8 bytes (e.g., corrupted or mixed encoding)
+_env_path = _project_root / ".env"
+if _env_path.exists():
+    # Try UTF-8 first (explicit encoding parameter)
+    try:
+        load_dotenv(dotenv_path=_env_path, override=False, encoding="utf-8")
+    except UnicodeDecodeError as e:
+        # Try GBK encoding (common for Chinese Windows systems)
+        try:
+            load_dotenv(dotenv_path=_env_path, override=False, encoding="gbk")
+        except UnicodeDecodeError:
+            # Last resort: read file with error handling and manually parse
+            with open(_env_path, "r", encoding="utf-8", errors="replace") as f:
+                content = f.read()
+            # Manually set environment variables from content
+            for line in content.splitlines():
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
+                    os.environ[key.strip()] = value.strip()
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles

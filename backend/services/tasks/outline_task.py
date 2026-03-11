@@ -382,28 +382,221 @@ async def generate_outline_task(
 
                 try:
                     if render_mode == "html":
-                        outline_result = await ai_service.call_async(
-                            "generate_structured_outline",
-                            topic=project.idea_prompt or "",
-                            requirements=project.extra_requirements or "",
-                            language=language,
-                            scheme_id=scheme_id,
-                        )
-                        if isinstance(outline_result, dict):
-                            try:
-                                from services.presentation.layout_planner import (
-                                    assign_layout_variants_to_structured_outline,
-                                )
-                                from services.prompts.layouts import LAYOUT_ID_ALIASES
+                        # 如果是从大纲生成，先解析用户输入的大纲文本
+                        if project.creation_type == "outline" and project.outline_text:
+                            # 第一步：解析用户提供的大纲文本
+                            parsed_outline = await ai_service.call_async(
+                                "parse_outline_text_async",
+                                project_context,
+                                language=language,
+                                render_mode=render_mode,
+                            )
+                            
+                            # 验证解析结果
+                            if not parsed_outline:
+                                raise ValueError("解析大纲文本失败：未生成任何大纲页面")
+                            if not isinstance(parsed_outline, list):
+                                raise ValueError(f"解析结果格式错误：期望列表，得到 {type(parsed_outline).__name__}")
+                            
+                            # 第二步：使用大模型对解析结果进行丰富和优化
+                            enhanced_outline = await ai_service.call_async(
+                                "enhance_outline_async",
+                                parsed_outline,
+                                project_context,
+                                language=language,
+                                render_mode=render_mode,
+                            )
+                            
+                            # 验证优化结果
+                            if not enhanced_outline:
+                                logger.warning("大纲优化失败，使用原始解析结果")
+                                enhanced_outline = parsed_outline
+                            if not isinstance(enhanced_outline, list):
+                                logger.warning(f"优化结果格式错误：期望列表，得到 {type(enhanced_outline).__name__}，使用原始解析结果")
+                                enhanced_outline = parsed_outline
+                            
+                            # 第三步：将丰富后的结果转换为结构化格式（添加 narrative_version、depends_on、must_cover 等字段）
+                            from services.presentation.narrative_continuity import enrich_outline_with_narrative_contract
+                            from services.presentation.ppt_quality_guard import apply_structured_outline_quality_guard
+                            
+                            # 从大纲文本中提取标题（取第一行或前50个字符）
+                            outline_title = project.idea_prompt or ""
+                            if not outline_title and project.outline_text:
+                                first_line = project.outline_text.split('\n')[0].strip()
+                                outline_title = first_line[:50] if first_line else "PPT 大纲"
+                            if not outline_title:
+                                outline_title = "PPT 大纲"
+                            
+                            # 构建结构化大纲格式
+                            structured_outline = {
+                                "title": outline_title,
+                                "narrative_version": 1,
+                                "pages": []
+                            }
+                            
+                            # 将丰富后的页面转换为结构化格式
+                            # 需要先展平章节结构
+                            from api.routes.refinement import _flatten_nested_outline
+                            flattened_pages = _flatten_nested_outline(
+                                enhanced_outline if isinstance(enhanced_outline, list) else [enhanced_outline]
+                            )
+                            
+                            for idx, page in enumerate(flattened_pages):
+                                page_id = f"p{idx + 1:02d}"
+                                structured_page = {
+                                    "page_id": page_id,
+                                    "title": page.get("title", f"第 {idx + 1} 页"),
+                                    "layout_id": page.get("layout_id", "title_content"),
+                                    "has_image": page.get("has_image", False),
+                                    "keywords": page.get("keywords", []),
+                                    "depends_on": [],
+                                    "must_cover": page.get("points", [])[:3] if page.get("points") else [],
+                                    "promises_open": [],
+                                    "promises_close": [],
+                                }
+                                if page.get("part"):
+                                    structured_page["part"] = page["part"]
+                                structured_outline["pages"].append(structured_page)
+                            
+                            # 应用质量检查和叙事连续性增强
+                            guarded = apply_structured_outline_quality_guard(structured_outline, scheme_id=scheme_id)
+                            outline_result = enrich_outline_with_narrative_contract(guarded)
+                            
+                            # 应用布局变体规划
+                            if isinstance(outline_result, dict):
+                                try:
+                                    from services.presentation.layout_planner import (
+                                        assign_layout_variants_to_structured_outline,
+                                    )
+                                    from services.prompts.layouts import LAYOUT_ID_ALIASES
 
-                                outline_result = assign_layout_variants_to_structured_outline(
-                                    outline=outline_result,
-                                    scheme_id=scheme_id,
-                                    layout_aliases=LAYOUT_ID_ALIASES,
-                                    seed=project.idea_prompt or project_id,
-                                )
-                            except Exception as planner_err:
-                                logger.warning("Outline variant planning skipped: %s", planner_err)
+                                    outline_result = assign_layout_variants_to_structured_outline(
+                                        outline=outline_result,
+                                        scheme_id=scheme_id,
+                                        layout_aliases=LAYOUT_ID_ALIASES,
+                                        seed=project.outline_text or project_id,
+                                    )
+                                except Exception as planner_err:
+                                    logger.warning("Outline variant planning skipped: %s", planner_err)
+                        elif project.creation_type == "descriptions" and project.description_text:
+                            # 第一步：解析描述文本到大纲
+                            parsed_outline = await ai_service.call_async(
+                                "parse_description_to_outline_async",
+                                project_context,
+                                language=language,
+                                render_mode=render_mode,
+                            )
+                            
+                            # 验证解析结果
+                            if not parsed_outline:
+                                raise ValueError("解析描述文本失败：未生成任何大纲页面")
+                            if not isinstance(parsed_outline, list):
+                                raise ValueError(f"解析结果格式错误：期望列表，得到 {type(parsed_outline).__name__}")
+                            
+                            # 第二步：使用大模型对解析结果进行丰富和优化
+                            enhanced_outline = await ai_service.call_async(
+                                "enhance_outline_async",
+                                parsed_outline,
+                                project_context,
+                                language=language,
+                                render_mode=render_mode,
+                            )
+                            
+                            # 验证优化结果
+                            if not enhanced_outline:
+                                logger.warning("大纲优化失败，使用原始解析结果")
+                                enhanced_outline = parsed_outline
+                            if not isinstance(enhanced_outline, list):
+                                logger.warning(f"优化结果格式错误：期望列表，得到 {type(enhanced_outline).__name__}，使用原始解析结果")
+                                enhanced_outline = parsed_outline
+                            
+                            # 第三步：将丰富后的结果转换为结构化格式
+                            from services.presentation.narrative_continuity import enrich_outline_with_narrative_contract
+                            from services.presentation.ppt_quality_guard import apply_structured_outline_quality_guard
+                            
+                            # 从描述文本中提取标题
+                            description_title = project.idea_prompt or ""
+                            if not description_title and project.description_text:
+                                first_line = project.description_text.split('\n')[0].strip()
+                                description_title = first_line[:50] if first_line else "PPT 大纲"
+                            if not description_title:
+                                description_title = "PPT 大纲"
+                            
+                            # 构建结构化大纲格式
+                            structured_outline = {
+                                "title": description_title,
+                                "narrative_version": 1,
+                                "pages": []
+                            }
+                            
+                            # 将丰富后的页面转换为结构化格式
+                            # 需要先展平章节结构
+                            from api.routes.refinement import _flatten_nested_outline
+                            flattened_pages = _flatten_nested_outline(
+                                enhanced_outline if isinstance(enhanced_outline, list) else [enhanced_outline]
+                            )
+                            
+                            for idx, page in enumerate(flattened_pages):
+                                page_id = f"p{idx + 1:02d}"
+                                structured_page = {
+                                    "page_id": page_id,
+                                    "title": page.get("title", f"第 {idx + 1} 页"),
+                                    "layout_id": page.get("layout_id", "title_content"),
+                                    "has_image": page.get("has_image", False),
+                                    "keywords": page.get("keywords", []),
+                                    "depends_on": [],
+                                    "must_cover": page.get("points", [])[:3] if page.get("points") else [],
+                                    "promises_open": [],
+                                    "promises_close": [],
+                                }
+                                if page.get("part"):
+                                    structured_page["part"] = page["part"]
+                                structured_outline["pages"].append(structured_page)
+                            
+                            # 应用质量检查和叙事连续性增强
+                            guarded = apply_structured_outline_quality_guard(structured_outline, scheme_id=scheme_id)
+                            outline_result = enrich_outline_with_narrative_contract(guarded)
+                            
+                            # 应用布局变体规划
+                            if isinstance(outline_result, dict):
+                                try:
+                                    from services.presentation.layout_planner import (
+                                        assign_layout_variants_to_structured_outline,
+                                    )
+                                    from services.prompts.layouts import LAYOUT_ID_ALIASES
+
+                                    outline_result = assign_layout_variants_to_structured_outline(
+                                        outline=outline_result,
+                                        scheme_id=scheme_id,
+                                        layout_aliases=LAYOUT_ID_ALIASES,
+                                        seed=project.description_text or project_id,
+                                    )
+                                except Exception as planner_err:
+                                    logger.warning("Outline variant planning skipped: %s", planner_err)
+                        else:
+                            # 从主题生成（原有逻辑）
+                            outline_result = await ai_service.call_async(
+                                "generate_structured_outline",
+                                topic=project.idea_prompt or "",
+                                requirements=project.extra_requirements or "",
+                                language=language,
+                                scheme_id=scheme_id,
+                            )
+                            if isinstance(outline_result, dict):
+                                try:
+                                    from services.presentation.layout_planner import (
+                                        assign_layout_variants_to_structured_outline,
+                                    )
+                                    from services.prompts.layouts import LAYOUT_ID_ALIASES
+
+                                    outline_result = assign_layout_variants_to_structured_outline(
+                                        outline=outline_result,
+                                        scheme_id=scheme_id,
+                                        layout_aliases=LAYOUT_ID_ALIASES,
+                                        seed=project.idea_prompt or project_id,
+                                    )
+                                except Exception as planner_err:
+                                    logger.warning("Outline variant planning skipped: %s", planner_err)
                         pages_data = outline_result.get("pages", []) if isinstance(outline_result, dict) else []
                     else:
                         blueprint_result = await ai_service.call_async(

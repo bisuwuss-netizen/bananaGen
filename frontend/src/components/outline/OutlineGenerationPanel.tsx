@@ -30,7 +30,7 @@ const getPercent = (progress?: TaskProgress | null): number => {
 };
 
 const modeLabelMap: Record<string, string> = {
-  html: 'HTML 结构化',
+  html: '结构化生成',
   image: '图片渲染',
 };
 
@@ -110,9 +110,9 @@ export const OutlineGenerationPanel: React.FC<OutlineGenerationPanelProps> = ({
   const renderMode = modeLabelMap[resolvedRenderMode] || '图片渲染';
   const queueSectionTitle = hasConfirmedPageCount ? '排队中的页面' : '正在规划的页面结构';
   const queueSectionMeta = hasConfirmedPageCount ? `${queuedCards.length} 张` : isHtmlOutlineMode ? '结构整体规划中' : '页数待确定';
-  const previewHeading = isHtmlOutlineMode ? 'HTML 结构化大纲会在规划完成后整体出现' : '大纲卡片正在逐页长出来';
+  const previewHeading = isHtmlOutlineMode ? '结构化大纲会在规划完成后整体出现' : '大纲卡片正在逐页长出来';
   const generatedPlaceholderText = isHtmlOutlineMode
-    ? 'HTML 结构化模式会先整体规划页面结构，再统一展示可编辑大纲。'
+    ? '结构化模式会先整体规划页面结构，再统一展示可编辑大纲。'
     : '第一张卡片生成后会立即出现在这里。';
 
   return (

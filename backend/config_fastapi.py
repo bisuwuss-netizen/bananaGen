@@ -16,6 +16,39 @@ _CURRENT_FILE = Path(__file__).resolve()
 BASE_DIR = _CURRENT_FILE.parent
 PROJECT_ROOT = BASE_DIR.parent
 
+# Pre-load .env file with error handling to avoid UnicodeDecodeError in pydantic_settings
+# This ensures environment variables are set before Settings() initialization
+_env_path = PROJECT_ROOT / ".env"
+if _env_path.exists() and not os.environ.get("_ENV_PRELOADED"):
+    try:
+        # Try UTF-8 first
+        with open(_env_path, "r", encoding="utf-8") as f:
+            content = f.read()
+    except UnicodeDecodeError:
+        # Fallback to UTF-8 with error replacement
+        try:
+            with open(_env_path, "r", encoding="utf-8", errors="replace") as f:
+                content = f.read()
+        except Exception:
+            content = ""
+    except Exception:
+        content = ""
+    
+    # Manually parse and set environment variables
+    if content:
+        for line in content.splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, value = line.split("=", 1)
+                key = key.strip()
+                value = value.strip()
+                # Only set if not already set (don't override existing env vars)
+                if key and key not in os.environ:
+                    os.environ[key] = value
+    
+    # Mark as preloaded to avoid duplicate processing
+    os.environ["_ENV_PRELOADED"] = "1"
+
 
 class Settings(BaseSettings):
     """
@@ -26,8 +59,10 @@ class Settings(BaseSettings):
     Misspelled env var names will use defaults instead of silently failing.
     """
     model_config = SettingsConfigDict(
-        env_file=str(PROJECT_ROOT / ".env"),
-        env_file_encoding="utf-8",
+        # env_file is disabled because we pre-load .env with error handling above
+        # This avoids UnicodeDecodeError when pydantic_settings tries to read the file
+        # Environment variables are already set from the pre-loaded .env file
+        env_file=None,  # Disable automatic .env file reading
         extra="ignore",  # Ignore unknown env vars
     )
 

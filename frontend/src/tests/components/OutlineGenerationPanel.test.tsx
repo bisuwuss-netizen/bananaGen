@@ -44,7 +44,7 @@ describe('OutlineGenerationPanel', () => {
     );
 
     expect(screen.getByText('待确定')).toBeInTheDocument();
-    expect(screen.getByText('待规划 · HTML 结构化')).toBeInTheDocument();
+    expect(screen.getByText('待规划 · 结构化生成')).toBeInTheDocument();
     expect(screen.getByText('页数规划中')).toBeInTheDocument();
     expect(screen.getByText('正在规划的页面结构')).toBeInTheDocument();
     expect(screen.getByText('结构确定后再显示真实页数')).toBeInTheDocument();
@@ -78,7 +78,7 @@ describe('OutlineGenerationPanel', () => {
     );
 
     expect(screen.getByText('2/6 已完成')).toBeInTheDocument();
-    expect(screen.getByText('6 · HTML 结构化')).toBeInTheDocument();
+    expect(screen.getByText('6 · 结构化生成')).toBeInTheDocument();
     expect(screen.getByText('排队中的页面')).toBeInTheDocument();
     expect(screen.getByText('4 张')).toBeInTheDocument();
   });

@@ -33,7 +33,7 @@ let _homeFreshPageLoad = true;
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
-  const { initializeProject, isGlobalLoading, setCurrentProject } = useProjectStore();
+  const { initializeProject, isGlobalLoading, setCurrentProject, currentProject } = useProjectStore();
   const { show, ToastContainer } = useToast();
 
   // 从 sessionStorage 恢复首页表单状态（SPA 回退时有值，刷新时为空）
@@ -471,7 +471,9 @@ export const Home: React.FC = () => {
       icon: <FileEdit size={20} />,
       label: '从描述生成',
       placeholder: '粘贴你的完整页面描述...\n\n例如：\n第 1 页\n标题：人工智能的诞生\n内容：1950 年，图灵提出"图灵测试"...\n\n第 2 页\n标题：AI 的发展历程\n内容：1950年代：符号主义...\n...',
-      description: '已有完整描述？AI 将自动解析出大纲并切分为每页描述，直接生成图片',
+      description: renderMode === 'html' 
+        ? '已有完整描述？AI 将自动解析出大纲并切分为每页描述，生成结构化内容'
+        : '已有完整描述？AI 将自动解析出大纲并切分为每页描述，直接生成图片',
     },
   };
 
@@ -528,11 +530,25 @@ export const Home: React.FC = () => {
       await initializeProject(activeTab, content, templateFile || undefined, styleDesc, renderMode, schemeId);
       
       // 根据类型跳转到不同页面
-      const projectId = localStorage.getItem('currentProjectId');
+      // 从 store 中获取项目ID，确保使用最新创建的项目
+      const latestProject = useProjectStore.getState().currentProject;
+      const projectId = latestProject?.id || localStorage.getItem('currentProjectId');
       if (!projectId) {
         show({ message: '项目创建失败', type: 'error' });
         return;
       }
+      
+      // 调试日志：记录跳转信息
+      console.log('[Home] 准备跳转:', {
+        projectId,
+        activeTab,
+        renderMode,
+        creation_type: latestProject?.creation_type,
+        has_description_text: !!latestProject?.description_text,
+        has_outline_text: !!latestProject?.outline_text,
+        has_idea_prompt: !!latestProject?.idea_prompt,
+        description_text_preview: latestProject?.description_text?.substring(0, 100) || '无',
+      });
       
       // 关联参考文件到项目
       if (referenceFiles.length > 0) {
@@ -577,11 +593,14 @@ export const Home: React.FC = () => {
       }
 
 
-      if (activeTab === 'idea' || activeTab === 'outline') {
+      // 图片模式下，所有类型都跳转到大纲生成页面
+      // HTML模式下，从描述生成也跳转到大纲生成页面（因为会生成结构化大纲）
+      if (renderMode === 'image') {
+        // 图片模式：统一跳转到大纲生成页面
         navigate(`/project/${projectId}/outline`);
-      } else if (activeTab === 'description') {
-        // 从描述生成：直接跳到描述生成页（因为已经自动生成了大纲和描述）
-        navigate(`/project/${projectId}/detail`);
+      } else {
+        // HTML模式（结构化生成）：也统一跳转到大纲生成页面
+        navigate(`/project/${projectId}/outline`);
       }
     } catch (error: any) {
       console.error('创建项目失败:', error);
@@ -813,8 +832,8 @@ export const Home: React.FC = () => {
               </div>
               <div className="inline-flex rounded-2xl border border-gray-200 bg-gray-50 p-1">
                 {([
-                  { value: 'html', label: 'HTML 结构化' },
-                  { value: 'image', label: 'Image 图片生成' },
+                  { value: 'html', label: '结构化生成' },
+                  { value: 'image', label: '图片化生成' },
                 ] as const).map((modeOption) => {
                   const isActive = renderMode === modeOption.value;
                   return (

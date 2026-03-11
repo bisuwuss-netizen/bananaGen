@@ -101,7 +101,7 @@ export const VocationalContentLayout: React.FC<{
 
       <div style={{ marginTop: '20px', fontSize: '12px', color: theme.colors.textLight, display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${theme.colors.backgroundAlt}`, paddingTop: '10px' }}>
         <span>高等职业教育 - 专业技能实务系列</span>
-        <span>BananaPPT 教学辅助系统</span>
+        <span></span>
       </div>
     </section>
   );
@@ -156,7 +156,7 @@ export function renderVocationalContentLayoutHTML(model: any, theme: ThemeConfig
   </div>
   <div style="margin-top: 20px; font-size: 12px; color: ${theme.colors.textLight}; display: flex; justify-content: space-between; border-top: 1px solid ${theme.colors.backgroundAlt}; padding-top: 10px;">
     <span>高等职业教育 - 专业技能实务系列</span>
-    <span>BananaPPT 教学辅助系统</span>
+    <span></span>
   </div>
 </section>`;
 }

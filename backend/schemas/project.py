@@ -14,7 +14,7 @@ class CreateProjectRequest(BaseModel):
     Replaces manual request.json parsing in project_controller.py create_project().
     FastAPI auto-validates all fields and returns 422 on invalid input.
     """
-    creation_type: Literal["idea", "outline", "description"] = "idea"
+    creation_type: Literal["idea", "outline", "descriptions"] = "idea"
     idea_prompt: Optional[str] = None
     outline_text: Optional[str] = None
     outline: Optional[list[dict]] = None

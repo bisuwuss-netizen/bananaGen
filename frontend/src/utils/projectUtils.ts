@@ -102,15 +102,29 @@ export const getPreviewPage = (project: Project): Page | null => {
 
 /**
  * 格式化日期
+ * 处理时区问题：如果后端返回的时间没有时区信息（naive datetime），
+ * 前端会将其解析为本地时间，然后正确显示
  */
 export const formatDate = (dateString: string): string => {
+  if (!dateString) return '';
+  
+  // 如果时间字符串以 'Z' 结尾，表示是 UTC 时间
+  // 如果时间字符串没有时区信息，new Date() 会将其解析为本地时间
   const date = new Date(dateString);
+  
+  // 检查日期是否有效
+  if (isNaN(date.getTime())) {
+    return dateString; // 如果解析失败，返回原字符串
+  }
+  
+  // 使用本地时区格式化，确保显示的时间与后端存储的本地时间一致
   return date.toLocaleString('zh-CN', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false, // 使用 24 小时制
   });
 };
 
@@ -213,8 +227,10 @@ export const getProjectFailureReason = (project: Project): string | null => {
 
 /**
  * 获取项目路由路径
+ * @param project 项目对象
+ * @param preferEditStage 是否优先跳转到编辑阶段（默认 false，优先跳转到预览页面）
  */
-export const getProjectRoute = (project: Project): string => {
+export const getProjectRoute = (project: Project, preferEditStage: boolean = false): string => {
   const projectId = project.id || project.project_id;
   if (!projectId) return '/';
 
@@ -223,6 +239,29 @@ export const getProjectRoute = (project: Project): string => {
     return `/project/${projectId}/outline`;
   }
 
+  // 如果 preferEditStage 为 true（从历史项目进入），优先跳转到编辑阶段
+  if (preferEditStage) {
+    if (project.render_mode === 'html') {
+      // HTML 模式：如果有 HTML 内容，跳转到 detail 编辑阶段；否则跳转到 outline
+      return pages.some(hasHtmlContent)
+        ? `/project/${projectId}/detail`
+        : `/project/${projectId}/outline`;
+    } else {
+      // 图片模式：按优先级跳转
+      // 1. 如果有描述内容但还没有图片，跳转到 detail 编辑阶段
+      // 2. 如果有大纲但还没有描述，跳转到 detail 编辑阶段
+      // 3. 否则跳转到 outline 编辑阶段
+      if (pages.some(hasDescriptionContent) && !pages.some(hasGeneratedImage)) {
+        return `/project/${projectId}/detail`;
+      }
+      if (pages.some(p => p.outline_content) && !pages.some(hasDescriptionContent)) {
+        return `/project/${projectId}/detail`;
+      }
+      return `/project/${projectId}/outline`;
+    }
+  }
+
+  // 原有逻辑：优先跳转到预览页面
   if (project.render_mode === 'html') {
     return pages.some(hasHtmlContent)
       ? `/project/${projectId}/preview`

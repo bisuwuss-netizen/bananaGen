@@ -127,6 +127,50 @@ class OutlineMixin:
         normalized = self.normalize_outline_layouts(outline, render_mode, project_context.scheme_id)
         return apply_outline_quality_guard(normalized, render_mode=render_mode, scheme_id=project_context.scheme_id)
 
+    def enhance_outline(self, parsed_outline: List[Dict], project_context, language: str = None, render_mode: str = 'image') -> List[Dict]:
+        """
+        基于解析结果对大纲进行丰富和优化
+        
+        Args:
+            parsed_outline: 解析后的初步大纲
+            project_context: 项目上下文对象
+            language: 输出语言代码
+            render_mode: 渲染模式
+        
+        Returns:
+            丰富和优化后的大纲
+        """
+        from services.prompts.outline import get_outline_enhancement_prompt
+        from services.presentation.ppt_quality_guard import apply_outline_quality_guard
+        enhancement_prompt = get_outline_enhancement_prompt(
+            parsed_outline, project_context, language, render_mode, scheme_id=project_context.scheme_id
+        )
+        outline = self.generate_json(enhancement_prompt, thinking_budget=1200)
+        normalized = self.normalize_outline_layouts(outline, render_mode, project_context.scheme_id)
+        return apply_outline_quality_guard(normalized, render_mode=render_mode, scheme_id=project_context.scheme_id)
+
+    async def enhance_outline_async(self, parsed_outline: List[Dict], project_context, language: str = None, render_mode: str = 'image') -> List[Dict]:
+        """
+        基于解析结果对大纲进行丰富和优化（异步版本）
+        
+        Args:
+            parsed_outline: 解析后的初步大纲
+            project_context: 项目上下文对象
+            language: 输出语言代码
+            render_mode: 渲染模式
+        
+        Returns:
+            丰富和优化后的大纲
+        """
+        from services.prompts.outline import get_outline_enhancement_prompt
+        from services.presentation.ppt_quality_guard import apply_outline_quality_guard
+        enhancement_prompt = get_outline_enhancement_prompt(
+            parsed_outline, project_context, language, render_mode, scheme_id=project_context.scheme_id
+        )
+        outline = await self.generate_json_async(enhancement_prompt, thinking_budget=1200)
+        normalized = self.normalize_outline_layouts(outline, render_mode, project_context.scheme_id)
+        return apply_outline_quality_guard(normalized, render_mode=render_mode, scheme_id=project_context.scheme_id)
+
     def flatten_outline(self, outline: List[Dict]) -> List[Dict]:
         pages: List[Dict] = []
 

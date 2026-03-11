@@ -6,20 +6,27 @@ with StreamingResponse for Server-Sent Events.
 import base64
 import json
 import logging
+import time
+from datetime import datetime
 from io import BytesIO
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from tenacity import RetryError
+from PIL import Image
 
 from config_fastapi import settings as app_settings
 from deps import get_db
 from models.project import Project
+from models.page import Page
+from schemas.common import SuccessResponse
 from services.image_request_policy import get_shared_image_request_gate
 from services.runtime_state import load_runtime_config, runtime_context
+from services.file_service import FileService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/projects", tags=["html-images"])
@@ -34,6 +41,12 @@ class HtmlImageSlot(BaseModel):
 
 class GenerateHtmlImagesBody(BaseModel):
     slots: list[HtmlImageSlot]
+
+
+class SaveHtmlImageRequest(BaseModel):
+    page_id: str
+    slot_path: str
+    image_base64: str  # data:image/webp;base64,... or data:image/png;base64,...
 
 
 def _friendly_error(err: Exception) -> str:
@@ -206,3 +219,104 @@ async def generate_html_images_sse(
             "Connection": "keep-alive",
         },
     )
+
+
+@router.post("/{project_id}/html-images/save", response_model=SuccessResponse)
+async def save_html_image(
+    project_id: str,
+    body: SaveHtmlImageRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """保存HTML模式的图片到文件系统并更新html_model"""
+    project = await db.get(Project, project_id)
+    if not project:
+        raise HTTPException(404, f"项目 {project_id} 不存在")
+    
+    page = await db.get(Page, body.page_id)
+    if not page or page.project_id != project_id:
+        raise HTTPException(404, f"页面 {body.page_id} 不存在")
+    
+    # 解析base64图片数据
+    try:
+        # 支持 data:image/webp;base64,... 或 data:image/png;base64,... 格式
+        if body.image_base64.startswith("data:image/"):
+            header, data = body.image_base64.split(",", 1)
+            # 提取格式
+            format_part = header.split(";")[0].split("/")[1].upper()
+            if format_part == "WEBP":
+                image_format = "WEBP"
+            elif format_part == "PNG":
+                image_format = "PNG"
+            elif format_part == "JPEG" or format_part == "JPG":
+                image_format = "JPEG"
+            else:
+                image_format = "WEBP"  # 默认
+        else:
+            # 如果没有data URI前缀，假设是纯base64
+            data = body.image_base64
+            image_format = "WEBP"
+        
+        # 解码base64
+        image_data = base64.b64decode(data)
+        image = Image.open(BytesIO(image_data))
+        
+        # 保存图片到文件系统
+        file_service = FileService(app_settings.upload_folder)
+        # 使用slot_path作为文件名的一部分，确保唯一性
+        timestamp = int(time.time() * 1000)
+        slot_safe = body.slot_path.replace(".", "_").replace("/", "_")
+        filename = f"{body.page_id}_{slot_safe}_{timestamp}.webp"
+        
+        # 保存为WEBP格式
+        pages_dir = file_service._get_pages_dir(project_id)
+        filepath = pages_dir / filename
+        image.save(str(filepath), format="WEBP", quality=85)
+        
+        # 获取相对路径
+        relative_path = filepath.relative_to(file_service.upload_folder).as_posix()
+        
+        # 构建前端可访问的URL
+        image_url = f"/files/{project_id}/pages/{filename}"
+        
+        # 更新html_model中的图片路径
+        html_model = page.get_html_model() or {}
+        if not isinstance(html_model, dict):
+            html_model = {}
+        
+        # 根据slot_path更新对应的字段
+        # slot_path格式如: "image.src", "left.image_src", "background_image" 等
+        def set_nested_path(obj: dict, path: str, value: str):
+            """递归设置嵌套路径的值"""
+            parts = path.split(".")
+            current = obj
+            for i, part in enumerate(parts[:-1]):
+                if part not in current:
+                    current[part] = {}
+                elif not isinstance(current[part], dict):
+                    current[part] = {}
+                current = current[part]
+            current[parts[-1]] = value
+        
+        set_nested_path(html_model, body.slot_path, image_url)
+        
+        # 保存更新后的html_model
+        page.set_html_model(html_model)
+        page.updated_at = datetime.now()
+        
+        if project:
+            project.updated_at = datetime.now()
+        
+        await db.flush()
+        
+        logger.info(f"HTML图片已保存: page_id={body.page_id}, slot_path={body.slot_path}, path={relative_path}")
+        
+        return SuccessResponse(data={
+            "image_path": relative_path,
+            "image_url": image_url,
+            "page_id": body.page_id,
+            "slot_path": body.slot_path,
+        })
+        
+    except Exception as e:
+        logger.error(f"保存HTML图片失败: {e}", exc_info=True)
+        raise HTTPException(500, f"保存图片失败: {str(e)}")

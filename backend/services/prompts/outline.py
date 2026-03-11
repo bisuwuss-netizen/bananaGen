@@ -373,33 +373,43 @@ Only use layout_id from the selected scheme above.
 ]'''
 
     prompt = (f"""\
-You are a helpful assistant that parses a user-provided PPT outline text into a structured format.
+你是一位专业的PPT大纲解析专家。请将用户提供的大纲文本解析成结构化格式。
 
-The user has provided the following outline text:
+用户提供的大纲文本：
 
 {outline_text}
 
-Your task is to analyze this text and convert it into a structured JSON format WITHOUT modifying any of the original text content.
-You should only reorganize and structure the existing content, preserving all titles, points, and text exactly as provided.
-{layout_instruction}
-You can organize the content in two ways:
+你的任务：
+1. **准确理解**：仔细分析用户输入的大纲结构，识别章节、标题、要点之间的层次关系
+2. **保持原意**：保留用户原始内容的核心主题和关键信息，不要改变主题含义
+3. **合理拆分**：将大纲文本拆分为多个页面，每个页面有明确的标题和1-3个要点
+4. **识别章节**：如果大纲中有明确的"第一部分"、"第二部分"等章节标识，使用 part-based 格式
+5. **提取要点**：从每个标题下提取关键要点，保持原文本的表述方式
 
-1. Simple format (for short PPTs without major sections):
+解析原则：
+- **必须保留**：用户明确提到的所有主题、章节、标题和要点
+- **可以优化**：页面标题可以更精炼，但必须反映原意；要点可以合并或拆分，但核心内容不变
+- **结构识别**：识别"第一部分"、"第二部分"等章节结构，正确分配到 part 字段
+- **逻辑顺序**：保持用户输入的逻辑顺序，不要随意调整
+
+{layout_instruction}
+你可以使用两种格式：
+
+1. 简单格式（适用于没有明确章节的短PPT）：
 {simple_example}
 
-2. Part-based format (for longer PPTs with major sections):
+2. 章节格式（适用于有明确章节的长PPT）：
 {part_example}
 
-Important rules:
-- DO NOT modify, rewrite, or change any text from the original outline
-- DO NOT add new content that wasn't in the original text
-- DO NOT remove any content from the original text
-- Only reorganize the existing content into the structured format
-- Preserve all titles, bullet points, and text exactly as they appear
-- If the text has clear sections/parts, use the part-based format
-- Extract titles and points from the original text, keeping them exactly as written
+重要规则：
+- 如果大纲中有"第一部分"、"第二部分"等章节标识，必须使用章节格式
+- 每个章节下的内容要正确分配到对应的 part 中
+- 页面标题要准确反映用户输入的内容，可以适当精炼但不要改变主题
+- 要点要从用户输入中提取，可以适当优化表述但核心内容必须保留
+- 不要添加用户没有提到的内容
+- 不要删除用户明确提到的主题
 
-Now parse the outline text above into the structured format. Return only the JSON, don't include any other text.
+现在请解析上述大纲文本，返回结构化格式。只返回JSON，不要包含其他文字。
 {get_language_instruction(language)}
 """)
     
@@ -407,6 +417,159 @@ Now parse the outline text above into the structured format. Return only the JSO
     logger.debug(f"[get_outline_parsing_prompt] Final prompt:\n{final_prompt}")
     return final_prompt
 
+
+def get_outline_enhancement_prompt(
+    parsed_outline: List[Dict],
+    project_context: ProjectContext,
+    language: str = None,
+    render_mode: str = 'image',
+    scheme_id: str = None
+) -> str:
+    """
+    基于解析结果对大纲进行丰富和优化的 prompt
+    
+    Args:
+        parsed_outline: 解析后的初步大纲
+        project_context: 项目上下文对象
+        language: 输出语言代码
+        render_mode: 渲染模式 ('image' | 'html')
+        scheme_id: 布局方案ID
+    
+    Returns:
+        格式化后的 prompt 字符串
+    """
+    from .utils import _format_reference_files_xml
+    from .layouts import (
+        get_layout_types_description,
+        get_layout_scheme,
+        SCHEME_ROLE_LAYOUTS,
+        get_scheme_style_prompt,
+        get_layout_constraints,
+    )
+    from .language import get_language_instruction
+    
+    files_xml = _format_reference_files_xml(project_context.reference_files_content)
+    outline_text = project_context.outline_text or ""
+    idea_prompt = project_context.idea_prompt or ""
+    
+    # HTML模式下的布局说明
+    if render_mode == 'html':
+        layout_instruction = f"""
+可用 layout_id（方案：{get_layout_scheme(scheme_id).get('name', 'tech_blue')}）：
+{get_layout_types_description(scheme_id)}
+
+{get_scheme_style_prompt(scheme_id)}
+
+布局约束：
+{get_layout_constraints(scheme_id)}
+
+每页都必须包含 layout_id，并且只能使用上述方案中的 layout_id。
+"""
+        scheme_roles = SCHEME_ROLE_LAYOUTS.get(scheme_id or 'edu_dark', SCHEME_ROLE_LAYOUTS['edu_dark'])
+        cover_id = scheme_roles['cover']
+        toc_id = scheme_roles['toc']
+        ending_id = scheme_roles['ending']
+    else:
+        layout_instruction = ""
+        cover_id = "cover"
+        toc_id = "toc"
+        ending_id = "ending"
+    
+    import json
+    parsed_outline_json = json.dumps(parsed_outline, ensure_ascii=False, indent=2)
+    
+    prompt = f"""\
+你是一位专业的PPT大纲设计师。请基于用户提供的大纲，对其进行丰富和优化。
+
+用户原始输入：
+{outline_text if outline_text else idea_prompt}
+
+已解析的初步大纲结构：
+{parsed_outline_json}
+
+你的任务：
+1. **保持核心内容**：必须保留用户输入的所有主题、章节和要点，不能删除或改变核心主题
+2. **丰富和优化**：
+   - 优化页面标题，使其更清晰、专业，但必须反映用户输入的原意
+   - 为每个页面补充1-3个关键要点，要点要基于用户输入的内容，可以适当扩展但不要偏离主题
+   - 如果用户输入比较简略，可以适当补充相关内容，但必须与主题相关
+3. **完善结构**：
+   - 添加封面页（标题基于用户输入的主题）
+   - 如果页数较多（>6页），添加目录页
+   - 在最后添加总结/回顾页
+4. **章节处理**：
+   - 如果初步大纲中有章节（part），保持章节结构
+   - 每个章节下至少要有2-3页内容页
+   - 章节标题要清晰反映用户输入的内容
+5. **逻辑优化**：
+   - 确保页面之间的逻辑顺序合理
+   - 确保内容连贯，有清晰的递进关系
+   - 避免重复和冗余
+
+{layout_instruction}
+输出格式要求：
+- 如果初步大纲使用了章节格式（有 part 字段），输出也要使用章节格式
+- 如果初步大纲是简单格式，输出也使用简单格式
+- 每页必须包含 title 和 points（1-3个要点）
+- HTML模式必须为每页添加 layout_id
+- 封面页使用 {cover_id}，目录页使用 {toc_id}，结束页使用 {ending_id}
+
+输出示例（简单格式）：
+[
+  {{
+    "title": "封面标题（基于用户输入主题）",
+    "points": ["主题概述"],
+    "layout_id": "{cover_id}"
+  }},
+  {{
+    "title": "目录",
+    "points": ["章节1", "章节2", "章节3"],
+    "layout_id": "{toc_id}"
+  }},
+  {{
+    "title": "页面标题（基于用户输入）",
+    "points": ["要点1（基于用户输入）", "要点2（可以适当扩展）", "要点3（与主题相关）"],
+    "layout_id": "title_content"
+  }},
+  ...
+  {{
+    "title": "总结",
+    "points": ["核心要点回顾", "学习收获"],
+    "layout_id": "{ending_id}"
+  }}
+]
+
+输出示例（章节格式）：
+[
+  {{
+    "part": "第一部分：章节名（基于用户输入）",
+    "pages": [
+      {{
+        "title": "页面标题",
+        "points": ["要点1", "要点2"],
+        "layout_id": "title_content"
+      }}
+    ]
+  }},
+  {{
+    "part": "第二部分：章节名",
+    "pages": [...]
+  }}
+]
+
+重要约束：
+- **必须保留**：用户输入的所有主题和核心内容
+- **可以优化**：标题表述、要点补充、结构完善
+- **不能偏离**：所有补充内容必须与用户输入的主题相关
+- **逻辑清晰**：页面顺序和内容要有清晰的逻辑关系
+
+现在请基于上述初步大纲，进行丰富和优化，返回优化后的结构化大纲。只返回JSON，不要包含其他文字。
+{get_language_instruction(language)}
+"""
+    
+    final_prompt = files_xml + prompt
+    logger.debug(f"[get_outline_enhancement_prompt] Final prompt:\n{final_prompt}")
+    return final_prompt
 
 
 def get_description_to_outline_prompt(project_context: ProjectContext, language: str = None, render_mode: str = 'image', scheme_id: str = None) -> str:

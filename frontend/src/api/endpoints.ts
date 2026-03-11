@@ -1051,3 +1051,46 @@ export const generateHtmlImages = async (
     data: { results, summary },
   };
 };
+
+/**
+ * 保存HTML模式的图片到服务器
+ * 
+ * @param projectId 项目ID
+ * @param pageId 页面ID
+ * @param slotPath 图片插槽路径（如 "image.src", "left.image_src"）
+ * @param imageBase64 base64编码的图片数据（data URI格式）
+ */
+export const saveHtmlImage = async (
+  projectId: string,
+  pageId: string,
+  slotPath: string,
+  imageBase64: string
+): Promise<ApiResponse<{
+  image_path: string;
+  image_url: string;
+  page_id: string;
+  slot_path: string;
+}>> => {
+  const apiBase = import.meta.env.VITE_API_BASE_URL || '';
+  const url = `${apiBase}/api/projects/${projectId}/html-images/save`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      page_id: pageId,
+      slot_path: slotPath,
+      image_base64: imageBase64,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+  }
+
+  const data = await response.json();
+  return data;
+};

@@ -63,14 +63,19 @@ class Project(db.Model):
 
     def to_dict(self, include_pages=False, page_summary=False, include_latest_generation_task=False):
         """Convert to dictionary"""
-        # Format created_at and updated_at with UTC timezone indicator for proper frontend parsing
+        # Format created_at and updated_at
+        # 注意：如果时间没有时区信息，不要添加 'Z' 后缀
+        # 因为 datetime.now() 返回的是本地时间，不是 UTC 时间
+        # 添加 'Z' 会让前端误以为是 UTC 时间，导致时区转换错误
         created_at_str = None
         if self.created_at:
-            created_at_str = self.created_at.isoformat() + 'Z' if not self.created_at.tzinfo else self.created_at.isoformat()
+            # 如果有时区信息，使用 isoformat()；如果没有，直接使用 isoformat() 不添加 'Z'
+            created_at_str = self.created_at.isoformat()
         
         updated_at_str = None
         if self.updated_at:
-            updated_at_str = self.updated_at.isoformat() + 'Z' if not self.updated_at.tzinfo else self.updated_at.isoformat()
+            # 如果有时区信息，使用 isoformat()；如果没有，直接使用 isoformat() 不添加 'Z'
+            updated_at_str = self.updated_at.isoformat()
         
         data = {
             'project_id': self.id,
