@@ -53,6 +53,7 @@ from .material import Material
 from .reference_file import ReferenceFile
 from .settings import Settings
 from .preset_style import PresetStyle
+from .smart_ppt_log import SmartPPTLog
 
-__all__ = ['db', 'Project', 'Page', 'Task', 'UserTemplate', 'Template', 'PageImageVersion', 'Material', 'ReferenceFile', 'Settings', 'PresetStyle']
+__all__ = ['db', 'Project', 'Page', 'Task', 'UserTemplate', 'Template', 'PageImageVersion', 'Material', 'ReferenceFile', 'Settings', 'PresetStyle', 'SmartPPTLog']
 

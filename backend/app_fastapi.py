@@ -97,6 +97,7 @@ from api.routes.html_renderer import router as html_renderer_router
 from api.routes.preset_styles import router as preset_styles_router
 from api.routes.user_templates import router as user_templates_router
 from api.routes.html_images import router as html_images_router
+from api.routes.smart_ppt_log import router as smart_ppt_log_router
 from features.home_characters.router import router as home_characters_router
 
 app.include_router(projects_router)
@@ -114,6 +115,7 @@ app.include_router(html_renderer_router)
 app.include_router(preset_styles_router)
 app.include_router(user_templates_router)
 app.include_router(html_images_router)
+app.include_router(smart_ppt_log_router)
 app.include_router(home_characters_router)
 
 
