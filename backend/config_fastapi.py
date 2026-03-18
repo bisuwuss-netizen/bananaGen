@@ -68,7 +68,7 @@ class Settings(BaseSettings):
 
     # --- Server ---
     secret_key: str = "your-secret-key-change-this"
-    port: int = 5000
+    port: int = 5001
     debug: bool = False
     log_level: str = "INFO"
     in_docker: str = "0"

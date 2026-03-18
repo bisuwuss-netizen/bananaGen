@@ -1,7 +1,7 @@
 """Banana Slides – FastAPI Application Entry Point
 
 Run: uvicorn app_fastapi:app --reload
-Docs: http://localhost:5000/docs
+Docs: http://localhost:5001/docs
 """
 import os
 import sys

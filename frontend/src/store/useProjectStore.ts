@@ -9,6 +9,8 @@ import type { ProjectStore } from './projectStore/types';
 
 export type { ProjectStore } from './projectStore/types';
 
+let recoveryBootstrapped = false;
+
 export const useProjectStore = create<ProjectStore>()((set, get, api) => {
   const debouncedUpdatePage = createDebouncedUpdatePage(get);
 
@@ -20,3 +22,10 @@ export const useProjectStore = create<ProjectStore>()((set, get, api) => {
     ...createExportSlice(set, get, api),
   };
 });
+
+if (typeof window !== 'undefined' && !recoveryBootstrapped) {
+  recoveryBootstrapped = true;
+  window.setTimeout(() => {
+    void useProjectStore.getState().restoreGenerationTasks();
+  }, 0);
+}

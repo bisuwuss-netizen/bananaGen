@@ -93,6 +93,7 @@ export const createCoreSlice: StateCreator<ProjectStore, [], [], ProjectCoreSlic
         });
         set({ currentProject: project });
         localStorage.setItem('currentProjectId', project.id!);
+        void get().restoreGenerationTasks(project.id!);
       }
     } catch (error: any) {
       set({ error: normalizeErrorMessage(error.message || '创建项目失败') });
@@ -124,6 +125,7 @@ export const createCoreSlice: StateCreator<ProjectStore, [], [], ProjectCoreSlic
         const project = normalizeProject(response.data);
         set({ currentProject: project });
         localStorage.setItem('currentProjectId', project.id!);
+        void get().restoreGenerationTasks(project.id!);
       }
     } catch (error: any) {
       let errorMessage = '同步项目失败';

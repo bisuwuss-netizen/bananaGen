@@ -1,24 +1,25 @@
 import type { StateCreator } from 'zustand';
 import * as api from '@/api/endpoints';
-import { openTaskWebSocket } from '@/api/client';
 import { normalizeErrorMessage } from '@/utils';
 import { buildInitialOutlineTaskProgress } from '@/utils/outlineProgress';
 import type {
   ProjectGenerationSlice,
   ProjectStore,
-  ProjectTaskPayload,
 } from './types';
 
 export const createGenerationSlice: StateCreator<ProjectStore, [], [], ProjectGenerationSlice> = (set, get) => ({
   generateOutline: async () => {
     const { currentProject } = get();
-    if (!currentProject) return;
+    if (!currentProject) {
+      return;
+    }
 
     set({
       isGlobalLoading: true,
       error: null,
       taskProgress: buildInitialOutlineTaskProgress(currentProject),
     });
+
     try {
       const response = await api.generateOutline(currentProject.id!);
       const taskId =
@@ -31,7 +32,7 @@ export const createGenerationSlice: StateCreator<ProjectStore, [], [], ProjectGe
           response.data?.outline
           || response.data?.pages
           || (response as any)?.outline
-          || (response as any)?.pages
+          || (response as any)?.pages,
         );
 
         if (maybeSyncPayload) {
@@ -63,14 +64,14 @@ export const createGenerationSlice: StateCreator<ProjectStore, [], [], ProjectGe
         }
 
         console.warn('[generateOutline] unexpected response payload:', response);
-        throw new Error('未收到任务ID');
+        throw new Error('\u672a\u6536\u5230\u4efb\u52a1 ID');
       }
 
       set({ activeTaskId: taskId });
-      await get().pollTask(taskId);
+      await get().pollTask(taskId, { projectId: currentProject.id!, persist: true });
     } catch (error: any) {
       set({
-        error: normalizeErrorMessage(error.message || '生成大纲失败'),
+        error: normalizeErrorMessage(error.message || '\u751f\u6210\u5927\u7eb2\u5931\u8d25'),
         activeTaskId: null,
         taskProgress: null,
         isGlobalLoading: false,
@@ -81,14 +82,16 @@ export const createGenerationSlice: StateCreator<ProjectStore, [], [], ProjectGe
 
   generateFromDescription: async () => {
     const { currentProject } = get();
-    if (!currentProject) return;
+    if (!currentProject) {
+      return;
+    }
 
     set({ isGlobalLoading: true, error: null });
     try {
       await api.generateFromDescription(currentProject.id!);
       await get().syncProject();
     } catch (error: any) {
-      set({ error: error.message || '从描述生成失败' });
+      set({ error: error.message || '\u4ece\u63cf\u8ff0\u751f\u6210\u5931\u8d25' });
       throw error;
     } finally {
       set({ isGlobalLoading: false });
@@ -97,12 +100,15 @@ export const createGenerationSlice: StateCreator<ProjectStore, [], [], ProjectGe
 
   generateDescriptions: async () => {
     const { currentProject } = get();
-    if (!currentProject?.id) return;
+    if (!currentProject?.id) {
+      return;
+    }
 
     await get().saveAllPages();
-    const pages = currentProject.pages.filter((p) => p.id);
-    if (pages.length === 0) return;
-    const isHtmlMode = currentProject.render_mode === 'html';
+    const pages = currentProject.pages.filter((page) => page.id);
+    if (pages.length === 0) {
+      return;
+    }
 
     const initialTasks: Record<string, boolean> = {};
     pages.forEach((page) => {
@@ -116,82 +122,18 @@ export const createGenerationSlice: StateCreator<ProjectStore, [], [], ProjectGe
       const response = await api.generateDescriptions(currentProject.id);
       const taskId = response.data?.task_id;
       if (!taskId) {
-        throw new Error('未收到任务ID');
+        throw new Error('\u672a\u6536\u5230\u4efb\u52a1 ID');
       }
 
-      let wsMessageCount = 0;
-      let lastSyncedCompleted = 0;
-      let lastSyncedFailed = 0;
-      let isSyncing = false;
-      openTaskWebSocket<ProjectTaskPayload>(currentProject.id, taskId, {
-        onMessage: async (task) => {
-          wsMessageCount++;
-          const prog = task.progress as any;
-          const currentCompleted = prog?.completed ?? 0;
-          const currentFailed = prog?.failed ?? 0;
-
-          if (task.progress) {
-            set({ taskProgress: task.progress });
-          }
-
-          // 只在 progress 有变化 或 任务终态时才 syncProject，避免请求风暴
-          const progressChanged = currentCompleted !== lastSyncedCompleted || currentFailed !== lastSyncedFailed;
-          const isTerminal = task.status === 'COMPLETED' || task.status === 'FAILED';
-
-          if ((progressChanged || isTerminal) && !isSyncing) {
-            isSyncing = true;
-            lastSyncedCompleted = currentCompleted;
-            lastSyncedFailed = currentFailed;
-
-            try {
-              await get().syncProject();
-              const { currentProject: updatedProject } = get();
-
-              if (updatedProject) {
-                const updatedTasks: Record<string, boolean> = {};
-                updatedProject.pages.forEach((page) => {
-                  if (page.id) {
-                    const hasContent = isHtmlMode
-                      ? !!(page as any).html_model && Object.keys((page as any).html_model || {}).length > 0
-                      : !!page.description_content;
-                    const isGenerating = page.status === 'GENERATING' || (!hasContent && initialTasks[page.id]);
-                    if (isGenerating) {
-                      updatedTasks[page.id] = true;
-                    }
-                  }
-                });
-                set({ pageDescriptionGeneratingTasks: updatedTasks });
-              }
-            } finally {
-              isSyncing = false;
-            }
-          }
-
-          if (task.status === 'COMPLETED') {
-            set({ pageDescriptionGeneratingTasks: {}, taskProgress: null, activeTaskId: null });
-            await get().syncProject();
-          } else if (task.status === 'FAILED') {
-            set({
-              pageDescriptionGeneratingTasks: {},
-              taskProgress: null,
-              activeTaskId: null,
-              error: normalizeErrorMessage(task.error_message || task.error || '生成描述失败'),
-            });
-            // 即使任务失败，也同步项目以获取已成功生成的部分内容
-            await get().syncProject();
-          }
-        },
-        onError: () => {
-          set({
-            pageDescriptionGeneratingTasks: {},
-            error: '描述生成任务连接失败',
-          });
-        },
-      });
+      void get().pollDescriptionTask(
+        taskId,
+        pages.map((page) => page.id!).filter(Boolean),
+        { projectId: currentProject.id, persist: true },
+      );
     } catch (error: any) {
       set({
         pageDescriptionGeneratingTasks: {},
-        error: normalizeErrorMessage(error.message || '启动生成任务失败'),
+        error: normalizeErrorMessage(error.message || '\u542f\u52a8\u751f\u6210\u4efb\u52a1\u5931\u8d25'),
       });
       throw error;
     }
@@ -199,10 +141,14 @@ export const createGenerationSlice: StateCreator<ProjectStore, [], [], ProjectGe
 
   generatePageDescription: async (pageId) => {
     const { currentProject, pageDescriptionGeneratingTasks } = get();
-    if (!currentProject) return;
+    if (!currentProject) {
+      return;
+    }
 
     await get().saveAllPages();
-    if (pageDescriptionGeneratingTasks[pageId]) return;
+    if (pageDescriptionGeneratingTasks[pageId]) {
+      return;
+    }
 
     set({
       error: null,
@@ -217,24 +163,29 @@ export const createGenerationSlice: StateCreator<ProjectStore, [], [], ProjectGe
       await api.generatePageDescription(currentProject.id!, pageId, true);
       await get().syncProject();
     } catch (error: any) {
-      set({ error: normalizeErrorMessage(error.message || '生成描述失败') });
+      set({ error: normalizeErrorMessage(error.message || '\u751f\u6210\u63cf\u8ff0\u5931\u8d25') });
       throw error;
     } finally {
       const { pageDescriptionGeneratingTasks: currentTasks } = get();
-      const newTasks = { ...currentTasks };
-      delete newTasks[pageId];
-      set({ pageDescriptionGeneratingTasks: newTasks });
+      const nextTasks = { ...currentTasks };
+      delete nextTasks[pageId];
+      set({ pageDescriptionGeneratingTasks: nextTasks });
     }
   },
 
   generateImages: async (pageIds) => {
     const { currentProject, pageGeneratingTasks } = get();
-    if (!currentProject) return;
+    if (!currentProject) {
+      return;
+    }
 
     await get().saveAllPages();
-    const targetPageIds = pageIds || currentProject.pages.map((p) => p.id).filter((id): id is string => !!id);
+    const targetPageIds =
+      pageIds || currentProject.pages.map((page) => page.id).filter((id): id is string => !!id);
     const newPageIds = targetPageIds.filter((id) => !pageGeneratingTasks[id]);
-    if (newPageIds.length === 0) return;
+    if (newPageIds.length === 0) {
+      return;
+    }
 
     set({ error: null });
 
@@ -248,12 +199,15 @@ export const createGenerationSlice: StateCreator<ProjectStore, [], [], ProjectGe
         });
         set({ pageGeneratingTasks: nextTasks });
         await get().syncProject();
-        get().pollImageTask(taskId, targetPageIds);
+        void get().pollImageTask(taskId, targetPageIds, {
+          projectId: currentProject.id!,
+          persist: true,
+        });
       } else {
         await get().syncProject();
       }
     } catch (error: any) {
-      set({ error: normalizeErrorMessage(error.message || '批量生成图片失败') });
+      set({ error: normalizeErrorMessage(error.message || '\u6279\u91cf\u751f\u6210\u56fe\u7247\u5931\u8d25') });
       throw error;
     }
   },
@@ -262,7 +216,8 @@ export const createGenerationSlice: StateCreator<ProjectStore, [], [], ProjectGe
     void pageId;
     void editPrompt;
     void contextImages;
-    const message = '图片编辑功能已下线，请使用“重新生成此页”';
+    const message =
+      '\u56fe\u7247\u7f16\u8f91\u529f\u80fd\u5df2\u4e0b\u7ebf\uff0c\u8bf7\u4f7f\u7528\u201c\u91cd\u65b0\u751f\u6210\u6b64\u9875\u201d';
     set({ error: message });
     throw new Error(message);
   },

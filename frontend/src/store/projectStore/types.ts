@@ -4,6 +4,11 @@ import type {
   TaskProgress,
 } from '@/types';
 
+export interface TaskSubscriptionOptions {
+  projectId?: string;
+  persist?: boolean;
+}
+
 export interface ProjectCoreSlice {
   currentProject: Project | null;
   isGlobalLoading: boolean;
@@ -37,8 +42,18 @@ export interface ProjectPageSlice {
 
 export interface ProjectTaskSlice {
   startAsyncTask: (apiCall: () => Promise<any>) => Promise<void>;
-  pollTask: (taskId: string) => Promise<void>;
-  pollImageTask: (taskId: string, pageIds: string[]) => void;
+  pollTask: (taskId: string, options?: TaskSubscriptionOptions) => Promise<void>;
+  pollDescriptionTask: (
+    taskId: string,
+    pageIds: string[],
+    options?: TaskSubscriptionOptions
+  ) => Promise<void>;
+  pollImageTask: (
+    taskId: string,
+    pageIds: string[],
+    options?: TaskSubscriptionOptions
+  ) => Promise<void>;
+  restoreGenerationTasks: (projectId?: string) => Promise<void>;
 }
 
 export interface ProjectGenerationSlice {

@@ -60,6 +60,7 @@ _local_backup/
 # Local/private workspace files
 AGENT.md
 AGENTS.md
+.svn/
 .cursor/
 node_modules/
 .env*
