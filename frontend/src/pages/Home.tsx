@@ -97,6 +97,15 @@ export const Home: React.FC = () => {
     sessionStorage.setItem('home_renderMode', renderMode);
   }, [renderMode]);
 
+  // 如果调试按钮被隐藏，但当前是 image 模式，自动切换回 html 模式
+  useEffect(() => {
+    if (import.meta.env.VITE_SHOW_DEBUG_BUTTONS !== 'true' && renderMode === 'image') {
+      setRenderMode('html');
+    }
+    // 注意：此 effect 只在组件挂载时运行一次，避免循环更新
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // 检查是否有当前项目 & 加载用户模板 & 加载预设风格
   useEffect(() => {
     const projectId = localStorage.getItem('currentProjectId');
@@ -831,27 +840,32 @@ export const Home: React.FC = () => {
                 <span className="text-sm font-medium text-gray-900">生成模式</span>
               </div>
               <div className="inline-flex rounded-2xl border border-gray-200 bg-gray-50 p-1">
-                {([
-                  { value: 'html', label: '结构化生成' },
-                  { value: 'image', label: '图片化生成' },
-                ] as const).map((modeOption) => {
-                  const isActive = renderMode === modeOption.value;
-                  return (
-                    <button
-                      key={modeOption.value}
-                      type="button"
-                      aria-pressed={isActive}
-                      onClick={() => setRenderMode(modeOption.value)}
-                      className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
-                        isActive
-                          ? 'bg-white text-banana-700 shadow-sm'
-                          : 'text-gray-500 hover:text-gray-900'
-                      }`}
-                    >
-                      {modeOption.label}
-                    </button>
-                  );
-                })}
+                <button
+                  type="button"
+                  aria-pressed={renderMode === 'html'}
+                  onClick={() => setRenderMode('html')}
+                  className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+                    renderMode === 'html'
+                      ? 'bg-white text-banana-700 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  结构化生成
+                </button>
+                {import.meta.env.VITE_SHOW_DEBUG_BUTTONS === 'true' && (
+                  <button
+                    type="button"
+                    aria-pressed={renderMode === 'image'}
+                    onClick={() => setRenderMode('image')}
+                    className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
+                      renderMode === 'image'
+                        ? 'bg-white text-banana-700 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-900'
+                    }`}
+                  >
+                    图片化生成
+                  </button>
+                )}
               </div>
               <p className="mt-2 text-xs text-gray-500">
                 {renderMode === 'html'

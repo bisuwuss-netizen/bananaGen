@@ -380,15 +380,17 @@ export const DescriptionCard: React.FC<DescriptionCardProps> = ({
         <div className="border-t border-gray-100 px-4 py-3 flex justify-end gap-2 mt-auto">
           {isHtmlMode && hasHtmlModel && (
             <>
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={<Code size={16} />}
-                onClick={() => setIsViewingJson(true)}
-                disabled={generating}
-              >
-                查看JSON
-              </Button>
+              {import.meta.env.VITE_SHOW_DEBUG_BUTTONS === 'true' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={<Code size={16} />}
+                  onClick={() => setIsViewingJson(true)}
+                  disabled={generating}
+                >
+                  查看JSON
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"

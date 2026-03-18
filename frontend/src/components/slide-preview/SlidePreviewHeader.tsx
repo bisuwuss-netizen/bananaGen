@@ -137,7 +137,7 @@ export function SlidePreviewHeader({
               >
                 导出为 PPTX
               </button>
-              {isHtmlMode && (
+              {isHtmlMode && import.meta.env.VITE_SHOW_DEBUG_BUTTONS === 'true' && (
                 <button
                   onClick={onDownloadHtmlSlides}
                   className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors text-sm text-banana-600 font-medium"
