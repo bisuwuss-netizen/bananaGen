@@ -3,6 +3,7 @@ Template Controller - handles template-related endpoints
 """
 import logging
 from flask import Blueprint, request, current_app
+from sqlalchemy import text
 from models import db, Project, UserTemplate, Template
 from utils import success_response, error_response, not_found, bad_request, allowed_file
 from services import FileService
@@ -153,7 +154,7 @@ def get_system_templates():
         # 如果查询结果为空，添加详细的调试信息
         if len(templates_data) == 0:
             try:
-                from sqlalchemy import inspect, text
+                from sqlalchemy import inspect
                 inspector = inspect(db.engine)
                 tables = inspector.get_table_names()
                 
@@ -492,4 +493,3 @@ def delete_user_template(template_id):
     except Exception as e:
         db.session.rollback()
         return error_response('SERVER_ERROR', str(e), 500)
-

@@ -7,19 +7,21 @@ interface EduTimelineStepsLayoutProps {
 }
 
 type LooseEduTimelineStepsModel = Partial<EduTimelineStepsModel> & {
-  steps?: Array<{
-    number?: number;
-    label?: string;
-    title?: string;
-    description?: string;
-    details?: string[];
-    highlights?: string[];
-  }>;
+  steps?: LooseEduTimelineStep[];
   content?: string[] | string;
 };
 
+type LooseEduTimelineStep = {
+  number?: number;
+  label?: string;
+  title?: string;
+  description?: string;
+  details?: string[];
+  highlights?: string[];
+};
+
 function normalizeModel(input: LooseEduTimelineStepsModel): EduTimelineStepsModel {
-  const rawSteps = Array.isArray(input.steps) ? input.steps : [];
+  const rawSteps: LooseEduTimelineStep[] = Array.isArray(input.steps) ? input.steps : [];
   let steps = rawSteps
     .map((item) => {
       const title = String(item.title || item.label || '').trim();

@@ -975,8 +975,8 @@ export const SlidePreview: React.FC = () => {
       // 生成文件名（带时间戳）
       const timestamp = new Date()
         .toISOString()
-        .replaceAll('-', '')
-        .replaceAll(':', '')
+        .replace(/-/g, '')
+        .replace(/:/g, '')
         .replace('T', '')
         .slice(0, 14);
       const randomNum = Math.floor(Math.random() * 100000);
@@ -1114,7 +1114,8 @@ export const SlidePreview: React.FC = () => {
     currentProject.pages.forEach((page) => {
       if (!page.id || !page.html_model) return;
 
-      const model = page.html_model as Record<string, unknown>;
+      const pageId = page.id;
+      const model = page.html_model as unknown as Record<string, unknown>;
       
       // 递归查找所有图片路径
       const findImagePaths = (obj: any, path: string = ''): Array<{ path: string; value: string }> => {
@@ -1142,20 +1143,20 @@ export const SlidePreview: React.FC = () => {
       const imagePaths = findImagePaths(model);
       
       if (imagePaths.length > 0) {
-        restoredImages[page.id] = {};
+        restoredImages[pageId] = {};
         imagePaths.forEach(({ path, value }) => {
           // 将文件路径转换为完整的URL
           // 如果value是/files/...格式，使用getImageUrl转换为完整URL
           // 如果value已经是base64或完整URL，直接使用
           if (value.startsWith('/files/')) {
             // 使用getImageUrl转换为完整URL
-            restoredImages[page.id][path] = getImageUrl(value, page.updated_at);
+            restoredImages[pageId][path] = getImageUrl(value, page.updated_at);
           } else if (value.startsWith('data:image/') || value.startsWith('http://') || value.startsWith('https://')) {
             // 已经是base64或完整URL，直接使用
-            restoredImages[page.id][path] = value;
+            restoredImages[pageId][path] = value;
           } else {
             // 其他情况，尝试使用getImageUrl
-            restoredImages[page.id][path] = getImageUrl(value, page.updated_at);
+            restoredImages[pageId][path] = getImageUrl(value, page.updated_at);
           }
         });
       }

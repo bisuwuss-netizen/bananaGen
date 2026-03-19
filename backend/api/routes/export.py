@@ -16,6 +16,7 @@ from schemas.common import SuccessResponse
 from schemas.generation import ExportEditablePptxRequest
 from config_fastapi import settings
 from services.runtime_state import load_runtime_config
+from services.file_service import FileService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/projects", tags=["export"])
@@ -31,7 +32,7 @@ def _get_filtered_pages_sync(pages: list[Page], page_ids: list[str] | None) -> l
 def _extract_image_paths_from_pages(
     pages: list[Page],
     project: Project,
-    file_service: "FileService",
+    file_service: FileService,
 ) -> list[str]:
     """从页面中提取图片路径，支持HTML模式和图片模式"""
     image_paths = []
@@ -105,7 +106,6 @@ async def export_pptx(
     if not pages:
         raise HTTPException(400, "No pages found")
 
-    from services.file_service import FileService
     from services.presentation.export_service import ExportService
 
     file_service = FileService(settings.upload_folder)
@@ -154,7 +154,6 @@ async def export_pdf(
     if not pages:
         raise HTTPException(400, "No pages found")
 
-    from services.file_service import FileService
     from services.presentation.export_service import ExportService
 
     file_service = FileService(settings.upload_folder)
@@ -214,7 +213,6 @@ async def export_editable_pptx(
     db.add(task)
     await db.commit()
 
-    from services.file_service import FileService
     from services.tasks import (
         export_editable_pptx_with_recursive_analysis_task,
         task_manager,

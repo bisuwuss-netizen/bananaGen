@@ -29,6 +29,13 @@ os.environ.setdefault("GOOGLE_API_KEY", "mock-api-key-for-testing")
 os.environ.setdefault("FLASK_ENV", "testing")
 
 
+def _is_safe_test_database(url) -> bool:
+    if url.drivername.startswith("sqlite"):
+        database = url.database or ""
+        return Path(database).name.endswith("_test.sqlite3")
+    return bool(url.database and url.database.endswith("_test"))
+
+
 class CompatResponse:
     """Provide Flask-like helpers on top of httpx responses for legacy tests."""
 
@@ -94,7 +101,15 @@ def _configure_test_database():
 
     original_database_url = os.environ.get("DATABASE_URL")
     if not original_database_url:
-        raise RuntimeError("DATABASE_URL is required for MySQL-backed tests")
+        sqlite_path = project_root / "backend" / "tests" / "banana_slides_test.sqlite3"
+        if sqlite_path.exists():
+            sqlite_path.unlink()
+        os.environ["DATABASE_URL"] = f"sqlite:///{sqlite_path}"
+        yield
+        if sqlite_path.exists():
+            sqlite_path.unlink()
+        os.environ.pop("DATABASE_URL", None)
+        return
 
     base_url = make_url(original_database_url)
     if base_url.drivername != "mysql+pymysql":
@@ -154,12 +169,13 @@ def app(_configure_test_database):
     from services.runtime_state import install_runtime_orm
 
     url = make_url(settings.sqlalchemy_sync_url)
-    if not (url.database and url.database.endswith("_test")):
+    if not _is_safe_test_database(url):
         raise RuntimeError(
             f"Refusing to run tests against non-test database: {url.database}"
         )
 
-    engine = create_engine(url.render_as_string(hide_password=False))
+    engine_kwargs = {"connect_args": {"check_same_thread": False}} if url.drivername.startswith("sqlite") else {}
+    engine = create_engine(url.render_as_string(hide_password=False), **engine_kwargs)
     install_runtime_orm()
     db.metadata.drop_all(bind=engine)
     db.metadata.create_all(bind=engine)
@@ -176,12 +192,13 @@ def client(app):
     from models import db
 
     url = make_url(settings.sqlalchemy_sync_url)
-    if not (url.database and url.database.endswith("_test")):
+    if not _is_safe_test_database(url):
         raise RuntimeError(
             f"Refusing to clean tables on non-test database: {url.database}"
         )
 
-    engine = create_engine(url.render_as_string(hide_password=False))
+    engine_kwargs = {"connect_args": {"check_same_thread": False}} if url.drivername.startswith("sqlite") else {}
+    engine = create_engine(url.render_as_string(hide_password=False), **engine_kwargs)
     with engine.begin() as connection:
         for table in reversed(db.metadata.sorted_tables):
             connection.execute(table.delete())

@@ -37,7 +37,7 @@ frontend/
 
 ### 1. 环境要求
 
-- Python 3.11+
+- Python 3.11-3.13（推荐 3.11）
 - [uv](https://github.com/astral-sh/uv)
 - Node.js 18+
 - MySQL 8+
@@ -60,14 +60,14 @@ cp .env.example .env
 ### 3. 安装依赖
 
 ```bash
-uv sync --extra test
+uv sync --python 3.11 --extra test
 cd frontend && npm install
 ```
 
 ### 4. 数据库迁移
 
 ```bash
-uv run alembic -c backend/alembic.ini upgrade head
+uv run --python 3.11 alembic -c backend/alembic.ini upgrade head
 ```
 
 ### 5. 启动服务

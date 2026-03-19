@@ -3,7 +3,7 @@ name = "banana-slides"
 version = "0.3.0"
 description = "Banana Slides – AI native PPT generator"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11,<3.14"
 dependencies = [
     "aiomysql>=0.2.0",
     "fastapi>=0.116.0",
@@ -39,6 +39,7 @@ dependencies = [
 
 [project.optional-dependencies]
 test = [
+    "aiosqlite>=0.21.0",
     "pytest>=7.4.0",
     "pytest-mock>=3.12.0",
     "pytest-cov>=4.1.0",

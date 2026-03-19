@@ -13,12 +13,23 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from config_fastapi import settings as fastapi_settings
 from models import db
 
+
+def _sync_engine_kwargs() -> dict[str, Any]:
+    if fastapi_settings.sqlalchemy_sync_url.startswith("sqlite"):
+        return {
+            "connect_args": {"check_same_thread": False},
+        }
+    return {
+        "pool_pre_ping": True,
+        "pool_recycle": 3600,
+        "pool_size": 10,
+        "max_overflow": 20,
+    }
+
+
 _engine = create_engine(
     fastapi_settings.sqlalchemy_sync_url,
-    pool_pre_ping=True,
-    pool_recycle=3600,
-    pool_size=10,
-    max_overflow=20,
+    **_sync_engine_kwargs(),
 )
 _scoped_session = scoped_session(
     sessionmaker(bind=_engine, autoflush=False, expire_on_commit=False)

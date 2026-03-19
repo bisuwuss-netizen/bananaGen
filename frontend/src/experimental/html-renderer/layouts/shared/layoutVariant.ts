@@ -1,7 +1,9 @@
 export interface LayoutVariantLike {
-  variant?: string;
-  layout_variant?: string;
+  variant?: unknown;
+  layout_variant?: unknown;
 }
 
-export const isLayoutVariantB = (model?: LayoutVariantLike | null): boolean =>
-  String(model?.layout_variant || model?.variant || 'a').toLowerCase() === 'b';
+export const isLayoutVariantB = (model?: object | null): boolean => {
+  const candidate = model as LayoutVariantLike | null | undefined;
+  return String(candidate?.layout_variant ?? candidate?.variant ?? 'a').toLowerCase() === 'b';
+};

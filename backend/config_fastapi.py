@@ -156,6 +156,8 @@ class Settings(BaseSettings):
             url = self.database_url
             if url.startswith("mysql+pymysql://"):
                 return url.replace("mysql+pymysql://", "mysql+aiomysql://")
+            if url.startswith("sqlite://"):
+                return url.replace("sqlite://", "sqlite+aiosqlite://", 1)
             return url
         return (
             f"mysql+aiomysql://{self.mysql_user}:{self.mysql_password}@"
@@ -169,6 +171,8 @@ class Settings(BaseSettings):
         if self.database_url:
             if self.database_url.startswith("mysql+aiomysql://"):
                 return self.database_url.replace("mysql+aiomysql://", "mysql+pymysql://")
+            if self.database_url.startswith("sqlite+aiosqlite://"):
+                return self.database_url.replace("sqlite+aiosqlite://", "sqlite://", 1)
             return self.database_url
         return (
             f"mysql+pymysql://{self.mysql_user}:{self.mysql_password}@"

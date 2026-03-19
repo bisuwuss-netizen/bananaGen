@@ -136,6 +136,12 @@ def _flatten_nested_outline(outline) -> list[dict]:
 
 
 def _prepare_refined_outline_pages(refined, *, render_mode: str, ai_service) -> list[dict]:
+    if isinstance(refined, dict):
+        if "pages" in refined:
+            refined = refined["pages"]
+        elif "outline" in refined:
+            refined = refined["outline"]
+
     # Pure flatten only: quality guard already processed TOC + ordering
     pages_data = _flatten_nested_outline(refined)
 

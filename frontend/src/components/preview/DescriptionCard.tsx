@@ -3,6 +3,7 @@ import { Edit2, FileText, RefreshCw, Code, Layout } from 'lucide-react';
 import { Card, ContextualStatusBadge, Button, Modal, Textarea, Skeleton, Markdown } from '@/components/shared';
 import { useDescriptionGeneratingState } from '@/hooks/useGeneratingState';
 import type { Page, DescriptionContent, LayoutId } from '@/types';
+import type { LayoutModel } from '@/experimental/html-renderer/types/schema';
 import { getLayoutDisplayName } from '@/experimental/html-renderer/layouts';
 import { HtmlModelFormEditor } from './HtmlModelFormEditor';
 
@@ -275,8 +276,9 @@ export const DescriptionCard: React.FC<DescriptionCardProps> = ({
   };
 
   const text = getDescriptionText(page.description_content);
-  const htmlModelSummary = getHtmlModelSummary(page.html_model as unknown as Record<string, unknown> | undefined);
-  const hasHtmlModel = isHtmlMode && !!page.html_model && Object.keys(page.html_model as unknown as Record<string, unknown>).length > 0;
+  const htmlModelRecord = page.html_model as unknown as Record<string, unknown> | undefined;
+  const htmlModelSummary = getHtmlModelSummary(htmlModelRecord);
+  const hasHtmlModel = isHtmlMode && !!htmlModelRecord && Object.keys(htmlModelRecord).length > 0;
 
 
   const [isEditing, setIsEditing] = useState(false);
@@ -301,7 +303,7 @@ export const DescriptionCard: React.FC<DescriptionCardProps> = ({
   const handleFormModelChange = (newModel: Record<string, unknown>) => {
     // 表单模式下的更新（实时保存）
     onUpdate({
-      html_model: newModel,
+      html_model: newModel as unknown as LayoutModel,
     });
   };
 
@@ -436,7 +438,7 @@ export const DescriptionCard: React.FC<DescriptionCardProps> = ({
           {isHtmlMode && hasHtmlModel ? (
             // HTML模式：表单编辑器
             <HtmlModelFormEditor
-              model={page.html_model as Record<string, unknown>}
+              model={htmlModelRecord || {}}
               onChange={handleFormModelChange}
             />
           ) : (

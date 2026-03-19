@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { generateHtmlImagesStreaming } from '@/api/endpoints';
+import { generateHtmlImagesStreaming, type HtmlImageSSEEvent } from '@/api/endpoints';
 
 describe('generateHtmlImagesStreaming', () => {
   afterEach(() => {
@@ -29,13 +29,13 @@ describe('generateHtmlImagesStreaming', () => {
       },
     } as unknown as Response);
 
-    const events: Array<Record<string, unknown>> = [];
+    const events: HtmlImageSSEEvent[] = [];
 
     await generateHtmlImagesStreaming(
       'project-1',
       [{ page_id: 'page-1', slot_path: 'hero.image', prompt: 'test prompt' }],
       (event) => {
-        events.push(event as Record<string, unknown>);
+        events.push(event);
       }
     );
 

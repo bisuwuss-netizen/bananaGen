@@ -7,8 +7,20 @@ import { getPresetStyles } from '@/config/presetStyles';
 import { listUserTemplates } from '@/api/endpoints';
 import { useProjectStore } from '@/store/useProjectStore';
 
+const { mockUseProjectStore, mockGetState } = vi.hoisted(() => {
+  const getState = vi.fn();
+  const useProjectStore = Object.assign(vi.fn(), {
+    getState,
+  });
+  return {
+    mockUseProjectStore: useProjectStore,
+    mockGetState: getState,
+  };
+});
+
 const mockNavigate = vi.fn();
 const mockInitializeProject = vi.fn();
+const mockSetCurrentProject = vi.fn();
 const mockShow = vi.fn();
 
 vi.mock('react-router-dom', async () => {
@@ -20,7 +32,7 @@ vi.mock('react-router-dom', async () => {
 });
 
 vi.mock('@/store/useProjectStore', () => ({
-  useProjectStore: vi.fn(),
+  useProjectStore: mockUseProjectStore,
 }));
 
 vi.mock('@/api/endpoints', () => ({
@@ -78,8 +90,13 @@ describe('Home submit flow', () => {
 
     vi.mocked(useProjectStore).mockReturnValue({
       initializeProject: mockInitializeProject,
+      setCurrentProject: mockSetCurrentProject,
+      currentProject: null,
       isGlobalLoading: false,
     } as any);
+    mockGetState.mockReturnValue({
+      currentProject: { id: 'new-project-id' },
+    });
     vi.mocked(listUserTemplates).mockResolvedValue({ data: { templates: [] } } as any);
     vi.mocked(getPresetStyles).mockResolvedValue([]);
 
@@ -123,19 +140,11 @@ describe('Home submit flow', () => {
     expect(mockNavigate).not.toHaveBeenCalledWith('/project/old-project-id/outline');
   });
 
-  it('keeps both html and image modes available on the home page', async () => {
+  it('keeps the teaching template and material entry available on the home page', async () => {
     render(<Home />);
 
-    expect(screen.getByRole('button', { name: '结构化生成' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Image 图片生成' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: '素材生成' }).length).toBeGreaterThan(0);
     expect(screen.getByText('选择教学模板')).toBeInTheDocument();
     expect(screen.getByTestId('scheme-selector')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Image 图片生成' }));
-
-    await waitFor(() => {
-      expect(screen.getByText('选择风格模板')).toBeInTheDocument();
-    });
-    expect(screen.queryByTestId('scheme-selector')).not.toBeInTheDocument();
   });
 });

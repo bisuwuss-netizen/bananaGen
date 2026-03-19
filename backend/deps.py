@@ -7,14 +7,23 @@ from config_fastapi import settings
 
 logger = logging.getLogger(__name__)
 
-engine = create_async_engine(
-    settings.sqlalchemy_database_url,
-    echo=False,
-    pool_pre_ping=True,
-    pool_recycle=3600,
-    pool_size=10,
-    max_overflow=20,
-)
+
+def _async_engine_kwargs() -> dict:
+    if settings.sqlalchemy_database_url.startswith("sqlite"):
+        return {
+            "echo": False,
+            "connect_args": {"check_same_thread": False},
+        }
+    return {
+        "echo": False,
+        "pool_pre_ping": True,
+        "pool_recycle": 3600,
+        "pool_size": 10,
+        "max_overflow": 20,
+    }
+
+
+engine = create_async_engine(settings.sqlalchemy_database_url, **_async_engine_kwargs())
 
 async_session_factory = async_sessionmaker(
     engine,

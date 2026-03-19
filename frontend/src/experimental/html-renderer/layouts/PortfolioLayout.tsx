@@ -6,7 +6,7 @@
 import React from 'react';
 import { PortfolioModel, ThemeConfig } from '../types/schema';
 import {
-  toInlineStyle,
+  toCSS,
   getBaseSlideStyle,
   getTitleStyle,
   getSubtitleStyle,
@@ -32,10 +32,10 @@ export const PortfolioLayout: React.FC<PortfolioLayoutProps> = ({ model, theme }
       : {}),
   };
 
-  const titleStyle = toInlineStyle({ ...getTitleStyle(theme), textShadow: '0 1px 2px rgba(0,0,0,0.1)' });
-  const subtitleStyle = toInlineStyle(getSubtitleStyle(theme));
+  const titleStyle = toCSS({ ...getTitleStyle(theme), textShadow: '0 1px 2px rgba(0,0,0,0.1)' });
+  const subtitleStyle = toCSS(getSubtitleStyle(theme));
 
-  const gridContainerStyle = toInlineStyle({
+  const gridContainerStyle = toCSS({
     marginTop: '36px',
     display: 'grid',
     gridTemplateColumns: layout === 'grid'
@@ -52,7 +52,7 @@ export const PortfolioLayout: React.FC<PortfolioLayoutProps> = ({ model, theme }
       <div style={gridContainerStyle}>
         {items.map((item, index) => {
           const baseCardStyle = getCardStyle(theme);
-          const itemCardStyle = toInlineStyle({
+          const itemCardStyle = toCSS({
             ...baseCardStyle,
             padding: '0',
             overflow: 'hidden',
@@ -60,7 +60,7 @@ export const PortfolioLayout: React.FC<PortfolioLayoutProps> = ({ model, theme }
             transition: 'transform 0.2s, box-shadow 0.2s',
           });
 
-          const imageContainerStyle = toInlineStyle({
+          const imageContainerStyle = toCSS({
             width: '100%',
             height: '180px',
             overflow: 'hidden',
@@ -68,18 +68,18 @@ export const PortfolioLayout: React.FC<PortfolioLayoutProps> = ({ model, theme }
             position: 'relative',
           });
 
-          const imageStyle = toInlineStyle({
+          const imageStyle = toCSS({
             width: '100%',
             height: '100%',
             objectFit: 'cover',
             transition: 'transform 0.3s',
           });
 
-          const contentStyle = toInlineStyle({
+          const contentStyle = toCSS({
             padding: '16px',
           });
 
-          const itemTitleStyle = toInlineStyle({
+          const itemTitleStyle = toCSS({
             fontSize: theme.sizes.bodySize,
             fontWeight: 'bold',
             color: theme.colors.text,
@@ -87,20 +87,20 @@ export const PortfolioLayout: React.FC<PortfolioLayoutProps> = ({ model, theme }
             lineHeight: '1.3',
           });
 
-          const itemDescStyle = toInlineStyle({
+          const itemDescStyle = toCSS({
             fontSize: theme.sizes.smallSize,
             color: theme.colors.textLight,
             lineHeight: '1.5',
             marginBottom: '12px',
           });
 
-          const tagsContainerStyle = toInlineStyle({
+          const tagsContainerStyle = toCSS({
             display: 'flex',
             flexWrap: 'wrap',
             gap: '6px',
           });
 
-          const tagStyle = toInlineStyle({
+          const tagStyle = toCSS({
             fontSize: '12px',
             padding: '4px 10px',
             borderRadius: '12px',
