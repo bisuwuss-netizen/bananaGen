@@ -380,19 +380,17 @@ export const DescriptionCard: React.FC<DescriptionCardProps> = ({
 
         {/* 操作栏 */}
         <div className="border-t border-gray-100 px-4 py-3 flex justify-end gap-2 mt-auto">
-          {isHtmlMode && hasHtmlModel && (
+          {isHtmlMode && hasHtmlModel && import.meta.env.VITE_SHOW_DEBUG_BUTTONS === 'true' && (
             <>
-              {import.meta.env.VITE_SHOW_DEBUG_BUTTONS === 'true' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  icon={<Code size={16} />}
-                  onClick={() => setIsViewingJson(true)}
-                  disabled={generating}
-                >
-                  查看JSON
-                </Button>
-              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Code size={16} />}
+                onClick={() => setIsViewingJson(true)}
+                disabled={generating}
+              >
+                查看JSON
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"
@@ -404,7 +402,7 @@ export const DescriptionCard: React.FC<DescriptionCardProps> = ({
               </Button>
             </>
           )}
-          {!isHtmlMode && (
+          {!isHtmlMode && import.meta.env.VITE_SHOW_DEBUG_BUTTONS === 'true' && (
             <Button
               variant="ghost"
               size="sm"
