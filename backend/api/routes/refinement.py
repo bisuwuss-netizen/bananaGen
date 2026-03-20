@@ -158,6 +158,20 @@ def _prepare_refined_outline_pages(refined, *, render_mode: str, ai_service) -> 
     return pages_data
 
 
+def _extract_refine_payload(result, *, default_summary: str, payload_keys: tuple[str, ...] = ()) -> tuple[str, object]:
+    """Accept both RefineResult objects and legacy raw dict/list payloads."""
+    summary = getattr(result, "summary", default_summary) or default_summary
+    data = getattr(result, "data", result)
+
+    if isinstance(data, dict):
+        summary = data.get("summary", summary)
+        for key in payload_keys:
+            if key in data:
+                return summary, data[key]
+
+    return summary, data
+
+
 @router.post("/{project_id}/refine/outline", response_model=SuccessResponse)
 async def refine_outline(
     project_id: str,
@@ -188,8 +202,14 @@ async def refine_outline(
         render_mode=render_mode,
     )
 
+    summary, refined_outline = _extract_refine_payload(
+        result,
+        default_summary="大纲已更新",
+        payload_keys=("pages", "outline"),
+    )
+
     pages_data = _prepare_refined_outline_pages(
-        result.data,
+        refined_outline,
         render_mode=render_mode,
         ai_service=ai_service,
     )
@@ -219,9 +239,9 @@ async def refine_outline(
     await db.flush()
 
     return SuccessResponse(data={
-        "outline": result.data,
+        "outline": refined_outline,
         "pages": [p.to_dict() for p in created],
-        "summary": result.summary,
+        "summary": summary,
     })
 
 
@@ -264,13 +284,17 @@ async def refine_descriptions(
             language=language,
         )
 
+        summary, refined_model_payload = _extract_refine_payload(
+            result,
+            default_summary="描述已更新",
+            payload_keys=("html_models",),
+        )
+
         refined_models = _ensure_refined_list(
-            result.data,
+            refined_model_payload,
             expected_count=len(sorted_pages),
             label="refined html models",
         )
-        
-        summary = result.summary
 
         now = datetime.now()
         for page, refined_model in zip(sorted_pages, refined_models):
@@ -292,13 +316,17 @@ async def refine_descriptions(
             language=language,
         )
 
+        summary, refined_description_payload = _extract_refine_payload(
+            result,
+            default_summary="描述已更新",
+            payload_keys=("descriptions",),
+        )
+
         refined_descs = _ensure_refined_list(
-            result.data,
+            refined_description_payload,
             expected_count=len(sorted_pages),
             label="refined descriptions",
         )
-        
-        summary = result.summary
 
         now = datetime.now()
         timestamp = now.isoformat()
