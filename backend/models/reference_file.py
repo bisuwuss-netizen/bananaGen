@@ -3,6 +3,7 @@ Reference File model - stores uploaded reference files and their parsed content
 """
 import uuid
 from datetime import datetime
+from sqlalchemy.orm import deferred
 from . import db, format_datetime_to_iso
 
 
@@ -14,6 +15,7 @@ class ReferenceFile(db.Model):
     
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     project_id = db.Column(db.String(36), db.ForeignKey('projects.id'), nullable=True)  # Can be null for global files
+    user_id = deferred(db.Column(db.String(100), nullable=True, index=True))
     filename = db.Column(db.String(500), nullable=False)
     file_path = db.Column(db.String(500), nullable=False)  # Path relative to upload folder
     file_size = db.Column(db.Integer, nullable=False)  # File size in bytes
@@ -39,6 +41,7 @@ class ReferenceFile(db.Model):
         result = {
             'id': self.id,
             'project_id': self.project_id,
+            'user_id': self.user_id,
             'filename': self.filename,
             'file_size': self.file_size,
             'file_type': self.file_type,
@@ -78,4 +81,3 @@ class ReferenceFile(db.Model):
     
     def __repr__(self):
         return f'<ReferenceFile {self.id}: {self.filename} ({self.parse_status})>'
-

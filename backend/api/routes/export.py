@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from deps import get_db
+from deps import CurrentUser, get_db, get_project_for_user, require_current_user
 from models.project import Project
 from models.page import Page
 from models.task import Task
@@ -88,11 +88,10 @@ async def export_pptx(
     request: Request,
     filename: Optional[str] = Query(None),
     page_ids: Optional[str] = Query(None),
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    project = await db.get(Project, project_id)
-    if not project:
-        raise HTTPException(404, "Project not found")
+    project = await get_project_for_user(db, project_id, current_user)
 
     result = await db.execute(
         select(Page)
@@ -136,11 +135,10 @@ async def export_pdf(
     request: Request,
     filename: Optional[str] = Query(None),
     page_ids: Optional[str] = Query(None),
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    project = await db.get(Project, project_id)
-    if not project:
-        raise HTTPException(404, "Project not found")
+    project = await get_project_for_user(db, project_id, current_user)
 
     result = await db.execute(
         select(Page)
@@ -182,11 +180,10 @@ async def export_pdf(
 async def export_editable_pptx(
     project_id: str,
     req: ExportEditablePptxRequest,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    project = await db.get(Project, project_id)
-    if not project:
-        raise HTTPException(404, "Project not found")
+    project = await get_project_for_user(db, project_id, current_user)
 
     result = await db.execute(
         select(Page)

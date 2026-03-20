@@ -5,7 +5,7 @@ import { Button, Loading, Card, useToast, useConfirm } from '@/components/shared
 import { ProjectCard } from '@/components/history/ProjectCard';
 import { useProjectStore } from '@/store/useProjectStore';
 import * as api from '@/api/endpoints';
-import { normalizeProject, getCookie } from '@/utils';
+import { normalizeProject } from '@/utils';
 import { getProjectTitle, getProjectRoute } from '@/utils/projectUtils';
 import type { Project } from '@/types';
 
@@ -47,10 +47,7 @@ export const History: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      // 从cookie获取user_id，即使为空也传递参数
-      const userId = getCookie('user_id') || '';
-      console.log('当前user_id (from cookie):', userId);
-      const response = await api.listProjects(50, 0, userId);
+      const response = await api.listProjects(50, 0);
       if (response.data?.projects) {
         const normalizedProjects = response.data.projects.map(normalizeProject);
         setProjects(normalizedProjects);

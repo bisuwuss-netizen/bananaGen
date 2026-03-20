@@ -2,12 +2,12 @@
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Cookie, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from deps import get_db
+from deps import CurrentUser, get_db, get_project_for_user, require_current_user
 from models.project import Project
 from models.page import Page
 from models.task import Task
@@ -24,22 +24,17 @@ from services.runtime_state import load_runtime_config
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/projects", tags=["generation"])
 
-
-def _resolve_user_id(
-    user_id: str | None = Query(None),
-    user_id_cookie: str | None = Cookie(None, alias="user_id"),
-) -> str:
-    return user_id or user_id_cookie or "1"
-
-
-async def _get_project_with_pages(db: AsyncSession, project_id: str) -> Project:
-    result = await db.execute(
-        select(Project).options(selectinload(Project.pages)).where(Project.id == project_id)
+async def _get_project_with_pages(
+    db: AsyncSession,
+    project_id: str,
+    current_user: CurrentUser,
+) -> Project:
+    return await get_project_for_user(
+        db,
+        project_id,
+        current_user,
+        selectinload(Project.pages),
     )
-    project = result.scalar_one_or_none()
-    if not project:
-        raise HTTPException(404, "Project not found")
-    return project
 
 
 async def _get_reference_files_content(db: AsyncSession, project_id: str) -> list[dict]:
@@ -77,9 +72,10 @@ def _reconstruct_outline(pages: list[Page]) -> list[dict]:
 async def generate_outline(
     project_id: str,
     req: GenerateOutlineRequest,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    project = await _get_project_with_pages(db, project_id)
+    project = await _get_project_with_pages(db, project_id, current_user)
     task = Task(
         project_id=project_id,
         task_type="GENERATE_OUTLINE",
@@ -127,9 +123,10 @@ async def generate_outline(
 async def generate_descriptions(
     project_id: str,
     req: GenerateDescriptionsRequest,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    project = await _get_project_with_pages(db, project_id)
+    project = await _get_project_with_pages(db, project_id, current_user)
     if not project.pages:
         raise HTTPException(400, "No pages found. Generate outline first.")
 
@@ -179,9 +176,10 @@ async def generate_descriptions(
 async def generate_layout_plan(
     project_id: str,
     req: GenerateLayoutPlanRequest,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    project = await _get_project_with_pages(db, project_id)
+    project = await _get_project_with_pages(db, project_id, current_user)
     if (project.render_mode or "image") != "html":
         raise HTTPException(400, "Layout plan is only available in HTML render mode")
 
@@ -278,9 +276,10 @@ async def generate_layout_plan(
 async def generate_images(
     project_id: str,
     req: GenerateImagesRequest,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    project = await _get_project_with_pages(db, project_id)
+    project = await _get_project_with_pages(db, project_id, current_user)
 
     task = Task(
         project_id=project_id,

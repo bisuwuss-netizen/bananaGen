@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from deps import get_db
+from deps import CurrentUser, get_db, get_project_for_user, require_current_user
 from models.project import Project
 from models.page import Page
 from models.page_image_version import PageImageVersion
@@ -30,11 +30,10 @@ router = APIRouter(prefix="/api/projects", tags=["pages"])
 async def create_page(
     project_id: str,
     req: CreatePageRequest,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    project = await db.get(Project, project_id)
-    if not project:
-        raise HTTPException(404, "Project not found")
+    project = await get_project_for_user(db, project_id, current_user)
 
     page = Page(
         project_id=project_id,
@@ -69,8 +68,10 @@ async def update_page(
     project_id: str,
     page_id: str,
     req: UpdatePageRequest,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await get_project_for_user(db, project_id, current_user)
     page = await db.get(Page, page_id)
     if not page or page.project_id != project_id:
         raise HTTPException(404, "Page not found")
@@ -95,8 +96,10 @@ async def update_page(
 async def delete_page(
     project_id: str,
     page_id: str,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await get_project_for_user(db, project_id, current_user)
     page = await db.get(Page, page_id)
     if not page or page.project_id != project_id:
         raise HTTPException(404, "Page not found")
@@ -116,8 +119,10 @@ async def update_page_outline(
     project_id: str,
     page_id: str,
     req: UpdateOutlineRequest,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    project = await get_project_for_user(db, project_id, current_user)
     page = await db.get(Page, page_id)
     if not page or page.project_id != project_id:
         raise HTTPException(404, "Page not found")
@@ -125,7 +130,6 @@ async def update_page_outline(
     page.set_outline_content(req.outline_content)
     page.updated_at = datetime.now()
 
-    project = await db.get(Project, project_id)
     if project and (project.render_mode or "image") == "html":
         page.set_html_model(None)
         page.status = "DRAFT"
@@ -146,8 +150,10 @@ async def update_page_description(
     project_id: str,
     page_id: str,
     req: UpdateDescriptionRequest,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    project = await get_project_for_user(db, project_id, current_user)
     page = await db.get(Page, page_id)
     if not page or page.project_id != project_id:
         raise HTTPException(404, "Page not found")
@@ -155,7 +161,6 @@ async def update_page_description(
     page.set_description_content(req.description_content)
     page.updated_at = datetime.now()
 
-    project = await db.get(Project, project_id)
     if project:
         project.updated_at = datetime.now()
 
@@ -167,8 +172,10 @@ async def update_page_description(
 async def get_page_image_versions(
     project_id: str,
     page_id: str,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await get_project_for_user(db, project_id, current_user)
     page = await db.get(Page, page_id)
     if not page or page.project_id != project_id:
         raise HTTPException(404, "Page not found")
@@ -190,8 +197,10 @@ async def set_current_image_version(
     project_id: str,
     page_id: str,
     version_id: str,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    await get_project_for_user(db, project_id, current_user)
     page = await db.get(Page, page_id)
     if not page or page.project_id != project_id:
         raise HTTPException(404, "Page not found")
@@ -232,15 +241,13 @@ async def generate_page_description(
     project_id: str,
     page_id: str,
     req: GeneratePageDescriptionRequest,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    project = await get_project_for_user(db, project_id, current_user)
     page = await db.get(Page, page_id)
     if not page or page.project_id != project_id:
         raise HTTPException(404, "Page not found")
-
-    project = await db.get(Project, project_id)
-    if not project:
-        raise HTTPException(404, "Project not found")
 
     language = req.language or app_settings.output_language
     render_mode = project.render_mode or "image"
@@ -447,15 +454,13 @@ async def generate_page_image(
     project_id: str,
     page_id: str,
     req: GeneratePageImageRequest,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    project = await get_project_for_user(db, project_id, current_user)
     page = await db.get(Page, page_id)
     if not page or page.project_id != project_id:
         raise HTTPException(404, "Page not found")
-
-    project = await db.get(Project, project_id)
-    if not project:
-        raise HTTPException(404, "Project not found")
 
     if page.generated_image_path and not req.force_regenerate:
         raise HTTPException(400, "Image already exists. Set force_regenerate=true to regenerate")

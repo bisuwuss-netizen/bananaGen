@@ -1,15 +1,38 @@
 import { apiClient } from './client';
 import type { Project, Task, ApiResponse, CreateProjectRequest, Page } from '@/types';
 import type { Settings } from '../types/index';
-import { getCookie } from '@/utils';
 
-const resolveUserId = (input?: string | null): string | undefined => {
-  if (input && input.trim()) return input.trim();
-  const fromCookie = getCookie('user_id');
-  if (fromCookie && fromCookie.trim()) return fromCookie.trim();
-  const fromStorage = localStorage.getItem('user_id');
-  if (fromStorage && fromStorage.trim()) return fromStorage.trim();
-  return undefined;
+export interface AuthUser {
+  user_id: string;
+  username: string;
+  auth_enabled?: boolean;
+}
+
+export interface AuthStatus {
+  enabled: boolean;
+  authenticated: boolean;
+  user: AuthUser | null;
+}
+
+export const loginAuth = async (
+  username: string,
+  password: string
+): Promise<ApiResponse<AuthStatus>> => {
+  const response = await apiClient.post<ApiResponse<AuthStatus>>('/api/auth/login', {
+    username,
+    password,
+  });
+  return response.data;
+};
+
+export const logoutAuth = async (): Promise<ApiResponse<AuthStatus>> => {
+  const response = await apiClient.post<ApiResponse<AuthStatus>>('/api/auth/logout');
+  return response.data;
+};
+
+export const getAuthStatus = async (): Promise<ApiResponse<AuthStatus>> => {
+  const response = await apiClient.get<ApiResponse<AuthStatus>>('/api/auth/me');
+  return response.data;
 };
 
 // ===== 项目相关 API =====
@@ -26,10 +49,6 @@ export const createProject = async (data: CreateProjectRequest): Promise<ApiResp
     creation_type = 'outline';
   }
 
-  // 从cookie获取user_id，如果不存在则使用'1'
-  const userId = getCookie('user_id') || '1';
-  console.log('创建项目 - user_id (from cookie):', userId);
-
   const response = await apiClient.post<ApiResponse<Project>>('/api/projects', {
     creation_type,
     idea_prompt: data.idea_prompt,
@@ -38,7 +57,6 @@ export const createProject = async (data: CreateProjectRequest): Promise<ApiResp
     template_style: data.template_style,
     scheme_id: data.scheme_id,
     render_mode: data.render_mode || 'image',  // 渲染模式：image 或 html
-    user_id: userId,  // 自动添加user_id参数，值为1（如果localStorage中没有）
   });
   return response.data;
 };
@@ -64,14 +82,11 @@ export const uploadTemplate = async (
  * 获取项目列表（历史项目）
  * @param limit 每页数量
  * @param offset 偏移量
- * @param userId 用户ID，用于过滤项目（可选）
  */
-export const listProjects = async (limit?: number, offset?: number, userId?: string): Promise<ApiResponse<{ projects: Project[]; total: number }>> => {
+export const listProjects = async (limit?: number, offset?: number): Promise<ApiResponse<{ projects: Project[]; total: number }>> => {
   const params = new URLSearchParams();
   if (limit !== undefined) params.append('limit', limit.toString());
   if (offset !== undefined) params.append('offset', offset.toString());
-  const finalUserId = resolveUserId(userId);
-  if (finalUserId) params.append('user_id', finalUserId);
 
   const queryString = params.toString();
   const url = `/api/projects${queryString ? `?${queryString}` : ''}`;
@@ -523,22 +538,19 @@ export interface Material {
  *   - If not provided: Get all materials via /api/materials
  */
 export const listMaterials = async (
-  projectId?: string,
-  userId?: string
+  projectId?: string
 ): Promise<ApiResponse<{ materials: Material[]; count: number }>> => {
   let url: string;
-  const finalUserId = resolveUserId(userId);
-  const userQuery = finalUserId ? `&user_id=${encodeURIComponent(finalUserId)}` : '';
 
   if (!projectId || projectId === 'all') {
     // Get all materials using global endpoint
-    url = `/api/materials?project_id=all${userQuery}`;
+    url = '/api/materials?project_id=all';
   } else if (projectId === 'none') {
     // Get global materials (not bound to any project)
-    url = `/api/materials?project_id=none${userQuery}`;
+    url = '/api/materials?project_id=none';
   } else {
     // Get materials for specific project
-    url = `/api/projects/${projectId}/materials${finalUserId ? `?user_id=${encodeURIComponent(finalUserId)}` : ''}`;
+    url = `/api/projects/${projectId}/materials`;
   }
 
   const response = await apiClient.get<ApiResponse<{ materials: Material[]; count: number }>>(url);

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, 
 from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from deps import get_db
+from deps import CurrentUser, get_db, get_project_for_user, require_current_user
 from models.project import Project
 from models.template import Template
 from schemas.common import SuccessResponse
@@ -22,11 +22,10 @@ ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 async def upload_template(
     project_id: str,
     request: Request,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    project = await db.get(Project, project_id)
-    if not project:
-        raise HTTPException(404, "Project not found")
+    project = await get_project_for_user(db, project_id, current_user)
 
     form = await request.form()
     file = form.get("template_image")
@@ -51,11 +50,10 @@ async def upload_template(
 @router.delete("/{project_id}/template", response_model=SuccessResponse)
 async def delete_template(
     project_id: str,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    project = await db.get(Project, project_id)
-    if not project:
-        raise HTTPException(404, "Project not found")
+    project = await get_project_for_user(db, project_id, current_user)
     if not project.template_image_path:
         raise HTTPException(400, "No template to delete")
 

@@ -68,10 +68,14 @@ class Settings(BaseSettings):
 
     # --- Server ---
     secret_key: str = "your-secret-key-change-this"
-    port: int = 5001
+    port: int = 5000
     debug: bool = False
     log_level: str = "INFO"
     in_docker: str = "0"
+    auth_users: str = ""
+    auth_cookie_name: str = "banana_auth"
+    auth_cookie_max_age_seconds: int = 60 * 60 * 24 * 7
+    auth_cookie_secure: bool = False
 
     # --- Database ---
     database_url: Optional[str] = None

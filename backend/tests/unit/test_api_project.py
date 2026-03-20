@@ -6,6 +6,7 @@ import pytest
 from unittest.mock import AsyncMock, Mock
 
 from api.routes.projects import create_project
+from deps import CurrentUser
 from schemas.project import CreateProjectRequest
 from conftest import assert_success_response, assert_error_response
 
@@ -78,7 +79,11 @@ class TestProjectCreate:
             scheme_id='academic',
         )
 
-        payload = await create_project(req=req, user_id='1', db=db)
+        payload = await create_project(
+            req=req,
+            current_user=CurrentUser(user_id='1', username='legacy', auth_enabled=False),
+            db=db,
+        )
 
         assert payload.data['project_id'] == 'project-commit-check'
         db.flush.assert_awaited_once()

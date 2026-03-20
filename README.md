@@ -56,6 +56,7 @@ cp .env.example .env
 - `OPENAI_API_KEY`
 - `TEXT_MODEL`
 - `IMAGE_MODEL`
+- 如果要启用多用户隔离：`AUTH_USERS`、`SECRET_KEY`
 
 ### 3. 安装依赖
 
@@ -103,6 +104,25 @@ npm run lint
 ```bash
 docker compose up -d
 ```
+
+## 多用户上线最小配置
+
+如果你要让不同账号只能看到自己的 PPT 项目，后端必须拿到这些环境变量：
+
+- `AUTH_USERS`
+- `SECRET_KEY`
+- `AUTH_COOKIE_SECURE=true`
+- `CORS_ORIGINS=https://你的前端域名`
+
+推荐直接参考 [`.env.production.example`](/Users/bisuv/Desktop/02_今日处理中-Today/ai生成ppt项目/banana_ppt/.env.production.example)。
+
+上线后先做这一步自检：
+
+```bash
+curl -s http://127.0.0.1:5000/api/auth/me
+```
+
+看到 `"enabled":true` 才说明多用户隔离真正生效。
 
 ## 上传到 GitHub 前的安全检查
 

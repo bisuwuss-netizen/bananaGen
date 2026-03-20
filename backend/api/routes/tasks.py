@@ -12,7 +12,14 @@ from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisco
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from deps import async_session_factory, get_db
+from deps import (
+    CurrentUser,
+    async_session_factory,
+    get_db,
+    get_optional_current_user,
+    get_project_for_user,
+    require_current_user,
+)
 from models.task import Task
 from schemas.common import SuccessResponse
 from services.tasks import _get_stale_timeout_seconds, task_manager
@@ -84,9 +91,12 @@ async def _auto_fail_stale_task_async(db: AsyncSession, task: Task | None) -> bo
 async def get_task_status(
     project_id: str,
     task_id: str,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """GET /api/projects/{project_id}/tasks/{task_id} - Get task status."""
+    if project_id not in ("none", "global", "_none"):
+        await get_project_for_user(db, project_id, current_user)
     task = await _load_task(db, project_id, task_id)
     if not task:
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
@@ -103,10 +113,25 @@ async def stream_task_status(
 ):
     """Push task progress updates without client polling."""
     await websocket.accept()
+    current_user = get_optional_current_user(websocket)
+    if current_user is None:
+        await websocket.send_json(
+            {"task_id": task_id, "status": "FAILED", "error_message": "Authentication required"}
+        )
+        await websocket.close(code=4401)
+        return
     update_queue = task_manager.subscribe_task(task_id)
 
     try:
         async with async_session_factory() as db:
+            if project_id not in ("none", "global", "_none"):
+                try:
+                    await get_project_for_user(db, project_id, current_user)
+                except HTTPException:
+                    await websocket.send_json(
+                        {"task_id": task_id, "status": "FAILED", "error_message": "Task not found"}
+                    )
+                    return
             task = await _load_task(db, project_id, task_id)
             if not task:
                 await websocket.send_json(
@@ -128,6 +153,14 @@ async def stream_task_status(
                 payload = await asyncio.wait_for(update_queue.get(), timeout=1.0)
             except asyncio.TimeoutError:
                 async with async_session_factory() as db:
+                    if project_id not in ("none", "global", "_none"):
+                        try:
+                            await get_project_for_user(db, project_id, current_user)
+                        except HTTPException:
+                            await websocket.send_json(
+                                {"task_id": task_id, "status": "FAILED", "error_message": "Task not found"}
+                            )
+                            return
                     task = await _load_task(db, project_id, task_id)
                     if not task:
                         await websocket.send_json(

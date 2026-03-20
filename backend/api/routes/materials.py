@@ -6,12 +6,12 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Cookie
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from werkzeug.utils import secure_filename
 
-from deps import get_db
+from deps import CurrentUser, get_db, get_project_for_user, require_current_user
 from models.project import Project
 from models.material import Material
 from models.task import Task
@@ -24,21 +24,10 @@ router = APIRouter(tags=["materials"])
 
 ALLOWED_MATERIAL_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg"}
 
-
-def _resolve_user_id(
-    user_id: str | None = Query(None),
-    user_id_cookie: str | None = Cookie(None, alias="user_id"),
-) -> str | None:
-    for v in (user_id, user_id_cookie):
-        if v and str(v).strip():
-            return str(v).strip()
-    return None
-
-
 async def _get_materials_list(
     db: AsyncSession,
     filter_project_id: str,
-    user_id: str | None = None,
+    current_user: CurrentUser,
 ) -> list[dict]:
     query = select(Material)
 
@@ -47,22 +36,14 @@ async def _get_materials_list(
     elif filter_project_id != "all":
         query = query.where(Material.project_id == filter_project_id)
 
-    if user_id:
-        query = query.where(or_(Material.user_id == user_id, Material.user_id.is_(None)))
+    if current_user.auth_enabled:
+        query = query.where(Material.user_id == current_user.user_id)
+    else:
+        query = query.where(or_(Material.user_id == current_user.user_id, Material.user_id.is_(None)))
 
     query = query.order_by(Material.created_at.desc())
     result = await db.execute(query)
     materials = result.scalars().all()
-
-    # Fallback if user_id filter returns empty
-    if user_id and not materials:
-        fallback = select(Material).order_by(Material.created_at.desc())
-        if filter_project_id == "none":
-            fallback = fallback.where(Material.project_id.is_(None))
-        elif filter_project_id != "all":
-            fallback = fallback.where(Material.project_id == filter_project_id)
-        result = await db.execute(fallback)
-        materials = result.scalars().all()
 
     from services.file_service import FileService
 
@@ -91,10 +72,12 @@ async def _get_materials_list(
 @router.get("/api/projects/{project_id}/materials", response_model=SuccessResponse)
 async def list_materials(
     project_id: str,
-    user_id: str | None = Depends(_resolve_user_id),
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    materials = await _get_materials_list(db, project_id, user_id)
+    if project_id != "none":
+        await get_project_for_user(db, project_id, current_user)
+    materials = await _get_materials_list(db, project_id, current_user)
     return SuccessResponse(data={"materials": materials, "count": len(materials)})
 
 
@@ -102,7 +85,7 @@ async def list_materials(
 async def upload_material(
     project_id: str,
     request: Request,
-    user_id: str | None = Depends(_resolve_user_id),
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     form = await request.form()
@@ -119,6 +102,9 @@ async def upload_material(
 
     file_service = FileService(app_settings.upload_folder)
     target_project_id = None if project_id == "none" else project_id
+
+    if target_project_id:
+        await get_project_for_user(db, target_project_id, current_user)
 
     if target_project_id:
         materials_dir = file_service._get_materials_dir(target_project_id)
@@ -143,7 +129,7 @@ async def upload_material(
 
     material = Material(
         project_id=target_project_id,
-        user_id=user_id or "1",
+        user_id=current_user.user_id,
         filename=unique_filename,
         relative_path=relative_path,
         url=image_url,
@@ -158,13 +144,11 @@ async def upload_material(
 async def generate_material_image(
     project_id: str,
     request: Request,
-    user_id: str | None = Depends(_resolve_user_id),
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     if project_id != "none":
-        project = await db.get(Project, project_id)
-        if not project:
-            raise HTTPException(404, "Project not found")
+        await get_project_for_user(db, project_id, current_user)
 
     form = await request.form()
     data = dict(form)
@@ -226,7 +210,7 @@ async def generate_material_image(
             app_settings.default_resolution,
             str(temp_dir),
             runtime_config,
-            user_id or "1",
+            current_user.user_id,
         )
     except Exception:
         shutil.rmtree(temp_dir, ignore_errors=True)
@@ -240,30 +224,33 @@ async def generate_material_image(
 @router.get("/api/materials", response_model=SuccessResponse)
 async def list_all_materials(
     project_id: str = Query("all"),
-    user_id: str | None = Depends(_resolve_user_id),
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    materials = await _get_materials_list(db, project_id, user_id)
+    materials = await _get_materials_list(db, project_id, current_user)
     return SuccessResponse(data={"materials": materials, "count": len(materials)})
 
 
 @router.post("/api/materials/upload", response_model=SuccessResponse, status_code=201)
 async def upload_material_global(
     request: Request,
-    user_id: str | None = Depends(_resolve_user_id),
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     # Delegate to the project-scoped upload with project_id="none"
-    return await upload_material("none", request, user_id, db)
+    return await upload_material("none", request, current_user, db)
 
 
 @router.delete("/api/materials/{material_id}", response_model=SuccessResponse)
 async def delete_material(
     material_id: str,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     material = await db.get(Material, material_id)
     if not material:
+        raise HTTPException(404, "Material not found")
+    if current_user.auth_enabled and material.user_id != current_user.user_id:
         raise HTTPException(404, "Material not found")
 
     from services.file_service import FileService
@@ -286,6 +273,7 @@ async def delete_material(
 @router.post("/api/materials/associate", response_model=SuccessResponse)
 async def associate_materials_to_project(
     request: Request,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     data = await request.json()
@@ -297,14 +285,13 @@ async def associate_materials_to_project(
     if not material_urls or not isinstance(material_urls, list):
         raise HTTPException(400, "material_urls must be a non-empty array")
 
-    project = await db.get(Project, project_id)
-    if not project:
-        raise HTTPException(404, "Project not found")
+    await get_project_for_user(db, project_id, current_user)
 
     result = await db.execute(
         select(Material).where(
             Material.url.in_(material_urls),
             Material.project_id.is_(None),
+            Material.user_id == current_user.user_id,
         )
     )
     updated_ids = []

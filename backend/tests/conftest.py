@@ -17,6 +17,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
+from sqlalchemy import inspect
 
 
 backend_path = Path(__file__).parent.parent
@@ -90,6 +91,33 @@ class CompatClient:
 
     def delete(self, url: str, **kwargs: Any) -> CompatResponse:
         return self._request("DELETE", url, **kwargs)
+
+
+def _column_exists(engine, table_name: str, column_name: str) -> bool:
+    inspector = inspect(engine)
+    columns = [col["name"] for col in inspector.get_columns(table_name)]
+    return column_name in columns
+
+
+def _index_exists(engine, table_name: str, index_name: str) -> bool:
+    inspector = inspect(engine)
+    indexes = inspector.get_indexes(table_name)
+    return any(index.get("name") == index_name for index in indexes)
+
+
+def _ensure_reference_file_user_id_column(engine) -> None:
+    if _column_exists(engine, "reference_files", "user_id"):
+        return
+
+    url = make_url(str(engine.url))
+    with engine.begin() as connection:
+        if url.drivername.startswith("sqlite"):
+            connection.execute(text("ALTER TABLE reference_files ADD COLUMN user_id VARCHAR(100)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_reference_files_user_id ON reference_files (user_id)"))
+        else:
+            connection.execute(text("ALTER TABLE reference_files ADD COLUMN user_id VARCHAR(100) NULL"))
+            if not _index_exists(engine, "reference_files", "ix_reference_files_user_id"):
+                connection.execute(text("CREATE INDEX ix_reference_files_user_id ON reference_files (user_id)"))
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -179,6 +207,7 @@ def app(_configure_test_database):
     install_runtime_orm()
     db.metadata.drop_all(bind=engine)
     db.metadata.create_all(bind=engine)
+    _ensure_reference_file_user_id_column(engine)
 
     yield fastapi_app
 

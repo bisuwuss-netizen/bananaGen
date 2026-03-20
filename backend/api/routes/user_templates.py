@@ -3,11 +3,11 @@ import uuid
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Cookie
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from deps import get_db
+from deps import CurrentUser, get_db, require_current_user
 from models.user_template import UserTemplate
 from schemas.common import SuccessResponse
 from config_fastapi import settings as app_settings
@@ -15,22 +15,21 @@ from config_fastapi import settings as app_settings
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/user-templates", tags=["user-templates"])
 
-
-def _resolve_user_id(
-    user_id: str | None = Query(None),
-    user_id_cookie: str | None = Cookie(None, alias="user_id"),
-) -> str | None:
-    for v in (user_id, user_id_cookie):
-        if v and str(v).strip():
-            return str(v).strip()
-    return None
+def _template_user_id(current_user: CurrentUser) -> int:
+    try:
+        return int(current_user.user_id)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=400,
+            detail="Configured user_id for template library must be numeric",
+        ) from exc
 
 
 @router.post("", response_model=SuccessResponse, status_code=201)
 async def upload_user_template(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    user_id: str | None = Depends(_resolve_user_id),
+    current_user: CurrentUser = Depends(require_current_user),
 ):
     form = await request.form()
     file = form.get("template_image")
@@ -52,7 +51,7 @@ async def upload_user_template(
     now = datetime.now()
     template = UserTemplate(
         id=template_id,
-        user_id=int(user_id) if user_id else 1,
+        user_id=_template_user_id(current_user),
         name=name,
         file_path=file_path,
         file_size=file_size,
@@ -69,26 +68,17 @@ async def upload_user_template(
 async def list_user_templates(
     page: int = Query(1, ge=1),
     page_size: int = Query(8, ge=1, le=100),
-    user_id: str | None = Depends(_resolve_user_id),
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     base = select(UserTemplate).order_by(UserTemplate.created_at.desc())
     count_base = select(func.count(UserTemplate.id))
+    user_id = _template_user_id(current_user)
 
-    if user_id:
-        query = base.where(UserTemplate.user_id == int(user_id))
-        count_q = count_base.where(UserTemplate.user_id == int(user_id))
-    else:
-        query = base
-        count_q = count_base
+    query = base.where(UserTemplate.user_id == user_id)
+    count_q = count_base.where(UserTemplate.user_id == user_id)
 
     total = (await db.execute(count_q)).scalar() or 0
-
-    # Fallback: if user_id filter returns 0, try unfiltered
-    if user_id and total == 0:
-        query = base
-        count_q = count_base
-        total = (await db.execute(count_q)).scalar() or 0
 
     result = await db.execute(query.offset((page - 1) * page_size).limit(page_size))
     templates = result.scalars().all()
@@ -110,10 +100,13 @@ async def list_user_templates(
 @router.delete("/{template_id}", response_model=SuccessResponse)
 async def delete_user_template(
     template_id: str,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     template = await db.get(UserTemplate, template_id)
     if not template:
+        raise HTTPException(404, "Template not found")
+    if template.user_id != _template_user_id(current_user):
         raise HTTPException(404, "Template not found")
 
     from services.file_service import FileService

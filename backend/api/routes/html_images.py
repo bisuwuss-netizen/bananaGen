@@ -20,7 +20,7 @@ from tenacity import RetryError
 from PIL import Image
 
 from config_fastapi import settings as app_settings
-from deps import get_db
+from deps import CurrentUser, get_db, get_project_for_user, require_current_user
 from models.project import Project
 from models.page import Page
 from schemas.common import SuccessResponse
@@ -76,11 +76,10 @@ def _friendly_error(err: Exception) -> str:
 async def generate_html_images_sse(
     project_id: str,
     body: GenerateHtmlImagesBody,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    project = await db.get(Project, project_id)
-    if not project:
-        raise HTTPException(404, f"项目 {project_id} 不存在")
+    project = await get_project_for_user(db, project_id, current_user)
 
     if not body.slots:
         raise HTTPException(400, "slots 列表不能为空")
@@ -225,12 +224,11 @@ async def generate_html_images_sse(
 async def save_html_image(
     project_id: str,
     body: SaveHtmlImageRequest,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """保存HTML模式的图片到文件系统并更新html_model"""
-    project = await db.get(Project, project_id)
-    if not project:
-        raise HTTPException(404, f"项目 {project_id} 不存在")
+    project = await get_project_for_user(db, project_id, current_user)
     
     page = await db.get(Page, body.page_id)
     if not page or page.project_id != project_id:

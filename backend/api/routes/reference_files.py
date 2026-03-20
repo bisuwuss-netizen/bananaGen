@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from werkzeug.utils import secure_filename
 
-from deps import get_db
+from deps import CurrentUser, get_db, get_project_for_user, require_current_user
 from models.project import Project
 from models.reference_file import ReferenceFile
 from schemas.common import SuccessResponse
@@ -84,6 +84,7 @@ def _parse_file_async(file_id: str, file_path: str, filename: str):
 @router.post("/upload", response_model=SuccessResponse)
 async def upload_reference_file(
     request: Request,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     form = await request.form()
@@ -103,9 +104,7 @@ async def upload_reference_file(
     project_id = None if not project_id_raw or project_id_raw == "none" else project_id_raw
 
     if project_id:
-        p = await db.get(Project, project_id)
-        if not p:
-            raise HTTPException(404, "Project not found")
+        await get_project_for_user(db, project_id, current_user)
 
     filename = secure_filename(original_filename)
     if not filename:
@@ -128,6 +127,7 @@ async def upload_reference_file(
 
     ref = ReferenceFile(
         project_id=project_id,
+        user_id=current_user.user_id,
         filename=original_filename,
         file_path=str(file_path.relative_to(upload_folder)),
         file_size=file_size,
@@ -141,17 +141,25 @@ async def upload_reference_file(
 
 
 @router.get("/{file_id}", response_model=SuccessResponse)
-async def get_reference_file(file_id: str, db: AsyncSession = Depends(get_db)):
+async def get_reference_file(
+    file_id: str,
+    current_user: CurrentUser = Depends(require_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     ref = await db.get(ReferenceFile, file_id)
-    if not ref:
+    if not ref or ref.user_id != current_user.user_id:
         raise HTTPException(404, "Reference file not found")
     return SuccessResponse(data={"file": ref.to_dict(include_content=True, include_failed_count=True)})
 
 
 @router.delete("/{file_id}", response_model=SuccessResponse)
-async def delete_reference_file(file_id: str, db: AsyncSession = Depends(get_db)):
+async def delete_reference_file(
+    file_id: str,
+    current_user: CurrentUser = Depends(require_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     ref = await db.get(ReferenceFile, file_id)
-    if not ref:
+    if not ref or ref.user_id != current_user.user_id:
         raise HTTPException(404, "Reference file not found")
 
     try:
@@ -169,20 +177,25 @@ async def delete_reference_file(file_id: str, db: AsyncSession = Depends(get_db)
 @router.get("/project/{project_id}", response_model=SuccessResponse)
 async def list_project_reference_files(
     project_id: str,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     if project_id == "all":
-        result = await db.execute(select(ReferenceFile))
+        result = await db.execute(select(ReferenceFile).where(ReferenceFile.user_id == current_user.user_id))
     elif project_id in ("global", "none"):
         result = await db.execute(
-            select(ReferenceFile).where(ReferenceFile.project_id.is_(None))
+            select(ReferenceFile).where(
+                ReferenceFile.project_id.is_(None),
+                ReferenceFile.user_id == current_user.user_id,
+            )
         )
     else:
-        p = await db.get(Project, project_id)
-        if not p:
-            raise HTTPException(404, "Project not found")
+        await get_project_for_user(db, project_id, current_user)
         result = await db.execute(
-            select(ReferenceFile).where(ReferenceFile.project_id == project_id)
+            select(ReferenceFile).where(
+                ReferenceFile.project_id == project_id,
+                ReferenceFile.user_id == current_user.user_id,
+            )
         )
 
     files = result.scalars().all()
@@ -190,9 +203,13 @@ async def list_project_reference_files(
 
 
 @router.post("/{file_id}/parse", response_model=SuccessResponse)
-async def trigger_file_parse(file_id: str, db: AsyncSession = Depends(get_db)):
+async def trigger_file_parse(
+    file_id: str,
+    current_user: CurrentUser = Depends(require_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     ref = await db.get(ReferenceFile, file_id)
-    if not ref:
+    if not ref or ref.user_id != current_user.user_id:
         raise HTTPException(404, "Reference file not found")
 
     if ref.parse_status == "parsing":
@@ -223,10 +240,11 @@ async def trigger_file_parse(file_id: str, db: AsyncSession = Depends(get_db)):
 async def associate_file_to_project(
     file_id: str,
     request: Request,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     ref = await db.get(ReferenceFile, file_id)
-    if not ref:
+    if not ref or ref.user_id != current_user.user_id:
         raise HTTPException(404, "Reference file not found")
 
     data = await request.json()
@@ -234,9 +252,7 @@ async def associate_file_to_project(
     if not project_id:
         raise HTTPException(400, "project_id is required")
 
-    p = await db.get(Project, project_id)
-    if not p:
-        raise HTTPException(404, "Project not found")
+    await get_project_for_user(db, project_id, current_user)
 
     ref.project_id = project_id
     ref.updated_at = datetime.utcnow()
@@ -248,10 +264,11 @@ async def associate_file_to_project(
 @router.post("/{file_id}/dissociate", response_model=SuccessResponse)
 async def dissociate_file_from_project(
     file_id: str,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     ref = await db.get(ReferenceFile, file_id)
-    if not ref:
+    if not ref or ref.user_id != current_user.user_id:
         raise HTTPException(404, "Reference file not found")
 
     ref.project_id = None

@@ -38,7 +38,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from config_fastapi import settings
-from deps import close_db
+from deps import close_db, get_auth_accounts, is_auth_enabled
 from api.middleware import setup_middleware
 
 logging.basicConfig(
@@ -65,6 +65,21 @@ async def lifespan(app: FastAPI):
     logger.info(f"  Text Model: {settings.text_model}")
     logger.info(f"  Image Model: {settings.image_model}")
     logger.info(f"  Upload Folder: {settings.upload_folder}")
+    if is_auth_enabled():
+        logger.info(
+            "  Multi-user auth: enabled | users=%s cookie=%s secure=%s",
+            len(get_auth_accounts()),
+            settings.auth_cookie_name,
+            settings.auth_cookie_secure,
+        )
+    else:
+        logger.warning(
+            "  Multi-user auth: disabled. AUTH_USERS is empty, so all browsers share the legacy user and can see the same project history."
+        )
+    if settings.secret_key == "your-secret-key-change-this":
+        logger.warning("  SECRET_KEY is still using the default value. Replace it before production.")
+    if not settings.auth_cookie_secure:
+        logger.warning("  AUTH_COOKIE_SECURE=false. Set AUTH_COOKIE_SECURE=true for HTTPS production.")
 
     # Ensure upload directory exists
     os.makedirs(settings.upload_folder, exist_ok=True)
@@ -98,8 +113,10 @@ from api.routes.preset_styles import router as preset_styles_router
 from api.routes.user_templates import router as user_templates_router
 from api.routes.html_images import router as html_images_router
 from api.routes.smart_ppt_log import router as smart_ppt_log_router
+from api.routes.auth import router as auth_router
 from features.home_characters.router import router as home_characters_router
 
+app.include_router(auth_router)
 app.include_router(projects_router)
 app.include_router(tasks_router)
 app.include_router(pages_router)

@@ -7,12 +7,12 @@ Extracted from the original project_controller.py (lines 162-426).
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Query, Cookie, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy import select, desc, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from deps import get_db
+from deps import CurrentUser, get_db, get_project_for_user, require_current_user
 from models.project import Project
 from models.page import Page
 from schemas.project import (
@@ -25,19 +25,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 
-def _resolve_user_id(
-    user_id: str | None = Query(None),
-    user_id_cookie: str | None = Cookie(None, alias="user_id"),
-) -> str | None:
-    """Resolve user_id from query param/cookie. Empty value means no user filter."""
-    return user_id or user_id_cookie or None
-
-
 @router.get("", response_model=SuccessResponse)
 async def list_projects(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    user_id: str | None = Depends(_resolve_user_id),
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -48,11 +40,13 @@ async def list_projects(
     query = select(Project)
     count_query = select(func.count(Project.id))
 
-    if user_id:
-        # Backward compatibility: include legacy rows that were created before user_id isolation.
-        user_filter = or_(Project.user_id == user_id, Project.user_id.is_(None))
-        query = query.where(user_filter)
-        count_query = count_query.where(user_filter)
+    if current_user.auth_enabled:
+        user_filter = Project.user_id == current_user.user_id
+    else:
+        user_filter = or_(Project.user_id == current_user.user_id, Project.user_id.is_(None))
+
+    query = query.where(user_filter)
+    count_query = count_query.where(user_filter)
 
     query = (
         query
@@ -85,7 +79,7 @@ async def list_projects(
 @router.post("", response_model=SuccessResponse, status_code=201)
 async def create_project(
     req: CreateProjectRequest,
-    user_id: str | None = Depends(_resolve_user_id),
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -102,7 +96,7 @@ async def create_project(
         template_style=req.template_style,
         render_mode=req.render_mode,
         scheme_id=req.scheme_id,
-        user_id=user_id or "1",
+        user_id=current_user.user_id,
         status="DRAFT",
     )
     db.add(project)
@@ -122,6 +116,7 @@ async def create_project(
 @router.get("/{project_id}", response_model=SuccessResponse)
 async def get_project(
     project_id: str,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -129,16 +124,13 @@ async def get_project(
     
     Original: project_controller.py get_project() (lines 298-317)
     """
-    query = (
-        select(Project)
-        .options(selectinload(Project.pages), selectinload(Project.tasks))
-        .where(Project.id == project_id)
+    project = await get_project_for_user(
+        db,
+        project_id,
+        current_user,
+        selectinload(Project.pages),
+        selectinload(Project.tasks),
     )
-    result = await db.execute(query)
-    project = result.scalar_one_or_none()
-
-    if not project:
-        raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
 
     return SuccessResponse(
         data=_project_to_dict(
@@ -153,6 +145,7 @@ async def get_project(
 async def update_project(
     project_id: str,
     req: UpdateProjectRequest,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -161,16 +154,12 @@ async def update_project(
     Original: project_controller.py update_project() (lines 320-398)
     """
     # 使用 selectinload 预先加载 pages 关系，避免在 to_dict() 时触发懒加载
-    query = (
-        select(Project)
-        .options(selectinload(Project.pages))
-        .where(Project.id == project_id)
+    project = await get_project_for_user(
+        db,
+        project_id,
+        current_user,
+        selectinload(Project.pages),
     )
-    result = await db.execute(query)
-    project = result.scalar_one_or_none()
-    
-    if not project:
-        raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
 
     # Update only provided fields
     update_data = req.model_dump(exclude_unset=True)
@@ -200,6 +189,7 @@ async def update_project(
 @router.delete("/{project_id}", response_model=SuccessResponse)
 async def delete_project(
     project_id: str,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -207,9 +197,7 @@ async def delete_project(
     
     Original: project_controller.py delete_project() (lines 401-426)
     """
-    project = await db.get(Project, project_id)
-    if not project:
-        raise HTTPException(status_code=404, detail=f"Project {project_id} not found")
+    project = await get_project_for_user(db, project_id, current_user)
 
     await db.delete(project)
     await db.flush()

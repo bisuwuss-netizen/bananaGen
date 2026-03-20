@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from deps import get_db
+from deps import CurrentUser, get_db, get_project_for_user, require_current_user
 from models.project import Project
 from models.page import Page
 from schemas.common import SuccessResponse
@@ -18,14 +18,17 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/projects", tags=["refinement"])
 
 
-async def _get_project_with_pages(db: AsyncSession, project_id: str) -> Project:
-    result = await db.execute(
-        select(Project).options(selectinload(Project.pages)).where(Project.id == project_id)
+async def _get_project_with_pages(
+    db: AsyncSession,
+    project_id: str,
+    current_user: CurrentUser,
+) -> Project:
+    return await get_project_for_user(
+        db,
+        project_id,
+        current_user,
+        selectinload(Project.pages),
     )
-    project = result.scalar_one_or_none()
-    if not project:
-        raise HTTPException(404, "Project not found")
-    return project
 
 
 def _reconstruct_outline(pages: list[Page]) -> list[dict]:
@@ -159,9 +162,10 @@ def _prepare_refined_outline_pages(refined, *, render_mode: str, ai_service) -> 
 async def refine_outline(
     project_id: str,
     req: RefineOutlineRequest,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    project = await _get_project_with_pages(db, project_id)
+    project = await _get_project_with_pages(db, project_id, current_user)
 
     from services.ai_service_manager import get_ai_service_async
     from services.ai.base import ProjectContext
@@ -225,9 +229,10 @@ async def refine_outline(
 async def refine_descriptions(
     project_id: str,
     req: RefineDescriptionsRequest,
+    current_user: CurrentUser = Depends(require_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    project = await _get_project_with_pages(db, project_id)
+    project = await _get_project_with_pages(db, project_id, current_user)
 
     if not project.pages:
         raise HTTPException(400, "No pages found.")
