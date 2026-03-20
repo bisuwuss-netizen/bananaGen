@@ -67,6 +67,8 @@ export const OutlineEditor: React.FC = () => {
     generateOutline,
     isGlobalLoading,
     taskProgress,
+    aiRefineHistory,
+    setAiRefineHistory,
   } = useProjectStore();
 
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
@@ -168,15 +170,17 @@ export const OutlineEditor: React.FC = () => {
   };
 
   const handleAiRefineOutline = useCallback(async (requirement: string, previousRequirements: string[]) => {
-    if (!currentProject || !projectId) return;
+    if (!currentProject || !projectId) return '';
     
     try {
       const response = await refineOutline(projectId, requirement, previousRequirements);
       await syncProject(projectId);
+      const summary = response.data?.summary || '大纲修改成功';
       show({ 
-        message: response.data?.message || '大纲修改成功', 
+        message: summary, 
         type: 'success' 
       });
+      return summary;
     } catch (error: any) {
       console.error('修改大纲失败:', error);
       const errorMessage = error?.response?.data?.error?.message 
@@ -460,6 +464,8 @@ export const OutlineEditor: React.FC = () => {
         isOpen={isAiSidebarOpen}
         onToggle={setIsAiSidebarOpen}
         onStatusChange={setIsAiRefining}
+        history={aiRefineHistory['outline'] || []}
+        onHistoryChange={(h) => setAiRefineHistory('outline', h)}
       />
     </div>
   );

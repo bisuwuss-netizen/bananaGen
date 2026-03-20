@@ -174,7 +174,7 @@ async def refine_outline(
     language = req.language or app_settings.output_language
     render_mode = project.render_mode or "image"
 
-    refined = await ai_service.call_async(
+    result = await ai_service.call_async(
         "refine_outline",
         current_outline,
         req.user_requirement,
@@ -185,7 +185,7 @@ async def refine_outline(
     )
 
     pages_data = _prepare_refined_outline_pages(
-        refined,
+        result.data,
         render_mode=render_mode,
         ai_service=ai_service,
     )
@@ -215,8 +215,9 @@ async def refine_outline(
     await db.flush()
 
     return SuccessResponse(data={
-        "outline": refined,
+        "outline": result.data,
         "pages": [p.to_dict() for p in created],
+        "summary": result.summary,
     })
 
 
@@ -243,11 +244,12 @@ async def refine_descriptions(
     outline = _reconstruct_outline(sorted_pages)
     previous_requirements = req.previous_requirements or None
 
+    summary = "描述已更新"
+
     if render_mode == "html":
         current_models = _build_html_model_refinement_inputs(sorted_pages)
 
-        refined_models = _ensure_refined_list(
-            await ai_service.call_async(
+        result = await ai_service.call_async(
             "refine_html_models",
             current_models,
             req.user_requirement,
@@ -255,10 +257,15 @@ async def refine_descriptions(
             outline=outline,
             previous_requirements=previous_requirements,
             language=language,
-            ),
+        )
+
+        refined_models = _ensure_refined_list(
+            result.data,
             expected_count=len(sorted_pages),
             label="refined html models",
         )
+        
+        summary = result.summary
 
         now = datetime.now()
         for page, refined_model in zip(sorted_pages, refined_models):
@@ -270,8 +277,7 @@ async def refine_descriptions(
     else:
         current_descs = _build_description_refinement_inputs(sorted_pages)
 
-        refined_descs = _ensure_refined_list(
-            await ai_service.call_async(
+        result = await ai_service.call_async(
             "refine_descriptions",
             current_descs,
             req.user_requirement,
@@ -279,10 +285,15 @@ async def refine_descriptions(
             outline=outline,
             previous_requirements=previous_requirements,
             language=language,
-            ),
+        )
+
+        refined_descs = _ensure_refined_list(
+            result.data,
             expected_count=len(sorted_pages),
             label="refined descriptions",
         )
+        
+        summary = result.summary
 
         now = datetime.now()
         timestamp = now.isoformat()
@@ -304,4 +315,5 @@ async def refine_descriptions(
 
     return SuccessResponse(data={
         "pages": [p.to_dict() for p in _sorted_pages(project)],
+        "summary": summary,
     })

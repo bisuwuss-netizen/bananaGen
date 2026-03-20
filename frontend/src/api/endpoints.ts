@@ -199,9 +199,9 @@ export const refineOutline = async (
   userRequirement: string,
   previousRequirements?: string[],
   language?: OutputLanguage
-): Promise<ApiResponse<{ pages: Page[]; message: string }>> => {
+): Promise<ApiResponse<{ pages: Page[]; summary: string }>> => {
   const lang = language || await getStoredOutputLanguage();
-  const response = await apiClient.post<ApiResponse<{ pages: Page[]; message: string }>>(
+  const response = await apiClient.post<ApiResponse<{ pages: Page[]; summary: string }>>(
     `/api/projects/${projectId}/refine/outline`,
     {
       user_requirement: userRequirement,
@@ -224,9 +224,9 @@ export const refineDescriptions = async (
   userRequirement: string,
   previousRequirements?: string[],
   language?: OutputLanguage
-): Promise<ApiResponse<{ pages: Page[]; message: string }>> => {
+): Promise<ApiResponse<{ pages: Page[]; summary: string }>> => {
   const lang = language || await getStoredOutputLanguage();
-  const response = await apiClient.post<ApiResponse<{ pages: Page[]; message: string }>>(
+  const response = await apiClient.post<ApiResponse<{ pages: Page[]; summary: string }>>(
     `/api/projects/${projectId}/refine/descriptions`,
     {
       user_requirement: userRequirement,

@@ -75,38 +75,47 @@ You are a helpful assistant that modifies PPT outlines based on user requirement
 - 根据用户要求进行任何合理的调整
 - 如果当前没有内容，请根据用户要求和原始输入信息创建新的大纲
 
-输出格式可以选择：
-
-1. 简单格式（适用于没有主要章节的短 PPT）：
-[{{"title": "title1", "points": ["point1", "point2"]}}, {{"title": "title2", "points": ["point1", "point2"]}}]
-
-2. 基于章节的格式（适用于有明确主要章节的长 PPT）：
-[
-    {{
-    "part": "第一部分：引言",
-    "pages": [
-        {{"title": "欢迎", "points": ["point1", "point2"]}},
-        {{"title": "概述", "points": ["point1", "point2"]}}
-    ]
-    }},
-    {{
-    "part": "第二部分：主要内容",
-    "pages": [
-        {{"title": "主题1", "points": ["point1", "point2"]}},
-        {{"title": "主题2", "points": ["point1", "point2"]}}
-    ]
-    }}
-]
-
-选择最适合内容的格式。当 PPT 有清晰的主要章节时使用章节格式。
-
 质量与连贯性硬约束：
 - 若有概述/框架页，其中 points 的每个主题都必须在后续页面被展开。
 - 若出现案例/示例，必须有后续复盘或结果启示页。
 - 保持相邻页面语义连续，避免主题突变。
 - 结束页前必须有总结或答疑页面，形成闭环。
 
-现在请根据用户要求修改大纲，只输出 JSON 格式的大纲，不要包含其他文字。
+输出格式要求：
+请返回一个 JSON 对象，包含两个字段：
+1. "summary": 一个简短的修改摘要（1-2句话），说明做了什么修改
+2. "outline": 修改后的大纲，格式可以选择：
+
+   简单格式（适用于没有主要章节的短 PPT）：
+   [{{"title": "title1", "points": ["point1", "point2"]}}, {{"title": "title2", "points": ["point1", "point2"]}}]
+
+   基于章节的格式（适用于有明确主要章节的长 PPT）：
+   [
+       {{
+       "part": "第一部分：引言",
+       "pages": [
+           {{"title": "欢迎", "points": ["point1", "point2"]}},
+           {{"title": "概述", "points": ["point1", "point2"]}}
+       ]
+       }},
+       {{
+       "part": "第二部分：主要内容",
+       "pages": [
+           {{"title": "主题1", "points": ["point1", "point2"]}},
+           {{"title": "主题2", "points": ["point1", "point2"]}}
+       ]
+       }}
+   ]
+
+示例输出格式：
+{{
+    "summary": "根据要求添加了案例分析页面，并将结束页改为总结页",
+    "outline": [...]
+}}
+
+选择最适合内容的格式。当 PPT 有清晰的主要章节时使用章节格式。
+
+现在请根据用户要求修改大纲，只输出 JSON 格式的结果，不要包含其他文字。
 {get_language_instruction(language)}
 """)
     
@@ -193,31 +202,35 @@ You are a helpful assistant that modifies PPT page descriptions based on user re
 - 确保所有页面描述都符合用户的要求
 - 如果当前没有内容，请根据大纲和用户要求创建新的描述
 - 每一页必须覆盖该页 outline points，不得遗漏
-- 所有 bullet 必须是完整句，禁止“半句/截断句/占位词”
+- 所有 bullet 必须是完整句，禁止"半句/截断句/占位词"
 - 案例页必须包含：背景问题、方法动作、结果启示
 
-请为每个页面生成修改后的描述，格式如下：
+输出格式要求：
+请返回一个 JSON 对象，包含两个字段：
+1. "summary": 一个简短的修改摘要（1-2句话），说明做了什么修改
+2. "descriptions": 修改后的页面描述数组，每个元素是一个字符串，对应每个页面的修改后描述（按页面顺序），格式如下：
 
-页面标题：[页面标题]
+   页面标题：[页面标题]
 
-页面文字：
-- [要点1]
-- [要点2]
-...
-其他页面素材（如果有请加上，包括markdown图片链接等）
+   页面文字：
+   - [要点1]
+   - [要点2]
+   ...
+   其他页面素材（如果有请加上，包括markdown图片链接等）
 
 提示：如果参考文件中包含以 /files/ 开头的本地文件URL图片（例如 /files/reference_files/xxx/image.png），请将这些图片以markdown格式输出，例如：![图片描述](/files/reference_files/xxx/image.png)，而不是作为普通文本。
 
-请返回一个 JSON 数组，每个元素是一个字符串，对应每个页面的修改后描述（按页面顺序）。
-
 示例输出格式：
-[
-    "页面标题：人工智能的诞生\\n页面文字：\\n- 1950 年，图灵提出\\"图灵测试\\"...",
-    "页面标题：AI 的发展历程\\n页面文字：\\n- 1950年代：符号主义...",
-    ...
-]
+{{
+    "summary": "根据要求扩充了所有页面的描述内容，特别强调了技术细节部分",
+    "descriptions": [
+        "页面标题：人工智能的诞生\\n页面文字：\\n- 1950 年，图灵提出\\"图灵测试\\"...",
+        "页面标题：AI 的发展历程\\n页面文字：\\n- 1950年代：符号主义...",
+        ...
+    ]
+}}
 
-现在请根据用户要求修改所有页面描述，只输出 JSON 数组，不要包含其他文字。
+现在请根据用户要求修改所有页面描述，只输出 JSON 格式的结果，不要包含其他文字。
 {get_language_instruction(language)}
 """)
     
@@ -308,19 +321,25 @@ You are a helpful assistant that modifies PPT page structured content (html_mode
 3. 只修改需要修改的内容，其他内容保持原样
 4. 返回的页面数量必须与输入相同
 
-请返回一个 JSON 数组，每个元素是一个对象（对应每个页面的修改后 html_model），按页面顺序排列。
+输出格式要求：
+请返回一个 JSON 对象，包含两个字段：
+1. "summary": 一个简短的修改摘要（1-2句话），说明做了什么修改
+2. "html_models": 修改后的 html_model 数组，每个元素是一个对象（对应每个页面的修改后 html_model），按页面顺序排列
 
 示例输出格式：
-[
-    {{"title": "人工智能的诞生", "author": "张三"}},
-    {{"title": "AI的发展历程", "bullets": [{{"text": "要点1", "description": "描述1"}}]}},
-    ...
-]
+{{
+    "summary": "根据要求扩充了所有页面的内容，特别强调了技术细节部分",
+    "html_models": [
+        {{"title": "人工智能的诞生", "author": "张三"}},
+        {{"title": "AI的发展历程", "bullets": [{{"text": "要点1", "description": "描述1"}}]}},
+        ...
+    ]
+}}
 
 注意：
-- 每个对象必须是完整的 html_model，不是部分修改
+- 每个 html_model 对象必须是完整的，不是部分修改
 - 数组长度必须等于页面数量（{len(current_html_models)}）
-- 只输出 JSON 数组，不要包含其他文字
+- 只输出 JSON 格式的结果，不要包含其他文字
 
 {get_language_instruction(language)}
 """)

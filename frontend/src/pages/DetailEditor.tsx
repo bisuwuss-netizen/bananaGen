@@ -19,6 +19,8 @@ export const DetailEditor: React.FC = () => {
     generateDescriptions,
     generatePageDescription,
     pageDescriptionGeneratingTasks,
+    aiRefineHistory,
+    setAiRefineHistory,
   } = useProjectStore();
   const { show, ToastContainer } = useToast();
   const { confirm, ConfirmDialog } = useConfirm();
@@ -121,15 +123,17 @@ export const DetailEditor: React.FC = () => {
   };
 
   const handleAiRefineDescriptions = useCallback(async (requirement: string, previousRequirements: string[]) => {
-    if (!currentProject || !projectId) return;
+    if (!currentProject || !projectId) return '';
     
     try {
       const response = await refineDescriptions(projectId, requirement, previousRequirements);
       await syncProject(projectId);
+      const summary = response.data?.summary || '页面描述修改成功';
       show({ 
-        message: response.data?.message || '页面描述修改成功', 
+        message: summary, 
         type: 'success' 
       });
+      return summary;
     } catch (error: any) {
       console.error('修改页面描述失败:', error);
       const errorMessage = error?.response?.data?.error?.message 
@@ -316,6 +320,8 @@ export const DetailEditor: React.FC = () => {
         isOpen={isAiSidebarOpen}
         onToggle={setIsAiSidebarOpen}
         onStatusChange={setIsAiRefining}
+        history={aiRefineHistory['detail'] || []}
+        onHistoryChange={(h) => setAiRefineHistory('detail', h)}
       />
     </div>
   );

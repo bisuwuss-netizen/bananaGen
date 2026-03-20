@@ -11,10 +11,14 @@ export const createCoreSlice: StateCreator<ProjectStore, [], [], ProjectCoreSlic
   error: null,
   pageGeneratingTasks: {},
   pageDescriptionGeneratingTasks: {},
+  aiRefineHistory: {},
 
   setCurrentProject: (project) => set({ currentProject: project }),
   setGlobalLoading: (loading) => set({ isGlobalLoading: loading }),
   setError: (error) => set({ error }),
+  setAiRefineHistory: (key, history) => set((state) => ({
+    aiRefineHistory: { ...state.aiRefineHistory, [key]: history },
+  })),
 
   initializeProject: async (type, content, templateImage, templateStyle, renderMode, schemeId) => {
     set({ isGlobalLoading: true, error: null });
@@ -91,7 +95,7 @@ export const createCoreSlice: StateCreator<ProjectStore, [], [], ProjectCoreSlic
           description_text_preview: project.description_text?.substring(0, 50) || '无',
           render_mode: project.render_mode,
         });
-        set({ currentProject: project });
+        set({ currentProject: project, aiRefineHistory: {} });
         localStorage.setItem('currentProjectId', project.id!);
         void get().restoreGenerationTasks(project.id!);
       }
@@ -123,7 +127,13 @@ export const createCoreSlice: StateCreator<ProjectStore, [], [], ProjectCoreSlic
       const response = await api.getProject(targetProjectId);
       if (response.data) {
         const project = normalizeProject(response.data);
-        set({ currentProject: project });
+        // Only clear aiRefineHistory when project actually changes
+        const prevId = get().currentProject?.id;
+        const updates: any = { currentProject: project };
+        if (prevId !== project.id) {
+          updates.aiRefineHistory = {};
+        }
+        set(updates);
         localStorage.setItem('currentProjectId', project.id!);
         void get().restoreGenerationTasks(project.id!);
       }

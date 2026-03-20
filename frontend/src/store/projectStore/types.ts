@@ -4,6 +4,13 @@ import type {
   TaskProgress,
 } from '@/types';
 
+export interface AiRefineHistoryItem {
+  text: string;
+  timestamp: Date;
+  status: 'success' | 'error';
+  summary?: string;
+}
+
 export interface TaskSubscriptionOptions {
   projectId?: string;
   persist?: boolean;
@@ -17,9 +24,11 @@ export interface ProjectCoreSlice {
   error: string | null;
   pageGeneratingTasks: Record<string, string>;
   pageDescriptionGeneratingTasks: Record<string, boolean>;
+  aiRefineHistory: Record<string, AiRefineHistoryItem[]>;
   setCurrentProject: (project: Project | null) => void;
   setGlobalLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  setAiRefineHistory: (key: string, history: AiRefineHistoryItem[]) => void;
   initializeProject: (
     type: 'idea' | 'outline' | 'description',
     content: string,

@@ -9,6 +9,8 @@ import {
   Trash2,
   MessageSquarePlus,
   Loader2,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 
 /* ─── 思考中步骤提示 ─── */
@@ -20,6 +22,13 @@ const THINKING_STEPS = [
   '正在优化排版与结构…',
   '即将完成，请稍候…',
 ];
+
+export interface HistoryItem {
+  text: string;
+  timestamp: Date;
+  status: 'success' | 'error';
+  summary?: string;
+}
 
 const ThinkingBubble: React.FC<{ text: string; userMessage?: string }> = ({
   text,
@@ -64,8 +73,8 @@ export interface AiRefineSidebarProps {
   title?: string;
   /** 输入框占位文字 */
   placeholder: string;
-  /** 提交回调函数，接收当前要求和历史要求，返回 Promise */
-  onSubmit: (requirement: string, previousRequirements: string[]) => Promise<void>;
+  /** 提交回调函数，接收当前要求和历史要求，返回 Promise<摘要字符串> */
+  onSubmit: (requirement: string, previousRequirements: string[]) => Promise<string>;
   /** 是否禁用 */
   disabled?: boolean;
   /** 侧边栏是否打开 */
@@ -74,6 +83,10 @@ export interface AiRefineSidebarProps {
   onToggle: (open: boolean) => void;
   /** 状态变化回调 */
   onStatusChange?: (isSubmitting: boolean) => void;
+  /** 外部传入的对话历史（持久化） */
+  history?: HistoryItem[];
+  /** 历史变化回调（持久化） */
+  onHistoryChange?: (history: HistoryItem[]) => void;
 }
 
 const AiRefineSidebarComponent: React.FC<AiRefineSidebarProps> = ({
@@ -84,14 +97,23 @@ const AiRefineSidebarComponent: React.FC<AiRefineSidebarProps> = ({
   isOpen,
   onToggle,
   onStatusChange,
+  history: externalHistory,
+  onHistoryChange,
 }) => {
   const [requirement, setRequirement] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [thinkingStep, setThinkingStep] = useState(0);
   const [pendingText, setPendingText] = useState<string | null>(null);
-  const [history, setHistory] = useState<
-    { text: string; timestamp: Date; status: 'success' | 'error' }[]
-  >([]);
+  const [internalHistory, setInternalHistory] = useState<HistoryItem[]>([]);
+  const history = externalHistory ?? internalHistory;
+  const setHistory = (updater: HistoryItem[] | ((prev: HistoryItem[]) => HistoryItem[])) => {
+    const newHistory = typeof updater === 'function' ? updater(history) : updater;
+    if (onHistoryChange) {
+      onHistoryChange(newHistory);
+    } else {
+      setInternalHistory(newHistory);
+    }
+  };
   const historyEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -134,18 +156,29 @@ const AiRefineSidebarComponent: React.FC<AiRefineSidebarProps> = ({
     setIsSubmitting(true);
     onStatusChange?.(true);
     try {
-      await onSubmit(
+      // onSubmit 现在返回摘要字符串
+      const summary = await onSubmit(
         currentRequirement,
         history.map((h) => h.text)
       );
       setHistory((prev) => [
         ...prev,
-        { text: currentRequirement, timestamp: new Date(), status: 'success' },
+        { 
+          text: currentRequirement, 
+          timestamp: new Date(), 
+          status: 'success',
+          summary: summary || '修改已完成'
+        },
       ]);
     } catch {
       setHistory((prev) => [
         ...prev,
-        { text: currentRequirement, timestamp: new Date(), status: 'error' },
+        { 
+          text: currentRequirement, 
+          timestamp: new Date(), 
+          status: 'error',
+          summary: '修改失败，请重试'
+        },
       ]);
     } finally {
       setIsSubmitting(false);
@@ -187,7 +220,7 @@ const AiRefineSidebarComponent: React.FC<AiRefineSidebarProps> = ({
         className={`fixed top-0 right-0 h-screen z-50 flex flex-col
           bg-white/95 backdrop-blur-xl shadow-2xl border-l border-slate-200/60
           transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]
-          w-[340px] md:w-[380px] overflow-hidden
+          w-[340px] md:w-[400px] overflow-hidden
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         {/* 头部 */}
@@ -262,7 +295,7 @@ const AiRefineSidebarComponent: React.FC<AiRefineSidebarProps> = ({
               </div>
             </div>
           ) : (
-            <div className="px-4 py-3 space-y-3">
+            <div className="px-4 py-3 space-y-4">
               {/* 历史头部 */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-xs text-gray-400">
@@ -280,11 +313,11 @@ const AiRefineSidebarComponent: React.FC<AiRefineSidebarProps> = ({
 
               {/* 历史消息列表 */}
               {history.map((item, idx) => (
-                <div key={idx} className="animate-fade-up" style={{ animationDelay: `${idx * 40}ms` }}>
+                <div key={idx} className="animate-fade-up space-y-2" style={{ animationDelay: `${idx * 40}ms` }}>
                   {/* 用户消息 */}
-                  <div className="flex justify-end mb-1.5">
+                  <div className="flex justify-end">
                     <div
-                      className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl rounded-tr-md text-[13px] leading-relaxed
+                      className={`max-w-[90%] px-3.5 py-2.5 rounded-2xl rounded-tr-md text-[13px] leading-relaxed
                         ${
                           item.status === 'success'
                             ? 'bg-gradient-to-br from-banana-400 to-banana-500 text-white shadow-sm'
@@ -295,42 +328,52 @@ const AiRefineSidebarComponent: React.FC<AiRefineSidebarProps> = ({
                     </div>
                   </div>
 
-                  {/* AI 回复指示 */}
-                  <div className="flex items-center gap-1.5 ml-1 mb-1">
+                  {/* AI 回复指示 + 摘要 */}
+                  <div className="flex items-start gap-2 ml-1">
                     <div
-                      className={`w-5 h-5 rounded-full flex items-center justify-center
+                      className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5
                         ${item.status === 'success' ? 'bg-green-50' : 'bg-red-50'}`}
                     >
-                      <Sparkles
-                        size={11}
-                        className={
-                          item.status === 'success'
-                            ? 'text-green-500'
-                            : 'text-red-400'
-                        }
-                      />
+                      {item.status === 'success' ? (
+                        <CheckCircle2 size={11} className="text-green-500" />
+                      ) : (
+                        <XCircle size={11} className="text-red-400" />
+                      )}
                     </div>
-                    <span
-                      className={`text-[11px] ${
-                        item.status === 'success'
-                          ? 'text-green-600'
-                          : 'text-red-500'
-                      }`}
-                    >
-                      {item.status === 'success'
-                        ? '已完成修改'
-                        : '修改失败，请重试'}
-                    </span>
-                    <span className="text-[10px] text-gray-300 ml-auto">
-                      {formatTime(item.timestamp)}
-                    </span>
+                    <div className="flex-1 min-w-0">
+                      {/* 状态标签 */}
+                      <div className="flex items-center gap-2 mb-1">
+                        <span
+                          className={`text-[11px] font-medium ${
+                            item.status === 'success'
+                              ? 'text-green-600'
+                              : 'text-red-500'
+                          }`}
+                        >
+                          {item.status === 'success' ? 'AI 已完成修改' : '修改失败'}
+                        </span>
+                        <span className="text-[10px] text-gray-300">
+                          {formatTime(item.timestamp)}
+                        </span>
+                      </div>
+                      {/* 摘要内容 */}
+                      {item.summary && (
+                        <div className="text-[12px] text-gray-600 bg-gray-50 rounded-lg px-3 py-2 leading-relaxed">
+                          <span className="text-banana-600 font-medium">修改摘要：</span>
+                          {item.summary}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
 
               {/* 思考中气泡 - AI 处理期间显示 */}
               {isSubmitting && pendingText && (
-                <ThinkingBubble text={THINKING_STEPS[thinkingStep]} />
+                <ThinkingBubble 
+                  text={THINKING_STEPS[thinkingStep]} 
+                  userMessage={pendingText}
+                />
               )}
               <div ref={historyEndRef} />
             </div>
