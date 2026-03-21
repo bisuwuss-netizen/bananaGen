@@ -622,8 +622,8 @@ export const Home: React.FC = () => {
       {/* 导航栏 */}
       <nav className="app-navbar relative h-16 md:h-18">
 
-        <div className="mx-auto px-4 md:px-6 h-full flex items-center justify-between">
-        <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
+        <div className="relative mx-auto px-4 md:px-6 h-full flex items-center justify-between">
+          <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
             <Button
                 variant="ghost"
                 size="sm"
@@ -634,7 +634,8 @@ export const Home: React.FC = () => {
               <span className="hidden sm:inline">主页</span>
             </Button>
           </div>
-          <div className="flex items-center gap-2">
+          {/* 绝对居中的品牌 Logo */}
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 pointer-events-none select-none">
             <img
               src="/yuean.svg"
               alt="跃案 Logo"
@@ -981,6 +982,38 @@ export const Home: React.FC = () => {
             )}
           </div>
         </Card>
+
+        {/* 品牌理念区 */}
+        <div className="mt-16 md:mt-24 mb-8 text-center space-y-10">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold tracking-[0.25em] text-banana-500 uppercase">Our Philosophy</p>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800">备课耗时，是教师最真实的痛点</h2>
+            <p className="text-sm md:text-base text-gray-500 max-w-xl mx-auto leading-relaxed">
+              跃案，让 AI 把这段时间还给你——专注教学本身，而非反复打磨幻灯片。
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+            <div className="group bg-white/70 backdrop-blur-sm rounded-2xl px-6 py-6 border border-banana-100 shadow-sm hover:shadow-md hover:border-banana-300 transition-all text-left">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-banana-400 to-banana-600 text-white font-bold text-lg mb-4 shadow-yellow">
+                跃
+              </div>
+              <h3 className="text-base font-semibold text-gray-800 mb-1.5">跨越式提效</h3>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                不是微调，是量级跃升。AI 注入教学动能，将一节课的备课时间压缩到分钟级，让高能量的创造力持续释放。
+              </p>
+            </div>
+            <div className="group bg-white/70 backdrop-blur-sm rounded-2xl px-6 py-6 border border-banana-100 shadow-sm hover:shadow-md hover:border-banana-300 transition-all text-left">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-banana-400 to-banana-600 text-white font-bold text-lg mb-4 shadow-yellow">
+                案
+              </div>
+              <h3 className="text-base font-semibold text-gray-800 mb-1.5">教案即产品</h3>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                "案"聚焦备课的生产过程——从构想到完整教案，一气呵成。比"课"更强调教师作为创作者的主体价值。
+              </p>
+            </div>
+          </div>
+        </div>
       </main>
       <ToastContainer />
       {/* 素材生成模态 - 在主页始终生成全局素材 */}
