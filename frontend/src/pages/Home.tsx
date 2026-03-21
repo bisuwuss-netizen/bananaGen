@@ -21,7 +21,7 @@ import { useProjectStore } from '@/store/useProjectStore';
 import { getPresetStyles, type PresetStyle } from '@/config/presetStyles';
 import { HomeCharactersPromptStage } from '@/features/home-characters';
 
-type CreationType = 'idea' | 'outline' | 'description';
+type CreationType = 'idea' | 'outline';
 
 // ── 模块级代码：仅在整页加载（刷新/外部导航）时执行 ──
 // SPA 内导航（如从大纲页回退）不会重新执行模块级代码，sessionStorage 保持不变
@@ -464,26 +464,18 @@ export const Home: React.FC = () => {
     e.target.value = '';
   };
 
-  const tabConfig = {
+  const tabConfig: Record<CreationType, { icon: React.ReactNode; label: string; placeholder: string; description: string }> = {
     idea: {
       icon: <Sparkles size={20} />,
       label: '一句话生成',
-      placeholder: '例如：生成一份关于 AI 发展史的演讲 PPT...',
-      description: '输入你的想法，AI 将为你生成完整的 PPT',
+      placeholder: '例如：生成一份机电一体化概论的教学课件，适合高职学生...',
+      description: '输入课程主题或教学目标，AI 将为你生成完整的教学课件',
     },
     outline: {
       icon: <FileText size={20} />,
       label: '从大纲生成',
-      placeholder: '粘贴你的 PPT 大纲...\n\n例如：\n第一部分：AI 的起源\n- 1950 年代的开端\n- 达特茅斯会议\n\n第二部分：发展历程\n...',
-      description: '已有大纲？直接粘贴即可快速生成，AI 将自动切分为结构化大纲',
-    },
-    description: {
-      icon: <FileEdit size={20} />,
-      label: '从描述生成',
-      placeholder: '粘贴你的完整页面描述...\n\n例如：\n第 1 页\n标题：人工智能的诞生\n内容：1950 年，图灵提出"图灵测试"...\n\n第 2 页\n标题：AI 的发展历程\n内容：1950年代：符号主义...\n...',
-      description: renderMode === 'html' 
-        ? '已有完整描述？AI 将自动解析出大纲并切分为每页描述，生成结构化内容'
-        : '已有完整描述？AI 将自动解析出大纲并切分为每页描述，直接生成图片',
+      placeholder: '粘贴你的课程大纲...\n\n例如：\n第一章：电气基础知识\n- 电路基本概念\n- 欧姆定律与基尔霍夫定律\n\n第二章：常用电工元件\n- 电阻、电容、电感\n- 低压电器认识与应用\n...',
+      description: '已有课程大纲？粘贴后 AI 将自动切分为结构化课件',
     },
   };
 
@@ -642,19 +634,16 @@ export const Home: React.FC = () => {
               <span className="hidden sm:inline">主页</span>
             </Button>
           </div>
-          <div className="flex items-center gap-2 md:gap-4 flex-shrink-0" />
-          {/*<div className="flex items-center gap-3">
-            <div className="flex items-center">
-              <img
-                src="/logo.png"
-                alt="蕉幻 Banana Slides Logo"
-                className="h-10 md:h-12 w-auto rounded-lg object-contain"
-              />
-            </div>
-            <span className="text-xl md:text-2xl font-bold bg-gradient-to-r from-banana-600 via-orange-500 to-pink-500 bg-clip-text text-transparent">
+          <div className="flex items-center gap-2">
+            <img
+              src="/logo.png"
+              alt="蕉幻 Banana Slides Logo"
+              className="h-8 md:h-10 w-auto rounded-lg object-contain"
+            />
+            <span className="text-lg md:text-xl font-bold bg-gradient-to-r from-banana-600 via-orange-500 to-pink-500 bg-clip-text text-transparent">
               蕉幻
             </span>
-          </div>*/}
+          </div>
           <div className="flex items-center gap-2 md:gap-3">
              {/*桌面端：带文字的素材生成按钮*/}
             <Button
@@ -692,23 +681,20 @@ export const Home: React.FC = () => {
       {/* 主内容 */}
       <main className="relative max-w-5xl mx-auto px-3 md:px-4 py-8 md:py-12 stagger-enter">
         {/* Hero 标题区 */}
-        {/*<div className="text-center mb-10 md:mb-16 space-y-4 md:space-y-6">
+        <div className="text-center mb-10 md:mb-16 space-y-4 md:space-y-6">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/60 backdrop-blur-sm rounded-full border border-banana-200/50 shadow-sm mb-4">
-            <span className="text-2xl animate-pulse"><Sparkles size={20} color="orange" /></span>
-            <span className="text-sm font-medium text-gray-700">基于 nano banana pro🍌 的原生 AI PPT 生成器</span>
+            <Sparkles size={16} className="text-banana-500" />
+            <span className="text-sm font-medium text-gray-700">面向高职教育的智能课件生成平台</span>
           </div>
           <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto font-light">
-            Vibe your PPT like vibing code
+            一句话描述课程主题，AI 自动生成专业教学课件
           </p>
-
-           特性标签
           <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 pt-4">
             {[
-              { icon: <Sparkles size={14} className="text-yellow-600" />, label: '一句话生成 PPT' },
-              { icon: <FileEdit size={14} className="text-blue-500" />, label: '自然语言修改' },
-              { icon: <Search size={14} className="text-orange-500" />, label: '指定区域编辑' },
-              
-              { icon: <Paperclip size={14} className="text-green-600" />, label: '一键导出 PPTX/PDF' },
+              { icon: <Sparkles size={14} className="text-banana-500" />, label: '一句话生成课件' },
+              { icon: <FileText size={14} className="text-blue-500" />, label: 'AI 智能排版' },
+              { icon: <FileEdit size={14} className="text-orange-500" />, label: '自然语言修改' },
+              { icon: <Paperclip size={14} className="text-green-600" />, label: '一键导出 PPTX' },
             ].map((feature, idx) => (
               <span
                 key={idx}
@@ -719,7 +705,7 @@ export const Home: React.FC = () => {
               </span>
             ))}
           </div>
-        </div>*/}
+        </div>
 
         {/* 创建卡片 */}
         <Card className="app-panel overflow-visible border-white/70 bg-white/95 p-4 shadow-[0_40px_120px_-56px_rgba(15,23,42,0.42)] duration-300 md:p-10 transition-[box-shadow,border-color,background-color]">

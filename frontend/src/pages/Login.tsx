@@ -35,10 +35,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     <div className="min-h-screen bg-slate-100 flex items-center justify-center px-4">
       <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/80">
         <div className="mb-8">
-          <p className="text-sm font-semibold tracking-[0.2em] text-slate-500 uppercase">Banana Slides</p>
+          <div className="flex items-center gap-2 mb-1">
+            <img src="/logo.png" alt="蕉幻" className="h-7 w-auto rounded object-contain" />
+            <p className="text-sm font-semibold text-slate-500">蕉幻</p>
+          </div>
+          <p className="text-xs text-slate-400 mb-2">智能教学课件平台</p>
           <h1 className="mt-3 text-3xl font-semibold text-slate-900">账号登录</h1>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            登录后只会看到当前账号自己的 PPT 项目和资源。
+            登录后即可管理你的教学课件项目与资源。
           </p>
         </div>
 

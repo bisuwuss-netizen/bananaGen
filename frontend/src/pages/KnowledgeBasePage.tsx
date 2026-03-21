@@ -502,7 +502,7 @@ export const KnowledgeBasePage: React.FC = () => {
             返回首页
           </Link>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <FileText className="w-6 h-6 text-blue-600" />
+            <FileText className="w-6 h-6 text-banana-500" />
             知识库生成大纲
           </h1>
           <p className="mt-1 text-sm text-gray-500">上传文档，AI 将根据内容自动生成 PPT 大纲</p>
@@ -511,8 +511,8 @@ export const KnowledgeBasePage: React.FC = () => {
         <div
           className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors mb-6 ${
             isDragging
-              ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-300 bg-white hover:border-blue-400 hover:bg-gray-50'
+              ? 'border-banana-500 bg-banana-50'
+              : 'border-gray-300 bg-white hover:border-banana-400 hover:bg-gray-50'
           }`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -537,7 +537,7 @@ export const KnowledgeBasePage: React.FC = () => {
             onChange={handleFileInputChange}
           />
           {isUploading ? (
-            <div className="flex flex-col items-center gap-2 text-blue-600">
+            <div className="flex flex-col items-center gap-2 text-banana-500">
               <Loader2 className="w-8 h-8 animate-spin" />
               <p className="text-sm font-medium">上传中...</p>
             </div>
@@ -560,7 +560,7 @@ export const KnowledgeBasePage: React.FC = () => {
             <div className="flex items-center justify-between text-xs text-gray-500 mb-2 px-1">
               <span>
                 已选 <span className="font-medium text-gray-700">{selectedCompletedCount}</span> 个文件参与生成
-                {parsingCount > 0 && <span className="ml-2 text-blue-500">· {parsingCount} 个解析中</span>}
+                {parsingCount > 0 && <span className="ml-2 text-banana-500">· {parsingCount} 个解析中</span>}
                 {failedCount > 0 && <span className="ml-2 text-red-500">· {failedCount} 个失败</span>}
                 {completedCount > selectedCompletedCount && (
                   <span className="ml-2 text-gray-400">· {completedCount - selectedCompletedCount} 个未选</span>
@@ -603,7 +603,7 @@ export const KnowledgeBasePage: React.FC = () => {
             placeholder="例如：重点突出技术架构，控制在 10 页以内..."
             rows={3}
             aria-label="额外要求（可选）"
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-banana-500 focus:border-transparent bg-white"
           />
         </div>
 
@@ -646,7 +646,7 @@ export const KnowledgeBasePage: React.FC = () => {
         {(isGenerating || outlineText) && (
           <div className="mt-6 bg-white border border-gray-200 rounded-xl p-4">
             {progressMessage && (
-              <div className="flex items-center gap-2 text-sm text-blue-600 mb-3">
+              <div className="flex items-center gap-2 text-sm text-banana-500 mb-3">
                 {isGenerating && <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />}
                 <span aria-live="polite">{progressMessage}</span>
               </div>

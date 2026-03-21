@@ -109,7 +109,7 @@ export const ReferenceFileCard: React.FC<ReferenceFileCardProps> = ({
     switch (file.parse_status) {
       case 'pending':
       case 'parsing':
-        return <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />;
+        return <Loader2 className="w-4 h-4 text-banana-500 animate-spin" />;
       case 'completed':
         return <CheckCircle2 className="w-4 h-4 text-green-500" />;
       case 'failed':
@@ -138,7 +138,7 @@ export const ReferenceFileCard: React.FC<ReferenceFileCardProps> = ({
     switch (file.parse_status) {
       case 'pending':
       case 'parsing':
-        return 'text-blue-600';
+        return 'text-banana-500';
       case 'completed':
         return 'text-green-600';
       case 'failed':
@@ -179,7 +179,7 @@ export const ReferenceFileCard: React.FC<ReferenceFileCardProps> = ({
       {/* File Icon */}
       <div className="flex-shrink-0">
         <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-          <FileText className="w-5 h-5 text-blue-600" />
+          <FileText className="w-5 h-5 text-banana-500" />
         </div>
       </div>
 
@@ -229,7 +229,7 @@ export const ReferenceFileCard: React.FC<ReferenceFileCardProps> = ({
               handleReparse();
             }}
             disabled={isReparsing}
-            className="flex-shrink-0 p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-50"
+            className="flex-shrink-0 p-1 text-gray-400 hover:text-banana-500 hover:bg-banana-50 rounded transition-colors disabled:opacity-50"
             title={file.parse_status === 'failed' ? '重试解析' : '重新解析'}
             aria-label={file.parse_status === 'failed' ? '重试解析' : '重新解析'}
           >

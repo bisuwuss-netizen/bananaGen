@@ -493,7 +493,7 @@ export const OutlineEditor: React.FC = () => {
       
       <AiRefineSidebar
         title="AI 修改大纲"
-        placeholder="例如：增加一页关于XXX的内容、删除第3页、合并前两页..."
+        placeholder="例如：增加一页实训操作步骤、删除第3页、合并第2页和第3页..."
         onSubmit={handleAiRefineOutline}
         disabled={isGlobalLoading}
         isOpen={isAiSidebarOpen}
