@@ -36,8 +36,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/80">
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-1">
-            <img src="/logo.png" alt="蕉幻" className="h-7 w-auto rounded object-contain" />
-            <p className="text-sm font-semibold text-slate-500">蕉幻</p>
+            <img src="/yuean.svg" alt="跃案" className="h-7 w-auto rounded object-contain" />
+            <p className="text-sm font-semibold text-slate-600">跃案</p>
           </div>
           <p className="text-xs text-slate-400 mb-2">智能教学课件平台</p>
           <h1 className="mt-3 text-3xl font-semibold text-slate-900">账号登录</h1>

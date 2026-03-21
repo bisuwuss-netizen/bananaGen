@@ -636,12 +636,12 @@ export const Home: React.FC = () => {
           </div>
           <div className="flex items-center gap-2">
             <img
-              src="/logo.png"
-              alt="蕉幻 Banana Slides Logo"
-              className="h-8 md:h-10 w-auto rounded-lg object-contain"
+              src="/yuean.svg"
+              alt="跃案 Logo"
+              className="h-8 md:h-9 w-auto rounded-lg object-contain"
             />
             <span className="text-lg md:text-xl font-bold bg-gradient-to-r from-banana-600 via-orange-500 to-pink-500 bg-clip-text text-transparent">
-              蕉幻
+              跃案
             </span>
           </div>
           <div className="flex items-center gap-2 md:gap-3">
