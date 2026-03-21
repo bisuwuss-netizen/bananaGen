@@ -581,6 +581,7 @@ async def generate_outline_task(
                                 requirements=project.extra_requirements or "",
                                 language=language,
                                 scheme_id=scheme_id,
+                                project_context=project_context,
                             )
                             if isinstance(outline_result, dict):
                                 try:

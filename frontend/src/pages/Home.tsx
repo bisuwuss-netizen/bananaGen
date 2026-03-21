@@ -680,29 +680,7 @@ export const Home: React.FC = () => {
       </nav>
 
       {/* 主内容 */}
-      <main className="relative w-full px-3 md:px-4 py-8 md:py-12 stagger-enter">
-        <div className="max-w-[1440px] mx-auto xl:grid xl:grid-cols-[200px_minmax(0,1fr)_200px] xl:gap-6 2xl:grid-cols-[240px_minmax(0,1fr)_240px] items-start">
-
-        {/* 左侧理念卡片：跃 */}
-        <div className="hidden xl:block sticky top-20">
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-5 border border-banana-100 shadow-sm">
-            <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-banana-400 to-banana-600 text-white font-bold text-xl mb-4 shadow-yellow">
-              跃
-            </div>
-            <h3 className="text-sm font-bold text-gray-800 mb-2">跨越式提效</h3>
-            <p className="text-xs text-gray-500 leading-relaxed">
-              不是微调，是量级跃升。AI 注入教学动能，将一节课的备课时间压缩到分钟级。
-            </p>
-            <div className="mt-4 pt-4 border-t border-banana-100">
-              <p className="text-xs text-banana-500 font-medium">备课效率</p>
-              <p className="text-2xl font-bold text-banana-600 mt-0.5">×10</p>
-              <p className="text-xs text-gray-400">较传统备课方式</p>
-            </div>
-          </div>
-        </div>
-
-        {/* 中间主内容 */}
-        <div className="min-w-0 max-w-5xl mx-auto xl:mx-0 w-full">
+      <main className="relative max-w-5xl mx-auto px-3 md:px-4 py-8 md:py-12 stagger-enter">
         {/* Hero 标题区 */}
         <div className="text-center mb-10 md:mb-16 space-y-4 md:space-y-6">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/60 backdrop-blur-sm rounded-full border border-banana-200/50 shadow-sm mb-4">
@@ -731,7 +709,7 @@ export const Home: React.FC = () => {
         </div>
 
         {/* 创建卡片 */}
-        <Card className="app-panel overflow-visible border-white/70 bg-white/95 p-4 shadow-[0_40px_120px_-56px_rgba(15,23,42,0.42)] duration-300 md:p-10 transition-[box-shadow,border-color,background-color]">
+        <Card className="app-panel overflow-visible border-white/70 bg-white/95 p-4 shadow-[0_40px_120px_-56px_rgba(15,23,42,0.42)] duration-300 md:p-10 lg:px-[8%] transition-[box-shadow,border-color,background-color]">
           {/* 选项卡 */}
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-6 md:mb-8">
             {(Object.keys(tabConfig) as CreationType[]).map((type) => {
@@ -851,46 +829,6 @@ export const Home: React.FC = () => {
 
           {/* 模板选择 */}
           <div className="mb-6 md:mb-8 pt-4 border-t border-gray-100">
-            <div className="mb-5">
-              <div className="mb-2 flex items-center gap-2">
-                <Lightbulb size={16} className="text-banana-500" />
-                <span className="text-sm font-medium text-gray-900">生成模式</span>
-              </div>
-              <div className="inline-flex rounded-2xl border border-gray-200 bg-gray-50 p-1">
-                <button
-                  type="button"
-                  aria-pressed={renderMode === 'html'}
-                  onClick={() => setRenderMode('html')}
-                  className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
-                    renderMode === 'html'
-                      ? 'bg-white text-banana-700 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-900'
-                  }`}
-                >
-                  结构化生成
-                </button>
-                {import.meta.env.VITE_SHOW_DEBUG_BUTTONS === 'true' && (
-                  <button
-                    type="button"
-                    aria-pressed={renderMode === 'image'}
-                    onClick={() => setRenderMode('image')}
-                    className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${
-                      renderMode === 'image'
-                        ? 'bg-white text-banana-700 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-900'
-                    }`}
-                  >
-                    图片化生成
-                  </button>
-                )}
-              </div>
-              <p className="mt-2 text-xs text-gray-500">
-                {renderMode === 'html'
-                  ? '当前使用教学模板，先生成结构化大纲，再进入编辑。'
-                  : '当前使用图片模式，可选模板图或文字风格来生成页面。'}
-              </p>
-            </div>
-
             <div className="flex items-center justify-between mb-3 md:mb-4">
               <div className="flex items-center gap-2">
                 <Palette size={18} className="text-banana-500 flex-shrink-0" />
@@ -1004,30 +942,38 @@ export const Home: React.FC = () => {
             )}
           </div>
         </Card>
-        </div>{/* 中间主内容 end */}
 
-        {/* 右侧理念卡片：案 */}
-        <div className="hidden xl:block sticky top-20">
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-5 border border-banana-100 shadow-sm">
-            <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-banana-400 to-banana-600 text-white font-bold text-xl mb-4 shadow-yellow">
-              案
-            </div>
-            <h3 className="text-sm font-bold text-gray-800 mb-2">教案即产品</h3>
-            <p className="text-xs text-gray-500 leading-relaxed">
-              从构想到完整教案，一气呵成。比"课"更聚焦备课的生产过程，强调教师的创作者价值。
+        {/* 品牌理念区 */}
+        <div className="mt-16 md:mt-24 mb-8 text-center space-y-10">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold tracking-[0.25em] text-banana-500 uppercase">Our Philosophy</p>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800">备课耗时，是教师最真实的痛点</h2>
+            <p className="text-sm md:text-base text-gray-500 max-w-xl mx-auto leading-relaxed">
+              跃案，让 AI 把这段时间还给你——专注教学本身，而非反复打磨幻灯片。
             </p>
-            <div className="mt-4 pt-4 border-t border-banana-100">
-              <p className="text-xs text-banana-500 font-medium">支持格式</p>
-              <p className="text-xs text-gray-600 mt-1.5 space-y-1">
-                <span className="block">📄 PPTX 可编辑导出</span>
-                <span className="block">🖼 PDF 高清导出</span>
-                <span className="block">📚 多课件模板</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+            <div className="group bg-white/70 backdrop-blur-sm rounded-2xl px-6 py-6 border border-banana-100 shadow-sm hover:shadow-md hover:border-banana-300 transition-all text-left">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-banana-400 to-banana-600 text-white font-bold text-lg mb-4 shadow-yellow">
+                跃
+              </div>
+              <h3 className="text-base font-semibold text-gray-800 mb-1.5">跨越式提效</h3>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                不是微调，是量级跃升。AI 注入教学动能，将一节课的备课时间压缩到分钟级，让高能量的创造力持续释放。
+              </p>
+            </div>
+            <div className="group bg-white/70 backdrop-blur-sm rounded-2xl px-6 py-6 border border-banana-100 shadow-sm hover:shadow-md hover:border-banana-300 transition-all text-left">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-banana-400 to-banana-600 text-white font-bold text-lg mb-4 shadow-yellow">
+                案
+              </div>
+              <h3 className="text-base font-semibold text-gray-800 mb-1.5">教案即产品</h3>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                "案"聚焦备课的生产过程——从构想到完整教案，一气呵成。比"课"更强调教师作为创作者的主体价值。
               </p>
             </div>
           </div>
         </div>
-
-        </div>{/* grid wrapper end */}
       </main>
       <ToastContainer />
       {/* 素材生成模态 - 在主页始终生成全局素材 */}

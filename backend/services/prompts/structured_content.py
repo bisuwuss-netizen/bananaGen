@@ -14,22 +14,13 @@ from .layouts import (
     LAYOUT_SCHEMAS
 )
 from .language import get_language_instruction
+from .utils import _format_reference_files_xml
 
 logger = logging.getLogger(__name__)
 
 
-def get_structured_outline_prompt(topic: str, requirements: str = "", language: str = None, scheme_id: str = None) -> str:
-    """
-    生成带布局信息的结构化大纲 prompt（用于HTML渲染器）
-
-    Args:
-        topic: PPT主题
-        requirements: 额外要求
-        language: 输出语言
-
-    Returns:
-        格式化后的 prompt 字符串
-    """
+def get_structured_outline_prompt(topic: str, requirements: str = "", language: str = None, scheme_id: str = None, reference_files_content=None) -> str:
+    files_xml = _format_reference_files_xml(reference_files_content)
     layout_list = get_layout_types_description(scheme_id)
     scheme_name = get_layout_scheme(scheme_id).get('name', 'tech_blue')
     layout_count = max(3, len(get_layout_scheme(scheme_id).get('layouts', {})) or 10)
@@ -150,7 +141,7 @@ def get_structured_outline_prompt(topic: str, requirements: str = "", language: 
 请生成15-20页左右的大纲，只返回JSON，不要包含其他文字。
 {get_language_instruction(language)}
 """
-    return prompt
+    return files_xml + prompt
 
 
 

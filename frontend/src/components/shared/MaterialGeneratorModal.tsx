@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Image as ImageIcon, ImagePlus, Upload, X, FolderOpen } from 'lucide-react';
 import { Modal, Textarea, Button, useToast, MaterialSelector, Skeleton } from '@/components/shared';
 import { generateMaterialImage, listMaterials, deleteMaterial } from '@/api/endpoints';
@@ -8,18 +8,11 @@ import type { Material } from '@/api/endpoints';
 import type { Task } from '@/types';
 
 interface MaterialGeneratorModalProps {
-  projectId?: string | null; // 可选，如果不提供则生成全局素材
+  projectId?: string | null;
   isOpen: boolean;
   onClose: () => void;
 }
 
-/**
- * 素材生成模态卡片
- * - 输入提示词 + 上传参考图
- * - 提示词原样传给文生图模型（不做额外修饰）
- * - 生成结果展示在模态顶部
- * - 结果统一保存在项目下的历史素材库（backend /uploads/{projectId}/materials）
- */
 export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
   projectId,
   isOpen,
@@ -37,6 +30,11 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [previewMaterial, setPreviewMaterial] = useState<Material | null>(null);
   const [failedImageUrls, setFailedImageUrls] = useState<Set<string>>(new Set());
+
+  const refImageUrl = useMemo(() => (refImage ? URL.createObjectURL(refImage) : null), [refImage]);
+  const extraImageUrls = useMemo(() => extraImages.map((f) => URL.createObjectURL(f)), [extraImages]);
+  useEffect(() => () => { if (refImageUrl) URL.revokeObjectURL(refImageUrl); }, [refImageUrl]);
+  useEffect(() => () => extraImageUrls.forEach((u) => URL.revokeObjectURL(u)), [extraImageUrls]);
 
   const promptTemplateGroups = [
     {
@@ -81,25 +79,22 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
 
   const handleRefImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = (e.target.files && e.target.files[0]) || null;
-    if (file) {
-      setRefImage(file);
+    if (file) setRefImage(file);
+  };
+
+  const addImages = (files: File[]) => {
+    if (files.length === 0) return;
+    if (!refImage) {
+      const [first, ...rest] = files;
+      setRefImage(first);
+      if (rest.length > 0) setExtraImages((prev) => [...prev, ...rest]);
+    } else {
+      setExtraImages((prev) => [...prev, ...files]);
     }
   };
 
   const handleExtraImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-
-    // 如果还没有主参考图，优先把第一张作为主参考图，其余作为额外参考图
-    if (!refImage) {
-      const [first, ...rest] = files;
-      setRefImage(first);
-      if (rest.length > 0) {
-        setExtraImages((prev) => [...prev, ...rest]);
-      }
-    } else {
-      setExtraImages((prev) => [...prev, ...files]);
-    }
+    addImages(Array.from(e.target.files || []));
   };
 
   const removeExtraImage = (index: number) => {
@@ -108,37 +103,16 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
 
   const handleSelectMaterials = async (materials: Material[]) => {
     try {
-      // 将选中的素材转换为File对象
-      const files = await Promise.all(
-        materials.map((material) => materialUrlToFile(material))
-      );
-
-      if (files.length === 0) return;
-
-      // 如果没有主图，优先把第一张设为主参考图
-      if (!refImage) {
-        const [first, ...rest] = files;
-        setRefImage(first);
-        if (rest.length > 0) {
-          setExtraImages((prev) => [...prev, ...rest]);
-        }
-      } else {
-        setExtraImages((prev) => [...prev, ...files]);
-      }
-
-      show({ message: `已添加 ${files.length} 个素材`, type: 'success' });
+      const files = await Promise.all(materials.map((m) => materialUrlToFile(m)));
+      addImages(files);
+      if (files.length > 0) show({ message: `已添加 ${files.length} 个素材`, type: 'success' });
     } catch (error: any) {
-      console.error('加载素材失败:', error);
-      show({
-        message: '加载素材失败: ' + (error.message || '未知错误'),
-        type: 'error',
-      });
+      show({ message: '加载素材失败: ' + (error.message || '未知错误'), type: 'error' });
     }
   };
 
   const taskSocketRef = useRef<WebSocket | null>(null);
 
-  // 清理连接
   useEffect(() => {
     return () => {
       taskSocketRef.current?.close();
@@ -151,11 +125,8 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
     try {
       const targetProjectId = projectId || 'all';
       const response = await listMaterials(targetProjectId);
-      if (response.data?.materials) {
-        setMaterials(response.data.materials);
-      }
+      if (response.data?.materials) setMaterials(response.data.materials);
     } catch (error: any) {
-      console.error('加载素材库失败:', error);
       show({
         message: error?.response?.data?.error?.message || error.message || '加载素材库失败',
         type: 'error',
@@ -166,13 +137,11 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
   };
 
   useEffect(() => {
-    if (isOpen) {
-      loadMaterials();
-    }
+    if (isOpen) loadMaterials();
   }, [isOpen, projectId]);
 
   const pollMaterialTask = async (taskId: string) => {
-    const targetProjectId = projectId || 'none'; // 使用'none'匹配后端NULL project_id
+    const targetProjectId = projectId || 'none';
     await new Promise<void>((resolve) => {
       taskSocketRef.current?.close();
       taskSocketRef.current = openTaskWebSocket<Task>(targetProjectId, taskId, {
@@ -196,7 +165,6 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
             resolve();
             return;
           }
-
           if (task.status === 'FAILED') {
             show({ message: task.error_message || '素材生成失败', type: 'error' });
             setIsGenerating(false);
@@ -212,6 +180,7 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
           resolve();
         },
         onClose: () => {
+          setIsGenerating(false);
           resolve();
         },
       });
@@ -223,16 +192,12 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
       show({ message: '请输入提示词', type: 'error' });
       return;
     }
-
     setIsGenerating(true);
     try {
-      // 如果没有projectId，使用'none'表示生成全局素材（后端将task的project_id设为NULL）
       const targetProjectId = projectId || 'none';
       const resp = await generateMaterialImage(targetProjectId, prompt.trim(), refImage as File, extraImages);
       const taskId = resp.data?.task_id;
-      
       if (taskId) {
-        // 开始轮询任务状态
         await pollMaterialTask(taskId);
       } else {
         show({ message: '素材生成失败：未返回任务ID', type: 'error' });
@@ -262,7 +227,6 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
       setMaterials((prev) => prev.filter((m) => m.id !== materialId));
       show({ message: '素材已删除', type: 'success' });
     } catch (error: any) {
-      console.error('删除素材失败:', error);
       show({
         message: error?.response?.data?.error?.message || error.message || '删除素材失败',
         type: 'error',
@@ -277,223 +241,189 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="素材生成" size="lg">
-      <blockquote className="text-sm text-gray-500 mb-4">生成的素材会保存到素材库</blockquote>
-      <div className="space-y-4">
-        {/* 顶部：生成结果预览（始终显示最新一次生成） */}
-        <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
-          <h4 className="text-sm font-semibold text-gray-700 mb-2">生成结果</h4>
-          {isGenerating ? (
-            <div className="aspect-video rounded-lg overflow-hidden border border-gray-200">
-              <Skeleton className="w-full h-full" />
-            </div>
-          ) : previewUrl ? (
-            <div className="aspect-video bg-white rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center">
-              <img
-                src={previewUrl}
-                alt="生成的素材"
-                className="w-full h-full object-contain"
-              />
-            </div>
-          ) : (
-            <div className="aspect-video bg-gray-100 rounded-lg flex flex-col items-center justify-center text-gray-400 text-sm">
-              <div className="text-3xl mb-2">🎨</div>
-              <div>生成的素材会展示在这里</div>
-            </div>
-          )}
-        </div>
+    <Modal isOpen={isOpen} onClose={handleClose} title="素材生成" size="xl">
+      <div className="flex gap-6" style={{ height: '62vh', minHeight: '400px' }}>
+        {/* 左栏：提示词 + 模板 + 参考图 */}
+        <div className="flex w-72 flex-shrink-0 flex-col gap-4 overflow-y-auto pr-1">
+          <Textarea
+            label="提示词"
+            placeholder="例如：蓝紫色渐变背景，带几何图形和科技感线条..."
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            rows={4}
+          />
 
-        {/* 提示词：原样传给模型 */}
-        <Textarea
-          label="提示词（原样发送给文生图模型）"
-          placeholder="例如：蓝紫色渐变背景，带几何图形和科技感线条，用于科技主题标题页..."
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          rows={3}
-        />
-        <div className="space-y-3">
-          {promptTemplateGroups.map((group) => (
-            <div key={group.label}>
-              <div className="text-xs font-medium text-gray-400 mb-1.5">{group.label}</div>
-              <div className="flex flex-wrap gap-2">
-                {group.templates.map((tpl) => (
-                  <button
-                    key={tpl}
-                    type="button"
-                    onClick={() => setPrompt(tpl)}
-                    className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
-                      prompt === tpl
-                        ? 'border-banana-400 bg-banana-50 text-banana-600'
-                        : 'border-gray-200 text-gray-600 hover:border-banana-400 hover:text-banana-600 hover:bg-banana-50'
-                    }`}
-                  >
-                    {tpl}
-                  </button>
-                ))}
+          <div className="space-y-3">
+            <div className="text-xs font-medium text-gray-500">快速模板</div>
+            {promptTemplateGroups.map((group) => (
+              <div key={group.label}>
+                <div className="mb-1.5 text-[11px] font-medium text-gray-400">{group.label}</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {group.templates.map((tpl) => (
+                    <button
+                      key={tpl}
+                      type="button"
+                      onClick={() => setPrompt(tpl)}
+                      className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                        prompt === tpl
+                          ? 'border-banana-400 bg-banana-50 text-banana-600'
+                          : 'border-gray-200 text-gray-600 hover:border-banana-400 hover:bg-banana-50 hover:text-banana-600'
+                      }`}
+                    >
+                      {tpl}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-
-        {/* 参考图上传区 */}
-        <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-gray-700">
-              <ImagePlus size={16} className="text-gray-500" />
-              <span className="font-medium">参考图片（可选）</span>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={<FolderOpen size={16} />}
-              onClick={() => setIsMaterialSelectorOpen(true)}
-            >
-              从素材库选择
-            </Button>
+            ))}
           </div>
-          <div className="flex flex-wrap gap-4">
-            {/* 主参考图（可选） */}
-            <div className="space-y-2">
-              <div className="text-xs text-gray-600">主参考图（可选）</div>
-              <label className="w-40 h-28 border-2 border-dashed border-gray-300 rounded flex flex-col items-center justify-center cursor-pointer hover:border-banana-500 transition-colors bg-white relative group">
+
+          {/* 参考图上传 */}
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                <ImagePlus size={13} />
+                参考图片（可选）
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMaterialSelectorOpen(true)}
+                className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-gray-700"
+              >
+                <FolderOpen size={12} />
+                从素材库选
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {/* 主参考图 */}
+              <label className="relative flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded border-2 border-dashed border-gray-300 bg-white transition-colors hover:border-banana-500 group">
                 {refImage ? (
                   <>
-                    <img
-                      src={URL.createObjectURL(refImage)}
-                      alt="主参考图"
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={refImageUrl!} alt="主参考图" className="h-full w-full rounded object-cover" />
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setRefImage(null);
-                      }}
-                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow z-10"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setRefImage(null); }}
+                      className="absolute -right-2 -top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow transition-opacity group-hover:opacity-100"
                     >
-                      <X size={12} />
+                      <X size={10} />
                     </button>
                   </>
                 ) : (
                   <>
-                    <ImageIcon size={24} className="text-gray-400 mb-1" />
-                    <span className="text-xs text-gray-500">点击上传</span>
+                    <ImageIcon size={18} className="mb-1 text-gray-400" />
+                    <span className="text-[10px] text-gray-400">主参考图</span>
                   </>
                 )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleRefImageChange}
-                />
+                <input type="file" accept="image/*" className="hidden" onChange={handleRefImageChange} />
+              </label>
+
+              {/* 额外参考图 */}
+              {extraImages.map((_file, idx) => (
+                <div key={idx} className="group relative">
+                  <img src={extraImageUrls[idx]} alt={`extra-${idx + 1}`} className="h-20 w-20 rounded border border-gray-300 object-cover" />
+                  <button
+                    onClick={() => removeExtraImage(idx)}
+                    className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow transition-opacity group-hover:opacity-100"
+                  >
+                    <X size={10} />
+                  </button>
+                </div>
+              ))}
+              <label className="flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded border-2 border-dashed border-gray-300 bg-white transition-colors hover:border-banana-500">
+                <Upload size={16} className="mb-1 text-gray-400" />
+                <span className="text-[10px] text-gray-400">添加</span>
+                <input type="file" accept="image/*" multiple className="hidden" onChange={handleExtraImagesChange} />
               </label>
             </div>
+          </div>
+        </div>
 
-            {/* 额外参考图（可选） */}
-            <div className="flex-1 space-y-2 min-w-[180px]">
-              <div className="text-xs text-gray-600">额外参考图（可选，多张）</div>
-              <div className="flex flex-wrap gap-2">
-                {extraImages.map((file, idx) => (
-                  <div key={idx} className="relative group">
-                    <img
-                      src={URL.createObjectURL(file)}
-                      alt={`extra-${idx + 1}`}
-                      className="w-20 h-20 object-cover rounded border border-gray-300"
-                    />
-                    <button
-                      onClick={() => removeExtraImage(idx)}
-                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))}
-                <label className="w-20 h-20 border-2 border-dashed border-gray-300 rounded flex flex-col items-center justify-center cursor-pointer hover:border-banana-500 transition-colors bg-white">
-                  <Upload size={18} className="text-gray-400 mb-1" />
-                  <span className="text-[11px] text-gray-500">添加</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={handleExtraImagesChange}
-                  />
-                </label>
+        {/* 右栏：生成结果 + 素材库 */}
+        <div className="flex flex-1 flex-col gap-4 overflow-y-auto min-w-0 pr-1">
+          {/* 生成结果 */}
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <div className="mb-2 text-xs font-medium text-gray-600">生成结果</div>
+            {isGenerating ? (
+              <div className="aspect-video overflow-hidden rounded-lg border border-gray-200">
+                <Skeleton className="h-full w-full" />
               </div>
-            </div>
+            ) : previewUrl ? (
+              <div className="aspect-video overflow-hidden rounded-lg border border-gray-200 bg-white flex items-center justify-center">
+                <img src={previewUrl} alt="生成的素材" className="h-full w-full object-contain" />
+              </div>
+            ) : (
+              <div className="aspect-video rounded-lg bg-gray-100 flex flex-col items-center justify-center text-gray-400 text-sm">
+                <div className="mb-2 text-3xl">🎨</div>
+                <div>生成的素材会展示在这里</div>
+              </div>
+            )}
           </div>
-        </div>
 
-        <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-semibold text-gray-700">素材库</h4>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={loadMaterials}
-              disabled={isLoadingMaterials}
-            >
-              {isLoadingMaterials ? '加载中...' : '刷新'}
-            </Button>
-          </div>
-          {isLoadingMaterials ? (
-            <div className="text-center text-sm text-gray-400 py-6">加载中...</div>
-          ) : materials.length === 0 ? (
-            <div className="text-center text-sm text-gray-400 py-6">暂无素材</div>
-          ) : (
-            <div className="grid grid-cols-4 gap-3 max-h-40 overflow-y-auto pr-1">
-              {materials.map((material) => (
-                <button
-                  key={material.id}
-                  type="button"
-                  onClick={() => setPreviewMaterial(material)}
-                  className="relative group aspect-video rounded border border-gray-200 overflow-hidden text-left"
-                >
-                  {failedImageUrls.has(material.url) ? (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs text-center p-2 bg-gray-100">
-                      图片加载失败
-                    </div>
-                  ) : (
-                    <img
-                      src={getImageUrl(material.url)}
-                      alt={material.filename}
-                      className="w-full h-full object-cover"
-                      onError={() => setFailedImageUrls(prev => new Set(prev).add(material.url))}
-                    />
-                  )}
+          {/* 素材库 */}
+          <div className="flex-1 rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="text-xs font-medium text-gray-600">素材库</div>
+              <button
+                type="button"
+                onClick={loadMaterials}
+                disabled={isLoadingMaterials}
+                className="text-[11px] text-gray-500 hover:text-gray-700 disabled:opacity-50"
+              >
+                {isLoadingMaterials ? '加载中...' : '刷新'}
+              </button>
+            </div>
+            {isLoadingMaterials ? (
+              <div className="py-6 text-center text-sm text-gray-400">加载中...</div>
+            ) : materials.length === 0 ? (
+              <div className="py-6 text-center text-sm text-gray-400">暂无素材</div>
+            ) : (
+              <div className="grid grid-cols-4 gap-2">
+                {materials.map((material) => (
                   <button
+                    key={material.id}
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteMaterial(material.id);
-                    }}
-                    disabled={deletingIds.has(material.id)}
-                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow disabled:opacity-60"
-                    aria-label="删除素材"
+                    onClick={() => setPreviewMaterial(material)}
+                    className="group relative aspect-video overflow-hidden rounded border border-gray-200 text-left"
                   >
-                    <X size={12} />
+                    {failedImageUrls.has(material.url) ? (
+                      <div className="flex h-full w-full items-center justify-center bg-gray-100 p-2 text-center text-[10px] text-gray-400">
+                        加载失败
+                      </div>
+                    ) : (
+                      <img
+                        src={getImageUrl(material.url)}
+                        alt={material.filename}
+                        className="h-full w-full object-cover"
+                        onError={() => setFailedImageUrls((prev) => new Set(prev).add(material.url))}
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleDeleteMaterial(material.id); }}
+                      disabled={deletingIds.has(material.id)}
+                      className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow transition-opacity group-hover:opacity-100 disabled:opacity-60"
+                      aria-label="删除素材"
+                    >
+                      <X size={10} />
+                    </button>
                   </button>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="flex justify-end gap-3 pt-2">
-          <Button variant="ghost" onClick={handleClose} disabled={isGenerating}>
-            关闭
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleGenerate}
-            disabled={isGenerating || !prompt.trim()}
-          >
-            {isGenerating ? '生成中...' : '生成素材'}
-          </Button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-      {/* 素材选择器 */}
+
+      {/* 底部操作 */}
+      <div className="mt-4 flex justify-end gap-3 border-t border-gray-100 pt-4">
+        <Button variant="ghost" onClick={handleClose} disabled={isGenerating}>
+          关闭
+        </Button>
+        <Button variant="primary" onClick={handleGenerate} disabled={isGenerating || !prompt.trim()}>
+          {isGenerating ? '生成中...' : '生成素材'}
+        </Button>
+      </div>
+
       <MaterialSelector
         projectId={projectId || undefined}
         isOpen={isMaterialSelectorOpen}
@@ -501,18 +431,14 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
         onSelect={handleSelectMaterials}
         multiple={true}
       />
+
       {previewMaterial && (
-        <Modal
-          isOpen={true}
-          onClose={() => setPreviewMaterial(null)}
-          title="素材预览"
-          size="lg"
-        >
+        <Modal isOpen={true} onClose={() => setPreviewMaterial(null)} title="素材预览" size="lg">
           <div className="w-full">
             <img
               src={getImageUrl(previewMaterial.url)}
               alt={previewMaterial.filename}
-              className="w-full h-auto max-h-[70vh] object-contain rounded"
+              className="max-h-[70vh] w-full rounded object-contain"
             />
           </div>
         </Modal>

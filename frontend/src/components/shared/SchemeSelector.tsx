@@ -169,16 +169,17 @@ export const SchemeSelector: React.FC<SchemeSelectorProps> = ({ value, onChange 
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory" style={{ scrollbarWidth: 'thin' }}>
         {layoutSchemes.map((scheme) => (
-          <SchemeCard
-            key={scheme.id}
-            scheme={scheme}
-            selected={scheme.id === value}
-            previewOpen={scheme.id === activePreviewSchemeId}
-            onSelect={() => onChange(scheme.id)}
-            onPreviewOpen={openPreview}
-          />
+          <div key={scheme.id} className="flex-shrink-0 w-[340px] snap-start">
+            <SchemeCard
+              scheme={scheme}
+              selected={scheme.id === value}
+              previewOpen={scheme.id === activePreviewSchemeId}
+              onSelect={() => onChange(scheme.id)}
+              onPreviewOpen={openPreview}
+            />
+          </div>
         ))}
       </div>
 

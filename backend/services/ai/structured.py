@@ -76,13 +76,14 @@ class StructuredMixin:
         outline['pages'] = fixed_pages
         return outline
 
-    def generate_structured_outline(self, topic: str, requirements: str = "", language: str = 'zh', scheme_id: str = 'edu_dark') -> Dict:
+    def generate_structured_outline(self, topic: str, requirements: str = "", language: str = 'zh', scheme_id: str = 'edu_dark', project_context=None) -> Dict:
         from services.prompts.layouts import LAYOUT_SCHEMES, SCHEME_ROLE_LAYOUTS
         from services.prompts.structured_content import get_structured_outline_prompt
         from services.presentation.ppt_quality_guard import apply_structured_outline_quality_guard
         from services.presentation.narrative_continuity import enrich_outline_with_narrative_contract
 
-        prompt = get_structured_outline_prompt(topic, requirements, language, scheme_id=scheme_id)
+        ref_files = project_context.reference_files_content if project_context else None
+        prompt = get_structured_outline_prompt(topic, requirements, language, scheme_id=scheme_id, reference_files_content=ref_files)
         outline = self.generate_json(prompt, thinking_budget=1000)
 
         scheme = LAYOUT_SCHEMES.get(scheme_id, LAYOUT_SCHEMES['edu_dark'])
@@ -660,13 +661,14 @@ class StructuredMixin:
 
         return ppt_document
 
-    async def generate_structured_outline_async(self, topic: str, requirements: str = "", language: str = 'zh', scheme_id: str = 'edu_dark') -> Dict:
+    async def generate_structured_outline_async(self, topic: str, requirements: str = "", language: str = 'zh', scheme_id: str = 'edu_dark', project_context=None) -> Dict:
         from services.prompts.layouts import LAYOUT_SCHEMES, SCHEME_ROLE_LAYOUTS
         from services.prompts.structured_content import get_structured_outline_prompt
         from services.presentation.ppt_quality_guard import apply_structured_outline_quality_guard
         from services.presentation.narrative_continuity import enrich_outline_with_narrative_contract
 
-        prompt = get_structured_outline_prompt(topic, requirements, language, scheme_id=scheme_id)
+        ref_files = project_context.reference_files_content if project_context else None
+        prompt = get_structured_outline_prompt(topic, requirements, language, scheme_id=scheme_id, reference_files_content=ref_files)
         outline = await self.generate_json_async(prompt, thinking_budget=1000)
 
         scheme = LAYOUT_SCHEMES.get(scheme_id, LAYOUT_SCHEMES['edu_dark'])
