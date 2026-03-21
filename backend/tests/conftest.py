@@ -181,6 +181,7 @@ def _configure_test_database():
 @pytest.fixture(scope="session")
 def app(_configure_test_database):
     import config_fastapi
+    import deps
     import services.runtime_state
     import app_fastapi
 
@@ -188,6 +189,7 @@ def app(_configure_test_database):
     config_fastapi = importlib.reload(config_fastapi)
     # Rebuild settings from current env (DATABASE_URL points to *_test in this fixture).
     config_fastapi.settings = config_fastapi.Settings()
+    deps = importlib.reload(deps)
     services.runtime_state = importlib.reload(services.runtime_state)
     app_fastapi = importlib.reload(app_fastapi)
     fastapi_app = app_fastapi.app

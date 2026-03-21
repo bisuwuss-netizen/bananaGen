@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, Save, ArrowRight, Plus, FileText, Sparkle, Home } from 'lucide-react';
 import {
@@ -56,6 +56,7 @@ export const OutlineEditor: React.FC = () => {
   const location = useLocation();
   const { projectId } = useParams<{ projectId: string }>();
   const fromHistory = (location.state as any)?.from === 'history';
+  const autoStartOutline = (location.state as any)?.autoStartOutline === true;
   const {
     currentProject,
     syncProject,
@@ -75,6 +76,7 @@ export const OutlineEditor: React.FC = () => {
   const [isAiRefining, setIsAiRefining] = useState(false);
   const [previewFileId, setPreviewFileId] = useState<string | null>(null);
   const [isAiSidebarOpen, setIsAiSidebarOpen] = useState(false);
+  const autoStartTriggeredRef = useRef(false);
   const { confirm, ConfirmDialog } = useConfirm();
   const { show, ToastContainer } = useToast();
 
@@ -106,6 +108,39 @@ export const OutlineEditor: React.FC = () => {
       setIsAiSidebarOpen(false);
     }
   }, [isGlobalLoading]);
+
+  useEffect(() => {
+    if (autoStartTriggeredRef.current || !autoStartOutline || !projectId) {
+      return;
+    }
+    if (!currentProject || currentProject.id !== projectId) {
+      return;
+    }
+    if (isGlobalLoading) {
+      return;
+    }
+    if (currentProject.creation_type !== 'outline') {
+      autoStartTriggeredRef.current = true;
+      return;
+    }
+    if ((currentProject.pages?.length || 0) > 0) {
+      autoStartTriggeredRef.current = true;
+      return;
+    }
+
+    autoStartTriggeredRef.current = true;
+    void Promise.resolve(generateOutline()).catch((error) => {
+      console.error('自动解析大纲失败:', error);
+      show({ message: '自动解析大纲失败，请手动重试', type: 'error' });
+    });
+  }, [
+    autoStartOutline,
+    currentProject,
+    generateOutline,
+    isGlobalLoading,
+    projectId,
+    show,
+  ]);
 
 
   // 拖拽传感器配置

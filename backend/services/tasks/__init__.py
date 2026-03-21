@@ -7,6 +7,7 @@ from .image_task import (
     generate_material_image_task,
     generate_single_page_image_task,
 )
+from .knowledge_base_task import generate_knowledge_base_outline_task
 from .outline_task import generate_outline_task
 from .manager import (
     DEFAULT_TASK_STALE_TIMEOUT_SECONDS,
@@ -30,6 +31,7 @@ __all__ = [
     "export_editable_pptx_with_recursive_analysis_task",
     "generate_descriptions_task",
     "generate_images_task",
+    "generate_knowledge_base_outline_task",
     "generate_material_image_task",
     "generate_outline_task",
     "generate_single_page_image_task",

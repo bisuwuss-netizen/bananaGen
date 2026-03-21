@@ -1106,3 +1106,73 @@ export const saveHtmlImage = async (
   const data = await response.json();
   return data;
 };
+
+// ===== 知识库相关 API =====
+
+export interface KnowledgeBaseOutlineTaskResponse {
+  task_id: string;
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+}
+
+export interface CreateKnowledgeBaseProjectRequest {
+  outlineText: string;
+  referenceFileIds: string[];
+  renderMode?: 'image' | 'html';
+  schemeId?: string;
+}
+
+export const uploadKnowledgeBaseDoc = async (file: File): Promise<ReferenceFile> => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await apiClient.post<ApiResponse<{ file: ReferenceFile }>>(
+    '/api/reference-files/upload',
+    formData
+  );
+  return response.data.data!.file;
+};
+
+export const listKnowledgeBaseFiles = async (): Promise<ReferenceFile[]> => {
+  const response = await apiClient.get<ApiResponse<{ files: ReferenceFile[] }>>(
+    '/api/reference-files/project/global'
+  );
+  return response.data.data?.files ?? [];
+};
+
+export const deleteKnowledgeBaseFile = async (fileId: string): Promise<void> => {
+  await apiClient.delete(`/api/reference-files/${fileId}`);
+};
+
+export const parseKnowledgeBaseFile = async (fileId: string): Promise<void> => {
+  await apiClient.post(`/api/reference-files/${fileId}/parse`);
+};
+
+export const startKnowledgeBaseOutlineTask = async (
+  referenceFileIds: string[],
+  extraRequirements?: string,
+): Promise<KnowledgeBaseOutlineTaskResponse> => {
+  const response = await apiClient.post<ApiResponse<KnowledgeBaseOutlineTaskResponse>>(
+    '/api/knowledge-base/generate-outline',
+    {
+      reference_file_ids: referenceFileIds,
+      extra_requirements: extraRequirements,
+    },
+  );
+  return response.data.data as KnowledgeBaseOutlineTaskResponse;
+};
+
+export const createProjectFromKnowledgeBase = async (
+  payload: CreateKnowledgeBaseProjectRequest,
+): Promise<ApiResponse<{ project_id: string; status: string }>> => {
+  const response = await apiClient.post<ApiResponse<{ project_id: string; status: string }>>(
+    '/api/knowledge-base/create-project',
+    {
+      outline_text: payload.outlineText,
+      reference_file_ids: payload.referenceFileIds,
+      render_mode: payload.renderMode || 'html',
+      scheme_id: payload.schemeId || 'edu_dark',
+    },
+  );
+  return response.data;
+};
+

@@ -9,6 +9,7 @@ import { SettingsPage } from './pages/Settings';
 import { LoginPage } from './pages/Login';
 import { HTMLRendererPage } from './experimental/html-renderer';
 import { IntegratedPage } from './experimental/html-renderer/IntegratedPage';
+import { KnowledgeBasePage } from './pages/KnowledgeBasePage';
 import { useProjectStore } from './store/useProjectStore';
 import { useToast } from './components/shared';
 import { getAuthStatus, logoutAuth, type AuthStatus } from './api/endpoints';
@@ -121,6 +122,7 @@ function App() {
             <Route path="/project/:projectId/outline" element={<OutlineEditor />} />
             <Route path="/project/:projectId/detail" element={<DetailEditor />} />
             <Route path="/project/:projectId/preview" element={<SlidePreview />} />
+            <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
             <Route path="/experimental/renderer" element={<HTMLRendererPage />} />
             <Route path="/experimental/integrated" element={<IntegratedPage />} />
             <Route path="/login" element={<Navigate to="/" replace />} />

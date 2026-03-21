@@ -1,7 +1,7 @@
 import { openTaskWebSocket } from '@/api/client';
 import type { ProjectTaskPayload } from './types';
 
-export type RecoverableTaskKind = 'active' | 'descriptions' | 'images';
+export type RecoverableTaskKind = 'active' | 'descriptions' | 'images' | 'knowledgeBase';
 
 export interface RecoverableTaskRecord {
   kind: RecoverableTaskKind;

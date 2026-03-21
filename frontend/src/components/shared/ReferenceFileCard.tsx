@@ -8,6 +8,8 @@ export interface ReferenceFileCardProps {
   onStatusChange?: (file: ReferenceFile) => void;
   deleteMode?: 'delete' | 'remove'; // 'delete': 彻底删除文件, 'remove': 只从项目中移除
   onClick?: () => void; // 点击卡片的事件
+  selected?: boolean; // 是否选中（用于生成大纲时的文件选择）
+  onToggle?: (fileId: string) => void; // 切换选中状态
 }
 
 export const ReferenceFileCard: React.FC<ReferenceFileCardProps> = ({
@@ -16,6 +18,8 @@ export const ReferenceFileCard: React.FC<ReferenceFileCardProps> = ({
   onStatusChange,
   deleteMode = 'delete', // 默认是彻底删除（文件选择器中使用）
   onClick,
+  selected,
+  onToggle,
 }) => {
   const [file, setFile] = useState<ReferenceFile>(initialFile);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -122,7 +126,7 @@ export const ReferenceFileCard: React.FC<ReferenceFileCardProps> = ({
       case 'parsing':
         return '解析中...';
       case 'completed':
-        return '解析完成';
+        return onClick ? '解析完成（点击预览）' : '解析完成';
       case 'failed':
         return '解析失败';
       default:
@@ -145,12 +149,33 @@ export const ReferenceFileCard: React.FC<ReferenceFileCardProps> = ({
   };
 
   return (
-    <div 
+    <div
       className={`flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow ${
         onClick ? 'cursor-pointer' : ''
       }`}
       onClick={onClick}
     >
+      {/* Checkbox */}
+      {onToggle !== undefined && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggle(file.id); }}
+          className="flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors focus:outline-none"
+          style={{
+            borderColor: selected ? '#3b82f6' : '#d1d5db',
+            backgroundColor: selected ? '#3b82f6' : 'white',
+          }}
+          aria-label={selected ? '取消选择' : '选择此文件'}
+          aria-checked={selected}
+          role="checkbox"
+        >
+          {selected && (
+            <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+              <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </button>
+      )}
+
       {/* File Icon */}
       <div className="flex-shrink-0">
         <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
@@ -196,8 +221,8 @@ export const ReferenceFileCard: React.FC<ReferenceFileCardProps> = ({
 
       {/* Action Buttons */}
       <div className="flex items-center gap-1">
-        {/* Reparse Button - 只在解析完成时显示 */}
-        {file.parse_status === 'completed' && (
+        {/* Reparse Button - 解析完成或失败时显示 */}
+        {(file.parse_status === 'completed' || file.parse_status === 'failed') && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -205,7 +230,8 @@ export const ReferenceFileCard: React.FC<ReferenceFileCardProps> = ({
             }}
             disabled={isReparsing}
             className="flex-shrink-0 p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-50"
-            title="重新解析"
+            title={file.parse_status === 'failed' ? '重试解析' : '重新解析'}
+            aria-label={file.parse_status === 'failed' ? '重试解析' : '重新解析'}
           >
             {isReparsing ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -214,7 +240,7 @@ export const ReferenceFileCard: React.FC<ReferenceFileCardProps> = ({
             )}
           </button>
         )}
-        
+
         {/* Delete Button */}
         <button
           onClick={(e) => {
@@ -224,6 +250,7 @@ export const ReferenceFileCard: React.FC<ReferenceFileCardProps> = ({
           disabled={isDeleting}
           className="flex-shrink-0 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
           title={deleteMode === 'remove' ? '从项目中移除' : '删除文件'}
+          aria-label="删除文件"
         >
           {isDeleting ? (
             <Loader2 className="w-4 h-4 animate-spin" />

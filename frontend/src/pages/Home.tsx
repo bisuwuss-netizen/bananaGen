@@ -11,6 +11,7 @@ import {
   Palette,
   Lightbulb,
   Eye,
+  BookOpen,
 } from 'lucide-react';
 import { Button, Textarea, Card, useToast, MaterialGeneratorModal, ReferenceFileList, ReferenceFileSelector, FilePreviewModal, ImagePreviewList } from '@/components/shared';
 import { TemplateSelector, getTemplateFile } from '@/components/shared/TemplateSelector';
@@ -741,6 +742,13 @@ export const Home: React.FC = () => {
                 </button>
               );
             })}
+            <button
+              onClick={() => navigate('/knowledge-base')}
+              className="flex flex-1 touch-manipulation items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium duration-200 md:gap-2 md:px-6 md:py-3 md:text-base transition-[background-color,color,box-shadow,border-color] bg-white border border-banana-500 text-banana-500 hover:bg-banana-500 hover:text-white"
+            >
+              <span className="scale-90 md:scale-100"><BookOpen size={20} /></span>
+              <span className="truncate">从文档生成</span>
+            </button>
           </div>
 
           {/* 描述 */}

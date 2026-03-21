@@ -136,8 +136,37 @@ async def upload_reference_file(
     )
     db.add(ref)
     await db.flush()
+    await db.commit()
 
     return SuccessResponse(data={"file": ref.to_dict()})
+
+
+@router.get("/project/{project_id}", response_model=SuccessResponse)
+async def list_project_reference_files(
+    project_id: str,
+    current_user: CurrentUser = Depends(require_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if project_id == "all":
+        result = await db.execute(select(ReferenceFile).where(ReferenceFile.user_id == current_user.user_id))
+    elif project_id in ("global", "none"):
+        result = await db.execute(
+            select(ReferenceFile).where(
+                ReferenceFile.project_id.is_(None),
+                ReferenceFile.user_id == current_user.user_id,
+            )
+        )
+    else:
+        await get_project_for_user(db, project_id, current_user)
+        result = await db.execute(
+            select(ReferenceFile).where(
+                ReferenceFile.project_id == project_id,
+                ReferenceFile.user_id == current_user.user_id,
+            )
+        )
+
+    files = result.scalars().all()
+    return SuccessResponse(data={"files": [f.to_dict(include_content=False) for f in files]})
 
 
 @router.get("/{file_id}", response_model=SuccessResponse)
@@ -170,36 +199,8 @@ async def delete_reference_file(
         logger.warning(f"Failed to delete file: {e}")
 
     await db.delete(ref)
-    await db.flush()
+    await db.commit()
     return SuccessResponse(data={"message": "File deleted"})
-
-
-@router.get("/project/{project_id}", response_model=SuccessResponse)
-async def list_project_reference_files(
-    project_id: str,
-    current_user: CurrentUser = Depends(require_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    if project_id == "all":
-        result = await db.execute(select(ReferenceFile).where(ReferenceFile.user_id == current_user.user_id))
-    elif project_id in ("global", "none"):
-        result = await db.execute(
-            select(ReferenceFile).where(
-                ReferenceFile.project_id.is_(None),
-                ReferenceFile.user_id == current_user.user_id,
-            )
-        )
-    else:
-        await get_project_for_user(db, project_id, current_user)
-        result = await db.execute(
-            select(ReferenceFile).where(
-                ReferenceFile.project_id == project_id,
-                ReferenceFile.user_id == current_user.user_id,
-            )
-        )
-
-    files = result.scalars().all()
-    return SuccessResponse(data={"files": [f.to_dict(include_content=False) for f in files]})
 
 
 @router.post("/{file_id}/parse", response_model=SuccessResponse)
@@ -220,7 +221,7 @@ async def trigger_file_parse(
         ref.error_message = None
         ref.markdown_content = None
         ref.mineru_batch_id = None
-        await db.flush()
+        await db.commit()
 
     file_path = Path(app_settings.upload_folder) / ref.file_path
     if not file_path.exists():
@@ -256,7 +257,7 @@ async def associate_file_to_project(
 
     ref.project_id = project_id
     ref.updated_at = datetime.utcnow()
-    await db.flush()
+    await db.commit()
 
     return SuccessResponse(data={"file": ref.to_dict()})
 
@@ -273,6 +274,6 @@ async def dissociate_file_from_project(
 
     ref.project_id = None
     ref.updated_at = datetime.utcnow()
-    await db.flush()
+    await db.commit()
 
     return SuccessResponse(data={"file": ref.to_dict(), "message": "Dissociated"})
