@@ -347,6 +347,7 @@ Only use layout_id from the selected scheme above.
     {{
     "part": "Part 2: Main Content",
     "pages": [
+        {{"title": "第二章：主要内容", "points": ["本章概览"], "layout_id": "section_title"}},
         {{"title": "Topic 1", "points": ["point1", "point2"], "layout_id": "{content_id}"}},
         {{"title": "Topic 2", "points": ["point1", "point2"], "layout_id": "{content_id_2}"}}
     ]
@@ -371,6 +372,8 @@ Only use layout_id from the selected scheme above.
     ]
     }}
 ]'''
+
+    section_title_rule = "- 章节格式中，每个 part（非第一 part）的第一页建议使用 section_title 类布局，用于章节过渡\n" if render_mode == 'html' else ""
 
     prompt = (f"""\
 你是一位专业的PPT大纲解析专家。请将用户提供的大纲文本解析成结构化格式。
@@ -408,11 +411,11 @@ Only use layout_id from the selected scheme above.
 - 要点要从用户输入中提取，可以适当优化表述但核心内容必须保留
 - 不要添加用户没有提到的内容
 - 不要删除用户明确提到的主题
-
+{section_title_rule}
 现在请解析上述大纲文本，返回结构化格式。只返回JSON，不要包含其他文字。
 {get_language_instruction(language)}
 """)
-    
+
     final_prompt = files_xml + prompt
     logger.debug(f"[get_outline_parsing_prompt] Final prompt:\n{final_prompt}")
     return final_prompt
@@ -477,7 +480,15 @@ def get_outline_enhancement_prompt(
     
     import json
     parsed_outline_json = json.dumps(parsed_outline, ensure_ascii=False, indent=2)
-    
+
+    content_type_instruction = """
+4. **内容类型标注**（仅 HTML 模式）：在 points 中以自然语言暗示内容类型，帮助后续内容生成选择合适的佐证方式：
+   - 数据/指标类页面：points 中至少包含一个具体数字、百分比或量化目标（如"操作合规率提升 ≥ 30%"）
+   - 流程/步骤类页面：points 按执行顺序排列，每条以动词开头（如"第一步：确认电源断开"）
+   - 对比/选型类页面：points 成对出现，明确标注对比维度（如"传统方式 vs 标准作业方式"）
+   - 案例/复盘类页面：第一条 point 描述情境，后续 points 为分析和结论
+""" if render_mode == 'html' else ""
+
     prompt = f"""\
 你是一位专业的PPT大纲设计师。请基于用户提供的大纲，对其进行丰富和优化。
 
@@ -493,7 +504,7 @@ def get_outline_enhancement_prompt(
    - 优化页面标题，使其更清晰、专业，但必须反映用户输入的原意
    - 为每个页面补充1-3个关键要点，要点要基于用户输入的内容，可以适当扩展但不要偏离主题
    - 如果用户输入比较简略，可以适当补充相关内容，但必须与主题相关
-3. **完善结构**：
+{content_type_instruction}3. **完善结构**：
    - 添加封面页（标题基于用户输入的主题）
    - 如果页数较多（>6页），添加目录页
    - 在最后添加总结/回顾页
@@ -527,8 +538,8 @@ def get_outline_enhancement_prompt(
     "layout_id": "{toc_id}"
   }},
   {{
-    "title": "页面标题（基于用户输入）",
-    "points": ["要点1（基于用户输入）", "要点2（可以适当扩展）", "要点3（与主题相关）"],
+    "title": "标准作业流程（基于用户输入）",
+    "points": ["第一步：确认设备断电并挂锁", "第二步：按规程完成操作并记录", "第三步：恢复送电并验收确认"],
     "layout_id": "title_content"
   }},
   ...

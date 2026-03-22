@@ -46,15 +46,20 @@ async def _load_reference_files(
     if not requested_ids:
         raise HTTPException(status_code=400, detail="reference_file_ids is required")
 
-    query = select(ReferenceFile).where(
-        ReferenceFile.id.in_(requested_ids),
-        ReferenceFile.user_id == current_user.user_id,
+    result = await db.execute(
+        select(ReferenceFile).where(
+            ReferenceFile.id.in_(requested_ids),
+            ReferenceFile.user_id == current_user.user_id,
+        )
     )
-    if require_completed:
-        query = query.where(ReferenceFile.parse_status == "completed")
-
-    result = await db.execute(query)
     files = result.scalars().all()
+
+    if require_completed:
+        files = [f for f in files if f.parse_status == "completed"]
+        if not files:
+            raise HTTPException(status_code=400, detail="没有可用的已解析文件，请等待解析完成或重新解析")
+        return files
+
     if len(files) != len(set(requested_ids)):
         raise HTTPException(status_code=400, detail="Some reference files are missing or unavailable")
     return files

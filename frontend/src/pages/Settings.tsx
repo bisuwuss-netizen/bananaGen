@@ -282,13 +282,12 @@ export const Settings: React.FC = () => {
                 key={option.value}
                 type="button"
                 onClick={() => handleFieldChange(field.key, option.value)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`px-4 py-2 rounded-md text-sm font-bold border-2 border-gray-900 transition-all ${
                   value === option.value
-                    ? option.value === 'openai'
-                      ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md'
-                      : 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md'
-                    : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300'
+                    ? 'bg-[#f5d040] text-gray-900'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
                 }`}
+                style={{ boxShadow: value === option.value ? '2px 2px 0 #1a1a1a' : 'none' }}
               >
                 {option.label}
               </button>
@@ -310,7 +309,7 @@ export const Settings: React.FC = () => {
           <select
             value={value as string}
             onChange={(e) => handleFieldChange(field.key, e.target.value)}
-            className="w-full h-10 px-4 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-banana-500 focus:border-transparent"
+            className="w-full h-10 px-4 rounded-md border-2 border-gray-900 bg-white font-medium focus:outline-none"
           >
             {field.options.map((option) => (
               <option key={option.value} value={option.value}>
@@ -398,7 +397,7 @@ export const Settings: React.FC = () => {
         </div>
 
         {/* 操作按钮 */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+        <div className="flex items-center justify-between pt-4 border-t-2 border-gray-900">
           <Button
             variant="secondary"
             icon={<RotateCcw size={18} />}
@@ -424,35 +423,29 @@ export const Settings: React.FC = () => {
 // SettingsPage 组件 - 完整页面包装
 export const SettingsPage: React.FC = () => {
   const navigate = useNavigate();
-  
-  return (
-    <div className="app-shell min-h-screen">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <Card className="app-panel p-6 md:p-8">
-          <div className="space-y-8">
-            {/* 顶部标题 */}
-            <div className="flex items-center justify-between pb-6 border-b border-gray-200">
-              <div className="flex items-center">
-                <Button
-                  variant="secondary"
-                  icon={<Home size={18} />}
-                  onClick={() => navigate('/')}
-                  className="mr-4"
-                >
-                  返回首页
-                </Button>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">系统设置</h1>
-                  <p className="text-sm text-gray-500 mt-1">
-                    配置应用的各项参数
-                  </p>
-                </div>
-              </div>
-            </div>
 
-            <Settings />
-          </div>
-        </Card>
+  return (
+    <div className="min-h-screen" style={{ background: '#ede4d0' }}>
+      {/* 导航栏 */}
+      <nav className="h-12 relative flex items-center px-4 md:px-6" style={{ background: '#ede4d0', borderBottom: '2px solid #1a1a1a' }}>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center gap-1 px-3 py-1 text-sm font-bold rounded-md border-2 border-gray-900"
+            style={{ background: '#f5d040', boxShadow: '2px 2px 0 #1a1a1a' }}
+          >
+            <Home size={14} /><span>主页</span>
+          </button>
+        </div>
+        <div className="absolute left-1/2 -translate-x-1/2">
+          <span className="text-base font-black text-gray-900">系统设置</span>
+        </div>
+      </nav>
+
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="bg-white rounded-lg p-6 md:p-8" style={{ border: '2px solid #1a1a1a', boxShadow: '4px 4px 0 #1a1a1a' }}>
+          <Settings />
+        </div>
       </div>
     </div>
   );

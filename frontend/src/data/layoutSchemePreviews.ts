@@ -1216,4 +1216,569 @@ export const layoutSchemePreviews: Record<string, LayoutSchemePreview> = {
       },
     ]),
   },
+  minimal_clean: {
+    label: '精工蓝图 (Exclusive)',
+    description: '工业 2026 技术美学：采用极简 CAD 线图、Bento 数据网格与宏大排版，传达精密制造与工程逻辑。',
+    pages: buildPages('minimal-clean', [
+      {
+        label: '精工解析封面',
+        summary: 'CAD 蓝图底纹，超大号非对称排版，建立工业极简基调。',
+        layoutId: 'blueprint_cover',
+        model: {
+          title: '涡扇发动机叶片精工',
+          subtitle: '从单晶高温合金到气膜冷却孔的微观宇宙',
+          author: '动力工程教研室',
+          department: '航空制造专业',
+          date: 'REV.2026.04',
+        },
+      },
+      {
+        label: '大师准则墙报',
+        summary: '巨型引号装饰与呼吸感排版，用于传达灵魂观点。',
+        layoutId: 'blueprint_quote',
+        model: {
+          quote: '制造的极致不在于庞大，而在于控制毫厘之间的生死。',
+          author: '《航空发动机：从理论到制造》',
+          description: '论叶片熔点与气流温度之悖论',
+        },
+      },
+      {
+        label: '规格明细清单',
+        summary: '侧边栏修订记录风格目录，体现工程文档的严谨性。',
+        layoutId: 'blueprint_toc',
+        model: {
+          title: '技术演进路线',
+          items: [
+            { index: 1, text: '材料特性：单晶合金' },
+            { index: 2, text: '结构工艺：蛇形流道' },
+            { index: 3, text: '表面处理：稀土涂层' },
+            { index: 4, text: '制造难点：激光打孔' },
+            { index: 5, text: '可靠性验证：应力测试' },
+          ],
+        },
+      },
+      {
+        label: '技术规格卡',
+        summary: '三轴向参数对比卡，用于展示教学目标的维度。',
+        layoutId: 'blueprint_spec_card',
+        model: {
+          title: '制造精度要求',
+          subtitle: '航空工业标准 // GR-104',
+          bullets: [
+            { text: '极高热耐受', description: '需在 1700°C 环境下保持结构稳固。' },
+            { text: '亚微米精度', description: '榫头配合部位公差控制在 ±0.005mm。' },
+            { text: '零晶界缺陷', description: '采用定向凝固技术，全程无应力点。' },
+          ],
+        },
+      },
+      {
+        label: '剖面图注释板',
+        summary: '左侧 CAD 示意圆环，右侧字母索引注释。',
+        layoutId: 'blueprint_annotation',
+        model: {
+          title: '核心组件解析',
+          image_src: artwork.academicPaper,
+          annotations: [
+            { label: 'A', content: '高压涡轮叶片主体' },
+            { label: 'B', content: '气膜连接孔阵列' },
+            { label: 'C', content: '陶瓷热障涂层 (TBC)' },
+          ],
+        },
+      },
+      {
+        label: '阶段里程碑页',
+        summary: '左侧巨型数字标识，右侧详细说明。',
+        layoutId: 'blueprint_section_title',
+        model: {
+          title: '02. 制造工艺流程',
+          subtitle: 'MANUFACTURING PROCESS',
+          description: '从熔模铸造到精密研磨的 14 道核心工序全解析。',
+        },
+      },
+      {
+        label: '工艺对比双板',
+        summary: '左右分栏对比，适合展示新旧技术迭代。',
+        layoutId: 'blueprint_dual_panel',
+        model: {
+          title: '工艺迭代演进',
+          left: {
+            header: '传统精密铸造',
+            bullets: [
+              { text: '成品率约 45%', description: '无法完全避免微观晶界缺陷。' },
+              { text: '热承载力较低', description: '工作温度极限受限于材料熔点。' },
+            ],
+          },
+          right: {
+            header: '定向凝固技术',
+            bullets: [
+              { text: '成品率提升至 82%', description: '消除横向晶界，显著提高蠕变强度。' },
+              { text: '热稳定性能极佳', description: '配合气膜冷却可超越材料熔点运行。' },
+            ],
+          },
+        },
+      },
+      {
+        label: '时间轴轨迹',
+        summary: '极简点位式时间轴。',
+        layoutId: 'blueprint_timeline',
+        model: {
+          title: '测试节点计划',
+          steps: [
+            { label: '应力实验室测试', description: '模拟 2000 小时持续高温环境。' },
+            { label: '风洞模拟验证', description: '验证气膜冷却孔的流道效率。' },
+            { label: '整机挂架试车', description: '在真实极端工况下监测振动特征。' },
+          ],
+        },
+      },
+      {
+        label: 'Bento 数据格',
+        summary: '利用 Bento 式布局展示多维度性能数据。',
+        layoutId: 'blueprint_bento_grid',
+        model: {
+          title: '性能表现矩阵',
+          items: [
+            { title: '热效率', content: '34.5%', tag: 'OPTIMAL' },
+            { title: '疲劳寿命', content: '15000h+', tag: 'LEVEL A' },
+            { title: '核心转速', content: '12500rpm', tag: 'STABLE' },
+          ],
+        },
+      },
+      {
+        label: '三极支撑对比',
+        summary: '三路并进的规格横评。',
+        layoutId: 'blueprint_tri_compare',
+        model: {
+          title: '关键材料特性对比',
+          columns: [
+            { title: '第一代合金', points: ['耐温 1050°C', '蠕变强度普通', '成本较低'] },
+            { title: '第二代单晶', points: ['耐温 1150°C', '抗蠕变性显著增强', '中等成本'] },
+            { title: '第三代稀土', points: ['耐温 1250°C+', '几乎无疲劳退化', '高精尖成本'] },
+          ],
+        },
+      },
+      {
+        label: '样本展示长廊',
+        summary: '大面积图样展示区。',
+        layoutId: 'blueprint_gallery',
+        model: {
+          title: '微观结构图样',
+          subtitle: '扫描电镜下的叶片表面',
+        },
+      },
+      {
+        label: '巨幕揭示页',
+        summary: '为核心观点预留的大篇幅文字展示。',
+        layoutId: 'blueprint_big_reveal',
+        model: {
+          title: '突破技术封锁',
+          content: '通过自主研发的高速脉冲激光打孔机，我们实现了在 0.5mm 壁厚上精准布置 3000 个非线性气膜孔，标志着国产发动机寿命的一次跨越式跃升。',
+        },
+      },
+      {
+        label: '精工结语归档',
+        summary: '结尾页，保留 CAD 风格签名区域。',
+        layoutId: 'blueprint_closing',
+        model: {
+          title: '航空动力，精益求精',
+          closing: 'REPORT ARCHIVED // MISSION SUCCESSFUL',
+        },
+      },
+    ]),
+  },
+
+  warm_edu: {
+    label: '完整故事板预览',
+    description: '12种重工终端布局全览 —— 从指令下达到任务归档，贯穿高危实训的完整闭环。',
+    pages: buildPages('warm-edu', [
+      {
+        label: '指令下达页',
+        summary: '任务代号 + 倒计时封面，黑底黄警戒水印，建立高危重工现场感。',
+        layoutId: 'vocational_intro_cover',
+        model: {
+          title: '新能源汽车高压系统故障诊断实训',
+          subtitle: '任务代号：EV-HV-07 │ 安全等级：高危工况',
+          author: '实测教员：陈工',
+          department: '新能源汽车技术教研组',
+          date: '倒计时：120 分钟',
+          hero_image: artwork.industryCase,
+        },
+      },
+      {
+        label: '作战序列页',
+        summary: '硬切角相位卡片目录，青色首步高亮，告知学员完整作战节奏。',
+        layoutId: 'vocational_mission_toc',
+        model: {
+          title: '作战序列 / OPERATION SEQUENCE',
+          subtitle: '严格按节点顺序推进，禁止跨步操作',
+          items: [
+            { index: 1, text: '高压下电与安全验证' },
+            { index: 2, text: '三电系统绝缘阻值测量' },
+            { index: 3, text: '故障码读取与定位分析' },
+            { index: 4, text: '部件更换与通电复测' },
+          ],
+        },
+      },
+      {
+        label: '目标锁定制',
+        summary: '雷达同心圆背景 + 狙击框客观卡，精准锁定本工位三大核心击破目标。',
+        layoutId: 'vocational_target_lock',
+        model: {
+          title: '本工位目标契约',
+          subtitle: '击破这 3 个绝对重点',
+          bullets: [
+            { text: '能使用绝缘电阻仪对动力电池包进行高压绝缘阻值检测' },
+            { text: '能根据 DTC 故障码精准定位 BMS 控制板异常节点' },
+            { text: '严格执行"断电、验电、等待5分钟"高压作业金标准' },
+          ],
+        },
+      },
+      {
+        label: '禁忌防呆清单',
+        summary: '极端红色斜纹边框，"严禁"关键词自动标红，未过核查不得继续。',
+        layoutId: 'vocational_safety_check',
+        model: {
+          title: '上桩前生死核查',
+          subtitle: '未完成以下确认，严禁触碰高压电缆与接插件',
+          bullets: [
+            { text: '严禁在未完成断高压服务插头操作前接触橙色高压线缆。' },
+            { text: '必须确认维修开关已断开并取出，用绝缘胶带封堵插槽。' },
+            { text: '必须等待至少 5 分钟让 DC-Link 电容自然放电至安全值。' },
+            { text: '严禁两人同时在高压系统不同节点进行测量操作。' },
+          ],
+        },
+      },
+      {
+        label: '装备库存阵列',
+        summary: 'Bento 深色网格呈现工器具备料清单，大格重点装备突出显示。',
+        layoutId: 'vocational_equipment_grid',
+        model: {
+          title: '高压作业装备备料',
+          subtitle: '检查你的弹药库是否齐备',
+          bullets: [
+            { text: '绝缘电阻仪 Fluke 1587FC（1000V档）' },
+            { text: '1000V 绝缘手套与绝缘靴（A级）' },
+            { text: '高压服务插头专用扳手' },
+            { text: '防弧面屏与绝缘改锥套装' },
+            { text: '万用表 Fluke 17B+（AC/DC）' },
+          ],
+        },
+      },
+      {
+        label: '蓝图微距透视',
+        summary: 'CAD 标注式透视图，瞄准镜扫描动力电池包核心结构热区。',
+        layoutId: 'vocational_blueprint_zoom',
+        model: {
+          title: '动力电池包拓扑透视',
+          image_src: artwork.industryCase,
+          annotations: [
+            { x: 28, y: 38, label: 'BMS 控制板', description: '电池管理核心，负责采集各模组电压/温度信号。' },
+            { x: 65, y: 55, label: '高压接触器组', description: '总正/总负/预充接触器，控制高压通断。' },
+            { x: 48, y: 72, label: '手动维修开关 MSD', description: '断开此处即可物理切断高压回路，操作前必须取出。' },
+          ],
+          background_image: artwork.industryCase,
+        },
+      },
+      {
+        label: 'SOP 动作流',
+        summary: '横排步骤横幅，黄色年度工业警戒配色，逐步呈现高压上电核验 SOP。',
+        layoutId: 'vocational_sop_banner',
+        model: {
+          title: '高压系统绝缘阻值测量 SOP',
+          subtitle: '进入高压作业前的生死防线',
+          steps: [
+            { number: 1, label: '断开 MSD 并封堵', description: '取出手动维修开关，用绝缘胶带封堵，防止误复位。' },
+            { number: 2, label: '等待 5 分钟放电', description: '电容放电期间严禁任何接触高压线的操作。' },
+            { number: 3, label: '设置绝缘仪档位', description: '选 1000V DC 档，测试棒分别接总正 P 和车身地。' },
+            { number: 4, label: '读取并记录数值', description: '正常值应 ≥500MΩ，低于此值须立即挂红牌暂停。' },
+          ],
+        },
+      },
+      {
+        label: '红黄警戒断路器',
+        summary: '左合规 vs 右灾难对比，红色右栏对比呈现高压违规的致命后果。',
+        layoutId: 'vocational_warning_split',
+        model: {
+          title: '高压诊断路径：合规 VS 灾难',
+          left: {
+            header: '规范作业路径',
+            bullets: [
+              { text: '先断 MSD、等待放电', description: '从低压侧开始诊断，逐步缩小故障范围。' },
+              { text: '绝缘测量先行', description: '确认绝缘合格再进行任何接插件插拔操作。' },
+            ],
+          },
+          right: {
+            header: '高危违规路径',
+            bullets: [
+              { text: '未断高压直接操作', description: '在高压系统带电状态下拆插橙色接插件。' },
+              { text: '灾难后果', description: '电弧闪络瞬间电流可达数千安培，造成致命烧伤！' },
+            ],
+            content: '新能源高压系统铁律：\n高压作业必须在 MSD 断开、验电确认安全后进行！',
+          },
+        },
+      },
+      {
+        label: '状态参数平显',
+        summary: 'HUD 仪表盘式指标回传，实时展示关键高压状态与报警参数。',
+        layoutId: 'vocational_piv_hud',
+        model: {
+          title: '高压系统核心状态实时回传',
+          subtitle: '通电诊断模式 / HV_DIAG_ACTIVE',
+          metrics: [
+            { value: '0.08MΩ', label: '整包绝缘阻值', note: '严重低于 500MΩ 合格线' },
+            { value: '47°C', label: '电池模组最高温', note: '接近热管理警戒阈值' },
+            { value: '396V', label: '当前总包电压', note: '系统仍处于带高压状态' },
+          ],
+          bars: [
+            { label: '绝缘状态指数', baseline: 100, current: 8 },
+            { label: '热管理系统负荷', baseline: 60, current: 88 },
+            { label: '整体故障风险评估', baseline: 20, current: 91 },
+          ],
+          bullets: [
+            { text: 'FAULT: ISO_RESIST_LOW', description: '第3模组对车身漏电路径阻值仅 80kΩ。' },
+            { text: 'WARN: CELL_TEMP_HIGH', description: '快充后冷却系统未及时响应，排水管疑似堵塞。' },
+          ],
+          insight: '绝缘阻值 <500MΩ 即判定为高压安全隐患，必须立即下电并挂红牌禁用。',
+        },
+      },
+      {
+        label: '故障报错终端',
+        summary: '黑屏绿字 CRT 终端，展示故障病历卡与 DTC 报错堆栈，引导排查思路。',
+        layoutId: 'vocational_fault_diagnostic',
+        model: {
+          title: '工况病历卡 #EV-07：绝缘泄漏',
+          subtitle: 'ERR_ISO_LOW // 高压绝缘失效',
+          content: [
+            '【故障现象】车辆充电桩连接后，BMS 主控板触发 P0D00 绝缘电阻低报警，充电立即中止。',
+            '【前置条件】行驶里程：78,000km；上次绝缘测量合规（6个月前）；昨日遭遇强降雨。',
+            '【接诊要求】请在确认高压下电后，使用绝缘电阻仪逐模组定位泄漏节点，完成排查并填写故障报告。',
+          ],
+        },
+      },
+      {
+        label: '实兵推演沙盘',
+        summary: '蓝图网格背景的模拟考核沙盘，驱动学员在拓扑图上定位故障热区。',
+        layoutId: 'vocational_practice_sandbox',
+        model: {
+          title: '逐模组定位推演 / 实操考核',
+          subtitle: '根据故障病历卡，在拓扑图上标记绝缘泄漏热区',
+        },
+      },
+      {
+        label: '归档核收签章',
+        summary: '巨型绿色橡皮印章水印 + 签名栏，完整闭合考核流程的最终归档页。',
+        layoutId: 'vocational_mission_complete',
+        model: {
+          title: 'MISSION COMPLETE',
+          subtitle: 'EV-HV-07 OPERATION CONCLUDED',
+          content: '绝缘泄漏节点已成功定位并完成模组更换验证。整包绝缘阻值恢复至 1200MΩ 以上，热管理系统排水管疏通完毕。工单已归档，考核通过，准备移交复检。',
+        },
+      },
+    ]),
+  },
+
+  business_pro: {
+    label: '完整故事板预览',
+    description: '12种 DATA VAULT 布局全览 —— 彭博终端风格，专为深度行业分析与情报研判设计。',
+    pages: buildPages('business-pro', [
+      {
+        label: '情报封档页',
+        summary: '机密档案封面，包含任务代号、密级标志与分析员信息。',
+        layoutId: 'vault_cover',
+        model: {
+          title: '2026 新能源汽车维修行业深度研判',
+          subtitle: 'MARKET INTELLIGENCE // SECTOR: AUTOMOTIVE',
+          author: '产教融合研究中心',
+          date: '2026-Q2 RELEASE',
+          classification: 'CONFIDENTIAL',
+        },
+      },
+      {
+        label: '线索导览板',
+        summary: '情报目录，带进度统计与各章节密级标识。',
+        layoutId: 'vault_index',
+        model: {
+          title: 'INTEL SECTIONS',
+          subtitle: '本报告涵盖市场格局、技术演进及人才缺口三大核心维度',
+          items: [
+            '全球新能源汽车市场态势',
+            '三电系统维修技术壁垒分析',
+            '职教体系与产业链匹配度',
+            '2026 关键风险与机遇评价',
+          ],
+        },
+      },
+      {
+        label: '核心指标墙',
+        summary: 'KPI Grid 分页呈现行业关键数据指标，大数字驱动。',
+        layoutId: 'vault_kpi_grid',
+        model: {
+          title: 'SECTOR KPI MONITOR',
+          subtitle: '关键行业指标实时快照',
+          bullets: [
+            { text: '35% 售后营收增速', description: '年复合增长率 (CAGR) 持续领跑整体车市。' },
+            { text: '1:8 技师缺口比', description: '每 8 台新能源车仅对应 1 名合格高压电技师。' },
+            { text: '850B 市场总规模', description: '预计 2028 年售后维保市场将突破 8500 亿。' },
+            { text: '92% 集中分布', description: '新增维修业务高度集中在长三角与大湾区。' },
+            { text: '42.5k 平均薪资', description: '三电诊断工程师平均月薪已达行业均值 2.2 倍。' },
+            { text: '120% 培训需求', description: '传统维修站升级新能源能力的迫切度极高。' },
+          ],
+        },
+      },
+      {
+        label: '风险热力矩阵',
+        summary: '多维度评估行业风险点，色块标识严重等级。',
+        layoutId: 'vault_heatmap',
+        model: {
+          title: 'THREAT LANDSCAPE',
+          subtitle: '基于当前政策与技术环境的风险多维评估',
+          bullets: [
+            { text: '技术迭代过快', description: '固态电池及 800V 平台对现有维修设备的代差冲击。' },
+            { text: '人才结构断层', description: '传统机电工无法直接转型，教学资源极度匮乏。' },
+            { text: '核心数据闭环', description: '车企对诊断数据的封锁导致第三方维修商准入困难。' },
+            { text: '高压作业事故', description: '未受训人员非法操作导致的触电与起火风险居高不下。' },
+            { text: '售后体系混乱', description: '非标维修导致电池残值评估缺乏公信力。' },
+            { text: '政策补贴退坡', description: '下游运营端盈利能力下降影响维保投入。' },
+          ],
+        },
+      },
+      {
+        label: '时序脉络轴',
+        summary: '行业演进时间轴，带有阶段状态标识。',
+        layoutId: 'vault_timeline',
+        model: {
+          title: 'EV AFTERMARKET EVOLUTION',
+          subtitle: '中国新能源维保市场发展阶段',
+          steps: [
+            { label: '起步探索期 (2015-2020)', description: '以车企直营模式为主，社会化维修初现。' },
+            { label: '爆发成长期 (2021-2024)', description: '保有量突破千万级，三电维修认证体系建立。' },
+            { label: '存量竞争期 (2025-2028)', description: '质保集中到期，第三方维修连锁大规模入局。' },
+            { label: '智慧融合期 (2029+)', description: '预测性维护成为主流，数据修复取代硬件更换。' },
+          ],
+        },
+      },
+      {
+        label: '情报双纵切',
+        summary: '多维度横评比较，左侧现状 vs 右侧预测。',
+        layoutId: 'vault_split_brief',
+        model: {
+          title: '战略选型：自营 VS 授权',
+          left: {
+            header: '车企直营模式',
+            bullets: [
+              { text: '数据完全闭环', description: '掌握底层诊断协议，技术支持力最强。' },
+              { text: '客户忠诚度高', description: '首任车主终身质保强绑定。' },
+            ],
+          },
+          right: {
+            header: '社会化授权模式',
+            bullets: [
+              { text: '成本边缘优势', description: '网点覆盖广，非保项目价格更具竞争力。' },
+              { text: '资产轻量化', description: '通过加盟模式实现快速区域渗透。' },
+            ],
+            content: 'CRITICAL INSIGHT: 未来 3 年，混合经营模式将占据 70% 的市场份额。',
+          },
+        },
+      },
+      {
+        label: '电路逻辑流',
+        summary: 'PCB 电路板风格的行业逻辑传导流。',
+        layoutId: 'vault_flow_circuit',
+        model: {
+          title: '人才培养闭环逻辑',
+          subtitle: 'FROM CAMPUS TO WORKSHOP',
+          steps: [
+            { label: '标准开发', description: '基于车企岗位规范制定教学大纲。' },
+            { label: '课程实操', description: '在 1:1 仿真环境下完成高压作业。' },
+            { label: '资格认证', description: '通过"1+X"级低压/高压电工考试。' },
+            { label: '站端实习', description: '进入授权中心参与真实案例排查。' },
+            { label: '持续演进', description: '定期返回培训中心进行技术迭代。' },
+          ],
+        },
+      },
+      {
+        label: '全幅数据看板',
+        summary: 'Bloomberg 看板风格，整合指标、进度条与动态日志。',
+        layoutId: 'vault_dashboard',
+        model: {
+          title: 'INDUSTRY REAL-TIME MONITOR',
+          subtitle: 'MARKET ACCESS GRANTED',
+          metrics: [
+            { value: '$420B', label: 'VC INVESTMENT', note: 'Q1-Q2 累计融资额' },
+            { value: '78.2%', label: 'ADOPTION RATE', note: '一线城市新车渗透率' },
+            { value: '0.04s', label: 'DATA LATENCY', note: '云端诊断同步耗时' },
+          ],
+          bars: [
+            { label: '电池回收利用率', baseline: 100, current: 85 },
+            { label: '快充桩覆盖密度', baseline: 100, current: 62 },
+            { label: '技术专利国产化', baseline: 100, current: 94 },
+            { label: '售后服务满意度', baseline: 100, current: 78 },
+          ],
+          bullets: [
+            { text: 'NEW: 固态电池装车试验', description: '预计 2027 年实现小规模量产。' },
+            { text: 'WARN: 硅基芯片供应收紧', description: '可能影响充电控制器交付周期。' },
+            { text: 'INTEL: 欧盟电池排碳法案', description: '出口导向企业需提前配置碳足迹追踪。' },
+          ],
+          insight: '新能源维修已从"硬件驱动"转向"算法驱动"，软硬件一体化人才成为市场唯一的定海神针。',
+        },
+      },
+      {
+        label: '深钻拆解页',
+        summary: '深色分析页，左侧大段研判文字 + 右侧重点摘要。',
+        layoutId: 'vault_deep_analysis',
+        model: {
+          title: '三电系统维修的技术奇点',
+          content: '随着 CTC (Cell to Chassis) 与集成式热管理系统的普及，新能源汽车的物理边界正在模糊。传统"拆件-换件"的维修逻辑正面临失效。现在的故障诊断更多依赖于对 CAN总线报文的抓取与云端数字孪生模型的对比。这就要求维修员不仅要懂扳手，更要懂 Python 数据分析与电压采样波形解析。这种转变是行业利润重构的源头。',
+          sidebar_title: 'CORE INSIGHTS //',
+          bullets: [
+            { text: '去中心化诊断', description: '边缘计算设备将允许技师在脱机状态下完成 80% 故障定位。' },
+            { text: '维修即研发', description: '顶级技师的反馈直接驱动 OEM 厂端的工程变更单 (ECN)。' },
+          ],
+        },
+      },
+      {
+        label: '数据终端输出',
+        summary: 'CRT 终端黑底绿字风格，展示底层数据流。',
+        layoutId: 'vault_terminal',
+        model: {
+          title: 'ACCESSING REGIONAL DATA...',
+          log_entries: [
+            'Initializing vault connection... [OK]',
+            'Pulling 2026 sales forecasting datasets...',
+            'Processing multi-variate regression analysis...',
+            'IDENTIFIED: Demand surge in Southwest regions.',
+            'MATCHING: Educational resources against market gap...',
+            'WARN: Chengdu-Chongqing cluster exhibits talent deficit.',
+            'Generating intelligence report packet 0xDF42...',
+            'Encrypting output with AES-256 standard.',
+            'Report finalized. Ready for debrief.',
+          ],
+        },
+      },
+      {
+        label: '多维横评表',
+        summary: '精细化的数据对比表，带通过/失败色差分析。',
+        layoutId: 'vault_compare',
+        model: {
+          title: '教学方案横向评估表',
+          categories: ['实操安全性', '设备成本', '教学复用率', '行业认可度', '就业转化率'],
+          options: [
+            { name: '传统实物实训', values: ['Low', 'High', 'Low', 'High', 'Medium'] },
+            { name: '全真 VR 仿真', values: ['High', 'Medium', 'High', 'Medium', 'Medium'] },
+            { name: '混合现实 (MR)', values: ['High', 'High', 'High', 'High', 'High'] },
+          ],
+        },
+      },
+      {
+        label: '任务复盘归档',
+        summary: '结尾页，带有 ARCHIVED 水印和绿色归档徽章。',
+        layoutId: 'vault_debrief',
+        model: {
+          title: 'INTELLIGENCE BRIEFING ENDS',
+          subtitle: 'MISSION STATUS: CONCLUDED',
+          content: '本报告所有数据均基于 2025-2026 年度实地调研与大数据建模。版权归属产教融合研究中心，严禁非受权外传。',
+          keyTakeaway: '在新能源下半场，数据资产是唯一的护城河。',
+        },
+      },
+    ]),
+  },
 };

@@ -1,7 +1,10 @@
 """Generated modular prompt file for utils."""
 from typing import List, Dict, Optional, Any
+import html as _html
 import json
 from textwrap import dedent
+
+_MAX_FILE_CONTENT_CHARS = 8000
 
 HTML_LAYOUT_TYPES = ('\n'
  'Available layout types for HTML rendering mode:\n'
@@ -63,8 +66,11 @@ def _format_reference_files_xml(reference_files_content: Optional[List[Dict[str,
     
     xml_parts = ["<uploaded_files>"]
     for file_info in reference_files_content:
-        filename = file_info.get('filename', 'unknown')
+        filename = _html.escape(file_info.get('filename', 'unknown'))
         content = file_info.get('content', '')
+        if len(content) > _MAX_FILE_CONTENT_CHARS:
+            content = content[:_MAX_FILE_CONTENT_CHARS] + "\n...(内容过长，已截断)"
+        content = _html.escape(content)
         xml_parts.append(f'  <file name="{filename}">')
         xml_parts.append('    <content>')
         xml_parts.append(content)

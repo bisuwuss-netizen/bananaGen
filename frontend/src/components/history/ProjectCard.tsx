@@ -97,10 +97,9 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   return (
     <Card
       className={`p-3 md:p-6 transition-all ${
-        isSelected 
-          ? 'border-2 border-banana-500 bg-banana-50' 
-          : 'hover:shadow-lg border border-gray-200'
+        isSelected ? 'bg-[#f5d040]' : 'hover:bg-gray-50'
       } ${isBatchMode ? 'cursor-default' : 'cursor-pointer'}`}
+      style={{ boxShadow: '4px 4px 0 #1a1a1a' }}
       onClick={() => onSelect(project)}
     >
       <div className="flex items-start gap-3 md:gap-4">
@@ -156,10 +155,10 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             </span>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-              模板系列: {schemeName}
+            <span className="inline-flex items-center rounded-md border-2 border-gray-900 bg-[#f5d040] px-2 py-0.5 text-xs font-bold text-gray-900">
+              {schemeName}
             </span>
-            <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+            <span className="inline-flex items-center rounded-md border border-gray-400 px-2 py-0.5 text-xs font-medium text-gray-600">
               {project.render_mode === 'html' ? 'HTML 渲染' : '图片渲染'}
             </span>
           </div>
@@ -174,7 +173,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         </div>
         
         {/* 右侧：图片预览 */}
-        <div className="hidden sm:block w-40 h-24 md:w-64 md:h-36 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">
+        <div className="hidden sm:block w-40 h-24 md:w-64 md:h-36 rounded-md overflow-hidden bg-gray-100 border-2 border-gray-900 flex-shrink-0">
           {canRenderHtmlPreview && previewPayload ? (
             <div
               className="w-full h-full flex items-center justify-center bg-white overflow-hidden"
@@ -209,7 +208,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 flex-shrink-0">
           <button
             onClick={(e) => onDelete(e, project)}
-            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            className="p-2 text-gray-600 hover:text-red-700 hover:bg-red-50 rounded-md border-2 border-gray-900 transition-colors"
             title="删除项目"
           >
             <Trash2 size={16} className="md:w-[18px] md:h-[18px]" />

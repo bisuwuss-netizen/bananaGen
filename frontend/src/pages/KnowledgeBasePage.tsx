@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Upload, Loader2, Sparkles, ArrowRight, FileText, ArrowLeft, RefreshCw } from 'lucide-react';
 
 import { Button, useToast, ReferenceFileCard, SchemeSelector, FilePreviewModal } from '@/components/shared';
@@ -136,8 +136,11 @@ export const KnowledgeBasePage: React.FC = () => {
   const [isComplete, setIsComplete] = useState(false);
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
   const [previewFileId, setPreviewFileId] = useState<string | null>(null);
+  const [outlineSource, setOutlineSource] = useState<number>(0);
+  const [draftSaved, setDraftSaved] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const outlineTextareaRef = useRef<HTMLTextAreaElement>(null);
   const taskSubscriptionRef = useRef<{ close: () => void } | null>(null);
   const lastFailedTaskKeyRef = useRef<string | null>(null);
   const outlineReferenceFileIdsRef = useRef<string[]>([]);
@@ -218,6 +221,11 @@ export const KnowledgeBasePage: React.FC = () => {
       progressMessage: nextProgressMessage,
       isComplete: nextIsComplete,
     });
+
+    if (nextIsComplete) {
+      const sourceCount = Array.isArray(progress.reference_file_ids) ? progress.reference_file_ids.length : 0;
+      if (sourceCount > 0) setOutlineSource(sourceCount);
+    }
 
     if (task.status === 'FAILED') {
       const failedKey = `${taskId || 'unknown'}:${failedMessage}`;
@@ -373,6 +381,16 @@ export const KnowledgeBasePage: React.FC = () => {
     });
   }, []);
 
+  const handleSelectAll = useCallback(() => {
+    const completedIds = files.filter((f) => f.parse_status === 'completed').map((f) => f.id);
+    const allSelected = completedIds.every((id) => selectedFileIds.has(id));
+    if (allSelected) {
+      setSelectedFileIds(new Set());
+    } else {
+      setSelectedFileIds(new Set(completedIds));
+    }
+  }, [files, selectedFileIds]);
+
   const handleStatusChange = useCallback((updated: ReferenceFile) => {
     setFiles((prev) => prev.map((file) => (file.id === updated.id ? updated : file)));
     if (updated.parse_status === 'completed') {
@@ -436,6 +454,7 @@ export const KnowledgeBasePage: React.FC = () => {
   const handleOutlineChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     const nextOutlineText = event.target.value;
     setOutlineText(nextOutlineText);
+    setDraftSaved(false);
     debouncedPersistDraftRef.current?.({
       taskId: currentTaskId,
       outlineText: nextOutlineText,
@@ -444,11 +463,17 @@ export const KnowledgeBasePage: React.FC = () => {
       progressMessage,
       isComplete,
     });
+    setTimeout(() => setDraftSaved(true), 350);
   };
 
   const handleUseOutline = async () => {
     const finalOutline = outlineText.trim();
     if (!finalOutline) {
+      return;
+    }
+    const lines = finalOutline.split('\n').filter((l) => l.trim().length > 0);
+    if (lines.length < 2) {
+      show('大纲内容过少，请至少包含 2 行有效内容', 'error');
       return;
     }
 
@@ -484,35 +509,62 @@ export const KnowledgeBasePage: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (isGenerating && outlineTextareaRef.current) {
+      const el = outlineTextareaRef.current;
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [outlineText, isGenerating]);
+
   const hasCompleted = files.some((file) => file.parse_status === 'completed' && selectedFileIds.has(file.id));
   const completedCount = files.filter((f) => f.parse_status === 'completed').length;
   const parsingCount = files.filter((f) => f.parse_status === 'parsing' || f.parse_status === 'pending').length;
   const failedCount = files.filter((f) => f.parse_status === 'failed').length;
   const selectedCompletedCount = files.filter((f) => f.parse_status === 'completed' && selectedFileIds.has(f.id)).length;
+  const allCompletedSelected = completedCount > 0 && completedCount === selectedCompletedCount;
+
+  const OUTLINE_STEPS = ['加载文档', 'AI 分析', '生成框架', '优化内容', '完成'];
+  const getOutlineStep = (msg: string): number => {
+    if (!msg || msg === '等待开始...') return 0;
+    if (msg.includes('分析文档') || msg.includes('提炼')) return 1;
+    if (msg.includes('框架')) return 2;
+    if (msg.includes('丰富') || msg.includes('优化')) return 3;
+    if (msg === '完成' || msg.includes('已生成')) return 4;
+    return 1;
+  };
+  const currentOutlineStep = getOutlineStep(progressMessage);
 
   return (
     <>
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ background: '#ede4d0' }}>
       <ToastContainer />
 
-      <div className="max-w-3xl mx-auto px-4 py-10">
-        <div className="mb-8">
-          <Link to="/" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4">
-            <ArrowLeft className="w-4 h-4" />
-            返回首页
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <FileText className="w-6 h-6 text-banana-500" />
-            知识库生成大纲
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">上传文档，AI 将根据内容自动生成 PPT 大纲</p>
+      {/* 导航栏 */}
+      <nav className="h-12 relative flex items-center px-4 md:px-6" style={{ background: '#ede4d0', borderBottom: '2px solid #1a1a1a' }}>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center gap-1 px-3 py-1 text-sm font-bold rounded-md border-2 border-gray-900"
+            style={{ background: '#f5d040', boxShadow: '2px 2px 0 #1a1a1a' }}
+          >
+            <ArrowLeft size={14} /><span>返回首页</span>
+          </button>
+        </div>
+        <div className="absolute left-1/2 -translate-x-1/2">
+          <span className="text-base font-black text-gray-900">知识库生成大纲</span>
+        </div>
+      </nav>
+
+      <div className="max-w-3xl mx-auto px-4 py-8">
+        <div className="mb-6">
+          <p className="text-sm text-gray-600">上传文档，AI 将根据内容自动生成 PPT 大纲</p>
         </div>
 
         <div
-          className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors mb-6 ${
+          className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors mb-6 ${
             isDragging
               ? 'border-banana-500 bg-banana-50'
-              : 'border-gray-300 bg-white hover:border-banana-400 hover:bg-gray-50'
+              : 'border-gray-900 bg-white hover:bg-gray-50'
           }`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -559,13 +611,18 @@ export const KnowledgeBasePage: React.FC = () => {
           <>
             <div className="flex items-center justify-between text-xs text-gray-500 mb-2 px-1">
               <span>
-                已选 <span className="font-medium text-gray-700">{selectedCompletedCount}</span> 个文件参与生成
+                已选 <span className="font-medium text-gray-700">{selectedCompletedCount}</span> / {completedCount} 个可用文件
                 {parsingCount > 0 && <span className="ml-2 text-banana-500">· {parsingCount} 个解析中</span>}
                 {failedCount > 0 && <span className="ml-2 text-red-500">· {failedCount} 个失败</span>}
-                {completedCount > selectedCompletedCount && (
-                  <span className="ml-2 text-gray-400">· {completedCount - selectedCompletedCount} 个未选</span>
-                )}
               </span>
+              {completedCount > 0 && (
+                <button
+                  onClick={handleSelectAll}
+                  className="text-xs text-gray-500 hover:text-gray-800 underline underline-offset-2"
+                >
+                  {allCompletedSelected ? '取消全选' : '全选'}
+                </button>
+              )}
             </div>
             <ul role="list" aria-label="已上传文件列表" className="space-y-2 mb-6">
               {files.map((file) => (
@@ -644,22 +701,68 @@ export const KnowledgeBasePage: React.FC = () => {
         )}
 
         {(isGenerating || outlineText) && (
-          <div className="mt-6 bg-white border border-gray-200 rounded-xl p-4">
-            {progressMessage && (
-              <div className="flex items-center gap-2 text-sm text-banana-500 mb-3">
-                {isGenerating && <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />}
-                <span aria-live="polite">{progressMessage}</span>
+          <div className="mt-6 bg-white rounded-lg p-4" style={{ border: '2px solid #1a1a1a' }}>
+            {isGenerating && (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  {OUTLINE_STEPS.map((step, idx) => (
+                    <div key={step} className="flex items-center">
+                      <div className="flex flex-col items-center">
+                        <div
+                          className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold"
+                          style={{
+                            borderColor: idx <= currentOutlineStep ? '#1a1a1a' : '#d1d5db',
+                            background: idx < currentOutlineStep ? '#f5d040' : idx === currentOutlineStep ? '#fefce8' : 'white',
+                            color: idx <= currentOutlineStep ? '#1a1a1a' : '#9ca3af',
+                          }}
+                        >
+                          {idx < currentOutlineStep ? '✓' : idx + 1}
+                        </div>
+                        <span className="text-xs mt-1 whitespace-nowrap" style={{ color: idx <= currentOutlineStep ? '#374151' : '#9ca3af' }}>
+                          {step}
+                        </span>
+                      </div>
+                      {idx < OUTLINE_STEPS.length - 1 && (
+                        <div className="w-8 h-0.5 mb-4 mx-1" style={{ background: idx < currentOutlineStep ? '#f5d040' : '#e5e7eb' }} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {progressMessage && (
+                  <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                    <Loader2 className="w-3 h-3 animate-spin flex-shrink-0" />
+                    <span aria-live="polite">{progressMessage}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {outlineText && (
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-gray-700">生成的大纲</span>
+                {outlineSource > 0 && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-300">
+                    基于 {outlineSource} 份文档生成
+                  </span>
+                )}
               </div>
             )}
 
             <textarea
+              ref={outlineTextareaRef}
               value={outlineText}
               onChange={handleOutlineChange}
               readOnly={!isComplete}
               rows={16}
               placeholder="大纲将在此处生成，刷新后也可继续恢复..."
-              className="w-full text-sm text-gray-800 border-0 resize-none focus:outline-none bg-transparent"
+              className="w-full text-sm text-gray-800 border-0 resize-none focus:outline-none bg-transparent overflow-y-auto"
             />
+
+            {isComplete && outlineText && (
+              <p className="text-xs text-gray-400 mt-1">
+                {draftSaved ? '已自动保存草稿' : '自动保存中...'}
+              </p>
+            )}
 
             {isComplete && (
               <div className="mt-4 pt-4 border-t border-gray-100">

@@ -1,3 +1,15 @@
 export { VocationalBulletsLayout, renderVocationalBulletsLayoutHTML } from './VocationalBulletsLayout';
 export { VocationalContentLayout, renderVocationalContentLayoutHTML } from './VocationalContentLayout';
 export { VocationalComparisonLayout, renderVocationalComparisonLayoutHTML } from './VocationalComparisonLayout';
+export { VocationalSopBannerLayout, renderVocationalSopBannerLayoutHTML } from './VocationalSopBannerLayout';
+export { VocationalWarningSplitLayout, renderVocationalWarningSplitLayoutHTML } from './VocationalWarningSplitLayout';
+export { VocationalBlueprintZoomLayout, renderVocationalBlueprintZoomLayoutHTML } from './VocationalBlueprintZoomLayout';
+export { VocationalPivHudLayout, renderVocationalPivHudLayoutHTML } from './VocationalPivHudLayout';
+export { VocationalIntroCoverLayout, renderVocationalIntroCoverLayoutHTML } from './VocationalIntroCoverLayout';
+export { VocationalMissionTocLayout, renderVocationalMissionTocLayoutHTML } from './VocationalMissionTocLayout';
+export { VocationalTargetLockLayout, renderVocationalTargetLockLayoutHTML } from './VocationalTargetLockLayout';
+export { VocationalSafetyCheckLayout, renderVocationalSafetyCheckLayoutHTML } from './VocationalSafetyCheckLayout';
+export { VocationalEquipmentGridLayout, renderVocationalEquipmentGridLayoutHTML } from './VocationalEquipmentGridLayout';
+export { VocationalMissionCompleteLayout, renderVocationalMissionCompleteLayoutHTML } from './VocationalMissionCompleteLayout';
+export { VocationalFaultDiagnosticLayout, renderVocationalFaultDiagnosticLayoutHTML } from './VocationalFaultDiagnosticLayout';
+export { VocationalPracticeSandboxLayout, renderVocationalPracticeSandboxLayoutHTML } from './VocationalPracticeSandboxLayout';

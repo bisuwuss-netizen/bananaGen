@@ -28,7 +28,7 @@ export function SlidePreviewFooter({
   versionMenu,
 }: Props) {
   return (
-    <div className="bg-white border-t border-gray-200 px-3 md:px-6 py-3 md:py-4 flex-shrink-0">
+    <div className="px-3 md:px-6 py-3 md:py-4 flex-shrink-0" style={{ background: '#ede4d0', borderTop: '2px solid #1a1a1a' }}>
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 max-w-5xl mx-auto">
         <div className="flex items-center gap-2 w-full sm:w-auto justify-center">
           <Button
@@ -64,10 +64,10 @@ export function SlidePreviewFooter({
                 key={v.id}
                 onClick={() => onVariantChange(v.id)}
                 disabled={isVariantUpdating}
-                className={`px-2.5 py-1 rounded-md text-xs transition-colors ${
+                className={`px-2.5 py-1 rounded-md text-xs font-bold border-2 border-gray-900 transition-colors ${
                   currentVariant === v.id
-                    ? 'bg-banana-500 text-white shadow-sm'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-[#f5d040] text-gray-900'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
                 } ${isVariantUpdating ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
                 {v.label}

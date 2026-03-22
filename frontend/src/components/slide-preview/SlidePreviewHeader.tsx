@@ -47,7 +47,7 @@ export function SlidePreviewHeader({
   ).length;
 
   return (
-    <header className="app-navbar relative z-40 h-14 md:h-16 flex items-center justify-between px-3 md:px-6 flex-shrink-0 overflow-visible">
+    <header className="relative z-40 h-12 flex items-center justify-between px-4 md:px-6 flex-shrink-0 overflow-visible" style={{ background: '#ede4d0', borderBottom: '2px solid #1a1a1a' }}>
       <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
         <Button
           variant="ghost"
@@ -130,10 +130,10 @@ export function SlidePreviewHeader({
             <span>导出</span>
           </Button>
           {showExportMenu && (
-            <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+            <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg py-2 z-50" style={{ border: '2px solid #1a1a1a', boxShadow: '4px 4px 0 #1a1a1a' }}>
               <button
                 onClick={onExportPptx}
-                className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors text-sm"
+                className="w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors text-sm font-medium"
               >
                 导出为 PPTX
               </button>

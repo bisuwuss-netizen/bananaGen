@@ -610,380 +610,348 @@ export const Home: React.FC = () => {
     }
   };
 
+
   return (
-    <div className="app-shell min-h-screen relative overflow-hidden">
-      {/* 背景装饰元素 */}
-      {/*<div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-banana-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-orange-400/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-yellow-400/5 rounded-full blur-3xl"></div>
-      </div>*/}
+    <div className="min-h-screen" style={{ background: '#ede4d0' }}>
 
-      {/* 导航栏 */}
-      <nav className="app-navbar relative h-16 md:h-18">
-
-        <div className="relative mx-auto px-4 md:px-6 h-full flex items-center justify-between">
-          <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
-            <Button
-                variant="ghost"
-                size="sm"
-                icon={<HomeIcon size={16} className="md:w-[18px] md:h-[18px]" />}
-                onClick={redirectHomepage}
-                className="flex-shrink-0"
-            >
-              <span className="hidden sm:inline">主页</span>
-            </Button>
-          </div>
-          {/* 绝对居中的品牌 Logo */}
-          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 pointer-events-none select-none">
-            <img
-              src="/yuean.svg"
-              alt="跃案 Logo"
-              className="h-8 md:h-9 w-auto rounded-lg object-contain"
-            />
-            <span className="text-lg md:text-xl font-bold bg-gradient-to-r from-banana-600 via-orange-500 to-pink-500 bg-clip-text text-transparent">
-              跃案
-            </span>
-          </div>
-          <div className="flex items-center gap-2 md:gap-3">
-             {/*桌面端：带文字的素材生成按钮*/}
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={<ImagePlus size={16} className="md:w-[18px] md:h-[18px]" />}
-              onClick={handleOpenMaterialModal}
-              className="hidden sm:inline-flex font-medium duration-200 hover:scale-105 hover:bg-banana-100/60 hover:shadow-sm transition-[transform,background-color,box-shadow]"
-            >
-              <span className="hidden md:inline">素材生成</span>
-            </Button>
-             {/*手机端：仅图标的素材生成按钮*/}
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={<ImagePlus size={16} />}
-              onClick={handleOpenMaterialModal}
-              className="sm:hidden duration-200 hover:scale-105 hover:bg-banana-100/60 hover:shadow-sm transition-[transform,background-color,box-shadow]"
-              title="素材生成"
-            />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/history')}
-              className="text-xs font-medium duration-200 hover:scale-105 hover:bg-banana-100/60 hover:shadow-sm md:text-sm transition-[transform,background-color,box-shadow]"
-            >
-              <span className="hidden sm:inline">历史项目</span>
-              <span className="sm:hidden">历史</span>
-            </Button>
-            {/*<Button variant="ghost" size="sm" className="hidden md:inline-flex hover:bg-banana-50/50">帮助</Button>*/}
-          </div>
+      {/* ═══ 1. 顶部导航 ═══════════════════════════════════════ */}
+      <nav
+        className="h-12 flex items-center px-4 md:px-6 relative"
+        style={{ background: '#ede4d0', borderBottom: '2px solid #1a1a1a' }}
+      >
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <button
+            onClick={redirectHomepage}
+            className="flex items-center gap-1 px-3 py-1 text-sm font-bold rounded-md border-2 border-gray-900"
+            style={{ background: '#f5d040', boxShadow: '2px 2px 0 #1a1a1a' }}
+          >
+            <HomeIcon size={14} /><span>主页</span>
+          </button>
+          <button
+            onClick={handleOpenMaterialModal}
+            className="hidden sm:flex items-center gap-1 px-3 py-1 text-sm font-bold rounded-md border-2 border-gray-900"
+            style={{ background: '#ede4d0' }}
+          >
+            <ImagePlus size={14} /><span className="hidden md:inline">素材生成</span>
+          </button>
+          <button
+            onClick={() => navigate('/history')}
+            className="hidden sm:flex items-center gap-1 px-3 py-1 text-sm font-bold rounded-md border-2 border-gray-900"
+            style={{ background: '#ede4d0' }}
+          >
+            <span>历史项目</span>
+          </button>
+        </div>
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 pointer-events-none select-none">
+          <img src="/yuean.svg" alt="跃案" className="h-7 w-auto rounded-lg object-contain" />
+          <span className="text-base font-bold text-gray-900">跃案</span>
         </div>
       </nav>
 
-      {/* 主内容 */}
-      <main className="relative max-w-5xl mx-auto px-3 md:px-4 py-8 md:py-12 stagger-enter">
-        {/* Hero 标题区 */}
-        <div className="text-center mb-10 md:mb-16 space-y-4 md:space-y-6">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/60 backdrop-blur-sm rounded-full border border-banana-200/50 shadow-sm mb-4">
-            <Sparkles size={16} className="text-banana-500" />
-            <span className="text-sm font-medium text-gray-700">面向高职教育的智能课件生成平台</span>
+      {/* ═══ 2. 核心滚动容器（pb 必须 >= 固定底栏高度，防遮挡）══ */}
+      <main className="max-w-5xl mx-auto px-4 pt-3 pb-36">
+
+        {/* 主副标题 */}
+        <h1 className="text-3xl md:text-4xl font-black text-center text-gray-900 mb-1 tracking-tight">
+          面向高职教育的智能课件生成平台
+        </h1>
+        <p className="text-sm text-center text-gray-700 mb-3 font-medium">
+          一句话描述课程主题，AI 自动生成专业教学课件
+        </p>
+
+        {/* ═══ 3. 装饰悬浮层 + 白卡（relative 锚点）══════════════ */}
+        {/*
+          白卡 wrapper: position:relative → 作为插画绝对定位的唯一参照物
+          插画: position:absolute, z-index:0  白卡: z-index:10
+          使用 right:100% / left:100% 让插画贴着白卡左右外侧，不占文档流宽度
+        */}
+        <div className="relative mx-auto" style={{ maxWidth: 560 }}>
+
+          {/* ── 左侧装饰插画 ── */}
+          <div
+            className="hidden md:block absolute bottom-0 z-0 pointer-events-none"
+            style={{ right: '100%', width: 152 }}
+          >
+            <img src="/char-left.svg" alt="" className="w-full" />
           </div>
-          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto font-light">
-            一句话描述课程主题，AI 自动生成专业教学课件
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 pt-4">
-            {[
-              { icon: <Sparkles size={14} className="text-banana-500" />, label: '一句话生成课件' },
-              { icon: <FileText size={14} className="text-blue-500" />, label: 'AI 智能排版' },
-              { icon: <FileEdit size={14} className="text-orange-500" />, label: '自然语言修改' },
-              { icon: <Paperclip size={14} className="text-green-600" />, label: '一键导出 PPTX' },
-            ].map((feature, idx) => (
-              <span
-                key={idx}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-white/70 backdrop-blur-sm rounded-full text-xs md:text-sm text-gray-700 border border-gray-200/50 shadow-sm hover:shadow-md transition-all hover:scale-105 cursor-default"
+
+          {/* ── 右侧装饰插画 ── */}
+          <div
+            className="hidden md:block absolute bottom-0 z-0 pointer-events-none"
+            style={{ left: '100%', width: 130 }}
+          >
+            <img src="/char-right.svg" alt="" className="w-full" />
+          </div>
+
+          {/* ── 主白卡（z-10 压住插画边缘）── */}
+          <div
+            className="relative z-10 bg-white"
+            style={{
+              border: '2px solid #1a1a1a',
+              borderRadius: 16,
+              boxShadow: '5px 5px 0 #1a1a1a',
+            }}
+          >
+            {/* Tabs — 积木缝合：激活 tab 底边用白色压住分隔线 */}
+            <div
+              className="flex relative"
+              style={{ borderBottom: '2px solid #1a1a1a', borderRadius: '14px 14px 0 0', overflow: 'visible' }}
+            >
+              {(Object.keys(tabConfig) as CreationType[]).map((type, idx, arr) => {
+                const config = tabConfig[type];
+                const isActive = activeTab === type;
+                return (
+                  <button
+                    key={type}
+                    onClick={() => setActiveTab(type)}
+                    className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 text-sm font-bold touch-manipulation"
+                    style={{
+                      background: isActive ? '#5c3a1e' : '#ede4d0',
+                      color: isActive ? '#fff' : '#1a1a1a',
+                      borderRight: idx < arr.length - 1 ? '2px solid #1a1a1a' : 'none',
+                      margin: 0,
+                      marginBottom: isActive ? -2 : 0,
+                      paddingBottom: isActive ? '12px' : '10px',
+                      borderRadius: idx === 0 ? '14px 0 0 0' : '0',
+                      position: 'relative',
+                      zIndex: isActive ? 1 : 0,
+                    }}
+                  >
+                    <span style={{ transform: 'scale(0.85)', display: 'flex' }}>{config.icon}</span>
+                    <span className="truncate">{config.label}</span>
+                  </button>
+                );
+              })}
+              <button
+                onClick={() => navigate('/knowledge-base')}
+                className="flex-1 flex items-center justify-center gap-1 py-2.5 px-2 text-sm font-bold touch-manipulation"
+                style={{
+                  background: '#ede4d0',
+                  color: '#1a1a1a',
+                  borderLeft: '2px solid #1a1a1a',
+                  margin: 0,
+                  borderRadius: '0 14px 0 0',
+                }}
               >
-                {feature.icon}
-                {feature.label}
-              </span>
-            ))}
+                <BookOpen size={14} />
+                <span className="truncate">从文档生成</span>
+              </button>
+            </div>
+
+            {/* 提示描述 */}
+            <p className="px-3 pt-1.5 pb-0 text-xs text-gray-500 flex items-center gap-1">
+              <Lightbulb size={11} className="text-banana-500 flex-shrink-0" />
+              <span>{tabConfig[activeTab].description}</span>
+            </p>
+
+            {/* Textarea — 无边框无背景，完全融入白卡 */}
+            <div className="px-2 pt-1">
+              <textarea
+                ref={textareaRef}
+                placeholder={tabConfig[activeTab].placeholder}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                onFocus={() => setIsPromptFocused(true)}
+                onBlur={() => setIsPromptFocused(false)}
+                onPaste={handlePaste}
+                rows={activeTab === 'idea' ? 5 : 8}
+                style={{
+                  width: '100%',
+                  resize: 'none',
+                  background: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                  boxShadow: 'none',
+                  fontSize: 13,
+                  lineHeight: 1.6,
+                  color: '#1a1a1a',
+                  padding: '6px 4px 4px 4px',
+                }}
+                className="placeholder:text-gray-400"
+              />
+            </div>
+
+            {/* 图片预览 & 参考文件列表 */}
+            <ImagePreviewList content={content} onRemoveImage={handleRemoveImage} className="px-3" />
+            <ReferenceFileList
+              files={referenceFiles}
+              onFileClick={setPreviewFileId}
+              onFileDelete={handleFileRemove}
+              onFileStatusChange={handleFileStatusChange}
+              deleteMode="remove"
+              className="px-3"
+            />
+
+            {/* 底部留白（给绝对定位按钮腾空间） */}
+            <div className="h-12" />
+
+            {/* 回形针 — absolute 固定在白卡左下角 */}
+            <button
+              type="button"
+              onClick={handlePaperclipClick}
+              className="absolute left-3 bottom-3 z-20 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors active:scale-95"
+              title="选择参考文件"
+            >
+              <Paperclip size={15} />
+            </button>
+
+            {/* 下一步按钮 — absolute 固定在白卡右下角 */}
+            <div className="absolute bottom-3 right-3 z-20">
+              <button
+                onClick={handleSubmit}
+                disabled={
+                  !content.trim() ||
+                  isGlobalLoading ||
+                  referenceFiles.some((f) => f.parse_status === 'pending' || f.parse_status === 'parsing')
+                }
+                className="px-4 py-1.5 text-sm font-black rounded-md border-2 border-gray-900 disabled:opacity-50 transition-opacity"
+                style={{ background: '#f5d040', boxShadow: '3px 3px 0 #1a1a1a' }}
+              >
+                {isGlobalLoading
+                  ? '生成中...'
+                  : referenceFiles.some((f) => f.parse_status === 'pending' || f.parse_status === 'parsing')
+                  ? '解析中...'
+                  : '下一步'}
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* 创建卡片 */}
-        <Card className="app-panel overflow-visible border-white/70 bg-white/95 p-4 shadow-[0_40px_120px_-56px_rgba(15,23,42,0.42)] duration-300 md:p-10 lg:px-[8%] transition-[box-shadow,border-color,background-color]">
-          {/* 选项卡 */}
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-6 md:mb-8">
-            {(Object.keys(tabConfig) as CreationType[]).map((type) => {
-              const config = tabConfig[type];
-              return (
-                <button
-                  key={type}
-                  onClick={() => setActiveTab(type)}
-                  className={`flex-1 touch-manipulation items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium duration-200 md:gap-2 md:px-6 md:py-3 md:text-base transition-[background-color,color,box-shadow,border-color] ${
-                    activeTab === type
-                      ? 'bg-banana-500 text-white'
-                      : 'bg-white border border-banana-500 text-banana-500 hover:bg-banana-500 hover:text-white'
-                  }`}
-                >
-                  <span className="scale-90 md:scale-100">{config.icon}</span>
-                  <span className="truncate">{config.label}</span>
-                </button>
-              );
-            })}
-            <button
-              onClick={() => navigate('/knowledge-base')}
-              className="flex flex-1 touch-manipulation items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-sm font-medium duration-200 md:gap-2 md:px-6 md:py-3 md:text-base transition-[background-color,color,box-shadow,border-color] bg-white border border-banana-500 text-banana-500 hover:bg-banana-500 hover:text-white"
-            >
-              <span className="scale-90 md:scale-100"><BookOpen size={20} /></span>
-              <span className="truncate">从文档生成</span>
-            </button>
-          </div>
+        {/* 隐藏文件输入 */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.txt,.md"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
 
-          {/* 描述 */}
-          <div className="relative">
-            <p className="text-sm md:text-base mb-4 md:mb-6 leading-relaxed">
-              <span className="inline-flex items-center gap-2 text-gray-600">
-                <Lightbulb size={16} className="text-banana-500 flex-shrink-0" />
-                <span className="font-semibold">
-                  {tabConfig[activeTab].description}
-                </span>
-              </span>
-            </p>
-          </div>
-
-          {/* 输入区 - 带按钮 */}
-          <div className="relative mb-4">
-            <HomeCharactersPromptStage
-              isPromptFocused={isPromptFocused}
-              hasPromptContent={Boolean(content.trim())}
-            >
-              <div className="relative mb-2 group">
-                <div className="absolute -inset-3 rounded-[28px] bg-[radial-gradient(circle_at_top,rgba(245,146,22,0.18),transparent_65%)] opacity-70 blur-2xl transition-opacity duration-300 group-hover:opacity-100"></div>
-                <Textarea
-                  ref={textareaRef}
-                  placeholder={tabConfig[activeTab].placeholder}
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  onFocus={() => setIsPromptFocused(true)}
-                  onBlur={() => setIsPromptFocused(false)}
-                  onPaste={handlePaste}
-                  rows={activeTab === 'idea' ? 4 : 8}
-                  className="relative min-h-[180px] rounded-[24px] pr-20 md:pr-28 pb-12 md:pb-14 text-sm md:text-base border-2 border-banana-200/80 bg-white/98 shadow-[0_26px_54px_-38px_rgba(245,146,22,0.45)] focus:border-banana-400 focus:shadow-[0_30px_60px_-36px_rgba(245,146,22,0.48)] transition-[border-color,box-shadow] duration-200"
-                />
-
-                {/* 左下角：上传文件按钮（回形针图标） */}
-                <button
-                  type="button"
-                  onClick={handlePaperclipClick}
-                  className="absolute left-3 md:left-4 bottom-3 md:bottom-4 z-10 p-1.5 md:p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors active:scale-95 touch-manipulation"
-                  title="选择参考文件"
-                >
-                  <Paperclip size={18} className="md:w-5 md:h-5" />
-                </button>
-
-                {/* 右下角：开始生成按钮 */}
-                <div className="absolute right-3 md:right-4 bottom-3 md:bottom-4 z-10">
-                  <Button
-                    size="sm"
-                    onClick={handleSubmit}
-                    loading={isGlobalLoading}
-                    disabled={
-                      !content.trim() ||
-                      referenceFiles.some(f => f.parse_status === 'pending' || f.parse_status === 'parsing')
-                    }
-                    className="rounded-xl text-xs md:text-sm px-3 md:px-4 shadow-sm"
-                  >
-                    {referenceFiles.some(f => f.parse_status === 'pending' || f.parse_status === 'parsing')
-                      ? '解析中...'
-                      : '下一步'}
-                  </Button>
-                </div>
-              </div>
-            </HomeCharactersPromptStage>
-          </div>
-
-          {/* 隐藏的文件输入 */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.txt,.md"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-
-          {/* 图片预览列表 */}
-          <ImagePreviewList
-            content={content}
-            onRemoveImage={handleRemoveImage}
-            className="mb-4"
-          />
-
-          <ReferenceFileList
-            files={referenceFiles}
-            onFileClick={setPreviewFileId}
-            onFileDelete={handleFileRemove}
-            onFileStatusChange={handleFileStatusChange}
-            deleteMode="remove"
-            className="mb-4"
-          />
-
-          {/* 模板选择 */}
-          <div className="mb-6 md:mb-8 pt-4 border-t border-gray-100">
-            <div className="flex items-center justify-between mb-3 md:mb-4">
-              <div className="flex items-center gap-2">
-                <Palette size={18} className="text-banana-500 flex-shrink-0" />
-                <h3 className="text-base md:text-lg font-semibold text-gray-900">
-                  {renderMode === 'html' ? '选择教学模板' : '选择风格模板'}
-                </h3>
-              </div>
-              {renderMode !== 'html' && (
-                <label className="flex items-center gap-2 cursor-pointer group">
-                  <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors">
-                    使用文字描述风格
-                  </span>
-                  <div className="relative">
-                    <input
-                        type="checkbox"
-                        checked={useTemplateStyle}
-                        onChange={(e) => {
-                          setUseTemplateStyle(e.target.checked);
-                          // 切换到无模板图模式时，清空模板选择
-                          if (e.target.checked) {
-                            setSelectedTemplate(null);
-                            setSelectedTemplateId(null);
-                          }
-                          // 不再清空风格描述，允许用户保留已输入的内容
-                        }}
-                        className="sr-only peer"
-                    />
-                    <div className="peer h-6 w-11 rounded-full bg-gray-200 transition-colors duration-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-banana-300 peer-checked:bg-banana-500 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:content-[''] after:transition-transform after:duration-200"></div>
-                  </div>
-                </label>
-              )}
+        {/* ═══ 模板选择区（白卡下方，需留底部 padding 防固定栏遮挡）═ */}
+        <div className="mt-5 mx-auto max-w-5xl">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-1.5">
+              <Palette size={14} className="text-gray-400 flex-shrink-0" />
+              <h3 className="text-sm font-bold text-gray-700">
+                {renderMode === 'html' ? '选择教学模板' : '选择风格模板'}
+              </h3>
             </div>
-
-            {renderMode === 'html' ? (
-              <SchemeSelector
-                value={selectedSchemeId}
-                onChange={setSelectedSchemeId}
-              />
-            ) : useTemplateStyle ? (
-              <div className="space-y-3">
-                <Textarea
-                  placeholder="描述您想要的 PPT 风格，例如：简约商务风格，使用蓝色和白色配色，字体清晰大方..."
-                  value={templateStyle}
-                  onChange={(e) => setTemplateStyle(e.target.value)}
-                  rows={3}
-                  className="text-sm border-2 border-gray-200 focus:border-banana-400 transition-colors duration-200"
-                />
-
-                {/* 预设风格按钮 */}
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-gray-600">
-                    快速选择预设风格：
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {isLoadingPresetStyles ? (
-                      <p className="text-xs text-gray-500">加载预设风格中...</p>
-                    ) : presetStyles.length === 0 ? (
-                      <p className="text-xs text-gray-500">暂无预设风格</p>
-                    ) : (
-                      presetStyles.map((preset) => {
-                        const isActive = activePresetStyleId === preset.id;
-                        const isPreviewOpen = activePresetPreview?.id === preset.id;
-
-                        return (
-                          <div key={preset.id} className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              aria-pressed={isActive}
-                              onClick={() => applyPresetStyle(preset)}
-                              className={`rounded-full border-2 px-3 py-1.5 text-xs font-medium duration-200 transition-[border-color,background-color,box-shadow,color] ${
-                                isActive
-                                  ? 'border-banana-400 bg-banana-50 text-banana-700 shadow-sm'
-                                  : 'border-gray-200 text-gray-700 hover:border-banana-400 hover:bg-banana-50 hover:shadow-sm'
-                              }`}
-                            >
-                              {preset.name}
-                            </button>
-
-                            {preset.previewImage && (
-                              <button
-                                type="button"
-                                aria-label={`预览 ${preset.name} 风格`}
-                                aria-haspopup="dialog"
-                                aria-expanded={isPreviewOpen}
-                                aria-controls={isPreviewOpen ? 'preset-style-preview-dialog' : undefined}
-                                onClick={(event) => openPresetPreview(preset, event.currentTarget)}
-                                className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-gray-500 duration-200 hover:border-banana-300 hover:bg-banana-50 hover:text-banana-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-banana-300/80 focus-visible:ring-offset-2 transition-[border-color,background-color,color,box-shadow]"
-                              >
-                                <Eye size={12} />
-                                预览
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
+            {renderMode !== 'html' && (
+              <label className="flex items-center gap-2 cursor-pointer">
+                <span className="text-xs text-gray-600">使用文字描述风格</span>
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={useTemplateStyle}
+                    onChange={(e) => {
+                      setUseTemplateStyle(e.target.checked);
+                      if (e.target.checked) {
+                        setSelectedTemplate(null);
+                        setSelectedTemplateId(null);
+                      }
+                    }}
+                    className="sr-only peer"
+                  />
+                  <div className="peer h-5 w-9 rounded-full bg-gray-200 transition-colors duration-200 peer-checked:bg-banana-500 peer-checked:after:translate-x-full after:absolute after:start-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:content-[''] after:transition-transform after:duration-200" />
                 </div>
-
-                <p className="text-xs text-gray-500">
-                  💡 提示：点击名称可快速应用风格，点击“预览”可查看样张后再决定是否采用
-                </p>
-              </div>
-            ) : (
-              <TemplateSelector
-                onSelect={handleTemplateSelect}
-                selectedTemplateId={selectedTemplateId}
-                showUpload={true} // 在主页上传的模板保存到用户模板库
-                projectId={currentProjectId}
-              />
+              </label>
             )}
           </div>
-        </Card>
 
-        {/* 品牌理念区 */}
-        <div className="mt-16 md:mt-24 mb-8 text-center space-y-10">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold tracking-[0.25em] text-banana-500 uppercase">Our Philosophy</p>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-800">备课耗时，是教师最真实的痛点</h2>
-            <p className="text-sm md:text-base text-gray-500 max-w-xl mx-auto leading-relaxed">
-              跃案，让 AI 把这段时间还给你——专注教学本身，而非反复打磨幻灯片。
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
-            <div className="group bg-white/70 backdrop-blur-sm rounded-2xl px-6 py-6 border border-banana-100 shadow-sm hover:shadow-md hover:border-banana-300 transition-all text-left">
-              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-banana-400 to-banana-600 text-white font-bold text-lg mb-4 shadow-yellow">
-                跃
+          {renderMode === 'html' ? (
+            <SchemeSelector value={selectedSchemeId} onChange={setSelectedSchemeId} />
+          ) : useTemplateStyle ? (
+            <div className="space-y-2">
+              <Textarea
+                placeholder="描述您想要的 PPT 风格，例如：简约商务风格，使用蓝色和白色配色..."
+                value={templateStyle}
+                onChange={(e) => setTemplateStyle(e.target.value)}
+                rows={3}
+                className="text-sm border-2 border-gray-900 rounded-lg focus:border-banana-400 transition-colors"
+              />
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-gray-600">快速选择预设风格：</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {isLoadingPresetStyles ? (
+                    <p className="text-xs text-gray-500">加载中...</p>
+                  ) : (
+                    presetStyles.map((preset) => {
+                      const isActive = activePresetStyleId === preset.id;
+                      const isPreviewOpen = activePresetPreview?.id === preset.id;
+                      return (
+                        <div key={preset.id} className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            aria-pressed={isActive}
+                            onClick={() => applyPresetStyle(preset)}
+                            className={`rounded-md border-2 px-2.5 py-1 text-xs font-medium transition-all ${
+                              isActive
+                                ? 'border-gray-900 bg-[#5c3a1e] text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                                : 'border-gray-900 text-gray-700 hover:bg-[#f5d040] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                            }`}
+                          >
+                            {preset.name}
+                          </button>
+                          {preset.previewImage && (
+                            <button
+                              type="button"
+                              ref={isActive ? presetPreviewTriggerRef : undefined}
+                              onClick={(e) => openPresetPreview(preset, e.currentTarget)}
+                              className="inline-flex items-center gap-0.5 rounded-md border-2 border-gray-900 bg-white px-2 py-1 text-[11px] font-medium text-gray-600 hover:bg-[#f5d040] transition-all"
+                            >
+                              <Eye size={11} />预览
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
-              <h3 className="text-base font-semibold text-gray-800 mb-1.5">跨越式提效</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                不是微调，是量级跃升。AI 注入教学动能，将一节课的备课时间压缩到分钟级，让高能量的创造力持续释放。
-              </p>
             </div>
-            <div className="group bg-white/70 backdrop-blur-sm rounded-2xl px-6 py-6 border border-banana-100 shadow-sm hover:shadow-md hover:border-banana-300 transition-all text-left">
-              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-banana-400 to-banana-600 text-white font-bold text-lg mb-4 shadow-yellow">
-                案
-              </div>
-              <h3 className="text-base font-semibold text-gray-800 mb-1.5">教案即产品</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                "案"聚焦备课的生产过程——从构想到完整教案，一气呵成。比"课"更强调教师作为创作者的主体价值。
-              </p>
-            </div>
-          </div>
+          ) : (
+            <TemplateSelector
+              onSelect={handleTemplateSelect}
+              selectedTemplateId={selectedTemplateId}
+              showUpload={true}
+              projectId={currentProjectId}
+            />
+          )}
         </div>
       </main>
+
+      {/* ═══ 4. 底部固定栏（Portal → body，彻底规避 containing-block 问题）══════════ */}
+      {createPortal(
+        <div
+          className="fixed bottom-0 left-0 w-full z-50"
+          style={{ background: '#ede4d0', borderTop: '2px solid #1a1a1a' }}
+        >
+          <div className="max-w-5xl mx-auto px-4 py-2 flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-banana-600">Our Philosophy</p>
+              <p className="text-xs text-gray-600 truncate">
+                备课耗时，是教师最真实的痛点跃案，让 AI 把这段时间还给你——专注教学本身，而非反复打磨幻灯片。
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <img src="/yuean.svg" alt="跃案" className="h-7 w-auto rounded-md object-contain" />
+              <span className="text-sm font-bold text-gray-900 hidden sm:inline">跃案</span>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
+
       <ToastContainer />
-      {/* 素材生成模态 - 在主页始终生成全局素材 */}
+
+      {/* 素材生成模态 */}
       <MaterialGeneratorModal
         projectId={null}
         isOpen={isMaterialModalOpen}
         onClose={() => setIsMaterialModalOpen(false)}
       />
+
       {/* 参考文件选择器 */}
-      {/* 在 Home 页面，始终查询全局文件，因为此时还没有项目 */}
       <ReferenceFileSelector
         projectId={null}
         isOpen={isFileSelectorOpen}
@@ -992,16 +960,13 @@ export const Home: React.FC = () => {
         multiple={true}
         initialSelectedIds={selectedFileIds}
       />
-      
+
       <FilePreviewModal fileId={previewFileId} onClose={() => setPreviewFileId(null)} />
 
       {activePresetPreview?.previewImage && typeof document !== 'undefined'
         ? createPortal(
             <div className="fixed inset-0 z-[95]" data-testid="preset-style-preview-overlay">
-              <div
-                className="absolute inset-0 bg-slate-950/32 backdrop-blur-[3px]"
-                onClick={closePresetPreview}
-              />
+              <div className="absolute inset-0 bg-slate-950/32 backdrop-blur-[3px]" onClick={closePresetPreview} />
               <div className="relative flex h-full items-center justify-center p-4 md:p-8">
                 <div
                   id="preset-style-preview-dialog"
@@ -1009,67 +974,47 @@ export const Home: React.FC = () => {
                   aria-modal="true"
                   aria-labelledby="preset-style-preview-title"
                   aria-describedby="preset-style-preview-description"
-                  className="relative flex w-full max-w-[860px] flex-col overflow-hidden rounded-[30px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(248,250,252,0.93)_100%)] shadow-[0_32px_120px_rgba(15,23,42,0.28)] backdrop-blur-2xl"
-                  onClick={(event) => event.stopPropagation()}
+                  className="relative flex w-full max-w-[860px] flex-col overflow-hidden rounded-[30px] border border-white/60 bg-white shadow-[0_32px_120px_rgba(15,23,42,0.28)]"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="border-b border-slate-200/80 bg-white/70 px-5 py-5 md:px-7">
+                  <div className="border-b border-slate-200 bg-white/70 px-5 py-4 md:px-7">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
-                        <div className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-slate-400">
-                          <span className="inline-block h-2.5 w-2.5 rounded-full bg-banana-400" />
-                          风格预览
+                        <div className="mb-1 flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-slate-400">
+                          <span className="inline-block h-2 w-2 rounded-full bg-banana-400" />风格预览
                         </div>
-                        <h4
-                          id="preset-style-preview-title"
-                          className="text-xl font-semibold text-slate-900 md:text-2xl"
-                        >
+                        <h4 id="preset-style-preview-title" className="text-xl font-semibold text-slate-900">
                           {activePresetPreview.name}
                         </h4>
-                        <p
-                          id="preset-style-preview-description"
-                          className="mt-2 max-w-[660px] text-sm leading-6 text-slate-600"
-                        >
+                        <p id="preset-style-preview-description" className="mt-1 max-w-[660px] text-sm leading-6 text-slate-600">
                           {activePresetPreview.description}
                         </p>
                       </div>
                       <button
                         type="button"
                         onClick={closePresetPreview}
-                        className="rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-medium text-slate-500 duration-200 hover:border-slate-300 hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-banana-300/80 focus-visible:ring-offset-2 transition-[border-color,color,background-color]"
-                      >
-                        关闭
-                      </button>
+                        className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors"
+                      >关闭</button>
                     </div>
                   </div>
-
-                  <div className="px-5 pb-5 pt-5 md:px-7 md:pb-7">
-                    <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-slate-100 shadow-[0_18px_60px_rgba(15,23,42,0.14)]">
+                  <div className="px-5 pb-5 pt-4 md:px-7">
+                    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
                       <img
                         src={activePresetPreview.previewImage}
                         alt={`${activePresetPreview.name} 预览图`}
                         className="block max-h-[65vh] w-full object-contain"
                       />
                     </div>
-
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                      <p className="text-xs leading-5 text-slate-500">
-                        点击“应用该风格”会将这条预设描述填入输入框，方便继续微调。
-                      </p>
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-xs text-slate-500">点击"应用该风格"会将这条预设描述填入输入框，方便继续微调。</p>
                       <div className="flex items-center gap-2">
+                        <button type="button" onClick={closePresetPreview}
+                          className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors"
+                        >稍后再看</button>
                         <button
                           type="button"
-                          onClick={closePresetPreview}
-                          className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-500 duration-200 hover:border-slate-300 hover:text-slate-900 transition-[border-color,color]"
-                        >
-                          稍后再看
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            applyPresetStyle(activePresetPreview);
-                            closePresetPreview();
-                          }}
-                          className="rounded-full bg-banana-500 px-4 py-2 text-sm font-medium text-white duration-200 hover:bg-banana-600 transition-[background-color,box-shadow]"
+                          onClick={() => { applyPresetStyle(activePresetPreview); closePresetPreview(); }}
+                          className="rounded-full bg-banana-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-banana-600 transition-colors"
                         >
                           {activePresetStyleId === activePresetPreview.id ? '已应用该风格' : '应用该风格'}
                         </button>

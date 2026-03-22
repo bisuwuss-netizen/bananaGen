@@ -179,16 +179,16 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           ) : (
             <div>
               {/* 模板网格：2行4列 */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-4">
                 {/* 用户已保存的模板 */}
                 {userTemplates.map((template) => (
                   <div
                     key={template.template_id}
                     onClick={() => handleSelectUserTemplate(template)}
-                    className={`aspect-[4/3] rounded-xl border cursor-pointer transition-all relative group overflow-hidden ${
+                    className={`h-32 rounded-lg border-2 border-gray-900 cursor-pointer transition-all relative group overflow-hidden ${
                       selectedTemplateId === template.template_id
-                        ? 'border-banana-400 ring-2 ring-banana-200/70 shadow-yellow'
-                        : 'border-slate-200 hover:border-banana-300 hover:shadow-md'
+                        ? 'shadow-[4px_4px_0px_0px_rgba(245,158,11,1)]'
+                        : 'hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]'
                     }`}
                   >
                     <img
@@ -219,7 +219,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                 ))}
                 
                 {/* 上传新模板 */}
-                <label className="aspect-[4/3] rounded-xl border-2 border-dashed border-slate-300 hover:border-banana-500 bg-white/85 cursor-pointer transition-all flex flex-col items-center justify-center gap-2 relative overflow-hidden hover:shadow-sm">
+                <label className="h-32 rounded-lg border-2 border-dashed border-gray-900 hover:border-banana-500 bg-white cursor-pointer transition-all flex flex-col items-center justify-center gap-2 relative overflow-hidden hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                   <span className="text-2xl text-banana-600">+</span>
                   <span className="text-sm text-slate-600">上传模板</span>
                   <input

@@ -7,6 +7,7 @@ import React from 'react';
 import {
   PagePayload,
   ThemeConfig,
+  LayoutId,
   CoverModel,
   TocModel,
   TitleContentModel,
@@ -115,7 +116,48 @@ import {
   VocationalBulletsLayout,
   VocationalContentLayout,
   VocationalComparisonLayout,
+  VocationalSopBannerLayout,
+  VocationalWarningSplitLayout,
+  VocationalBlueprintZoomLayout,
+  VocationalPivHudLayout,
+  VocationalIntroCoverLayout,
+  VocationalMissionTocLayout,
+  VocationalTargetLockLayout,
+  VocationalSafetyCheckLayout,
+  VocationalEquipmentGridLayout,
+  VocationalFaultDiagnosticLayout,
+  VocationalPracticeSandboxLayout,
+  VocationalMissionCompleteLayout,
 } from '../layouts/vocational';
+import {
+  BlueprintCoverLayout,
+  BlueprintTocLayout,
+  BlueprintSpecCardLayout,
+  BlueprintQuoteLayout,
+  BlueprintAnnotationLayout,
+  BlueprintSectionTitleLayout,
+  BlueprintDualPanelLayout,
+  BlueprintTimelineLayout,
+  BlueprintBentoGridLayout,
+  BlueprintTriCompareLayout,
+  BlueprintGalleryLayout,
+  BlueprintBigRevealLayout,
+  BlueprintClosingLayout,
+} from '../layouts/blueprint';
+import {
+  VaultCoverLayout,
+  VaultIndexLayout,
+  VaultKpiGridLayout,
+  VaultHeatmapLayout,
+  VaultTimelineLayout,
+  VaultSplitBriefLayout,
+  VaultFlowCircuitLayout,
+  VaultDashboardLayout,
+  VaultDeepAnalysisLayout,
+  VaultTerminalLayout,
+  VaultCompareLayout,
+  VaultDebriefLayout,
+} from '../layouts/vault';
 import { getLayoutDisplayName, normalizeLayoutId } from '../layouts';
 
 interface SlideRendererProps {
@@ -176,8 +218,50 @@ export const SlideRenderer: React.FC<SlideRendererProps> = ({
     );
   }
 
-  const normalizedLayoutId = normalizeLayoutId(layout_id);
+  let normalizedLayoutId = normalizeLayoutId(layout_id);
 
+  // 针对高职顶级美学模板的运行时特殊路由拦截 (Theme-aware runtime layout substitution)
+  if (theme?.id === 'warm_edu') {
+    if (normalizedLayoutId === 'process_steps' || normalizedLayoutId === 'vertical_timeline') {
+      normalizedLayoutId = 'vocational_sop_banner';
+    } else if (normalizedLayoutId === 'two_column' || normalizedLayoutId === 'vocational_comparison') {
+      normalizedLayoutId = 'vocational_warning_split';
+    }
+  } else if (theme?.id === 'minimal_clean') {
+    const blueprintMap: Record<string, LayoutId> = {
+      cover: 'blueprint_cover',
+      toc: 'blueprint_toc',
+      quote: 'blueprint_quote',
+      section_title: 'blueprint_section_title',
+      ending: 'blueprint_closing',
+      two_column: 'blueprint_dual_panel',
+      timeline: 'blueprint_timeline',
+      portfolio: 'blueprint_gallery',
+      learning_objectives: 'blueprint_spec_card',
+      title_bullets: 'blueprint_bento_grid',
+      edu_tri_compare: 'blueprint_tri_compare',
+      detail_zoom: 'blueprint_annotation',
+    };
+    if (blueprintMap[normalizedLayoutId]) {
+      normalizedLayoutId = blueprintMap[normalizedLayoutId];
+    }
+  } else if (theme?.id === 'business_pro') {
+    const vaultMap: Record<string, LayoutId> = {
+      cover: 'vault_cover',
+      toc: 'vault_index',
+      ending: 'vault_debrief',
+      two_column: 'vault_split_brief',
+      process_steps: 'vault_flow_circuit',
+      timeline: 'vault_timeline',
+      title_bullets: 'vault_kpi_grid',
+      edu_data_board: 'vault_dashboard',
+      edu_tri_compare: 'vault_compare',
+    };
+    if (vaultMap[normalizedLayoutId]) {
+      normalizedLayoutId = vaultMap[normalizedLayoutId];
+    }
+  }
+  
   // 检查 model
   if (!model) {
     console.error('[SlideRenderer] model is null/undefined, layout_id:', layout_id);
@@ -294,6 +378,50 @@ export const SlideRenderer: React.FC<SlideRendererProps> = ({
             onImageUpload={onImageUpload}
           />
         );
+      case 'vocational_sop_banner':
+        return (
+          <VocationalSopBannerLayout
+            model={{ ...(model as ProcessStepsModel), layoutId: layout_id } as ProcessStepsModel}
+            theme={theme}
+          />
+        );
+      case 'vocational_warning_split':
+        return (
+          <VocationalWarningSplitLayout
+            model={{ ...(model as TwoColumnModel), layoutId: layout_id } as TwoColumnModel}
+            theme={theme}
+          />
+        );
+      case 'vocational_blueprint_zoom':
+        return (
+          <VocationalBlueprintZoomLayout
+            model={{ ...(model as DetailZoomModel), layoutId: layout_id } as DetailZoomModel}
+            theme={theme}
+          />
+        );
+      case 'vocational_piv_hud':
+        return (
+          <VocationalPivHudLayout
+            model={{ ...(model as EduDataBoardModel), layoutId: layout_id } as EduDataBoardModel}
+            theme={theme}
+          />
+        );
+      case 'vocational_intro_cover':
+        return <VocationalIntroCoverLayout model={model as CoverModel} theme={theme} />;
+      case 'vocational_mission_toc':
+        return <VocationalMissionTocLayout model={model as TocModel} theme={theme} />;
+      case 'vocational_target_lock':
+        return <VocationalTargetLockLayout model={{ ...(model as TitleBulletsModel), layoutId: layout_id } as TitleBulletsModel} theme={theme} />;
+      case 'vocational_safety_check':
+        return <VocationalSafetyCheckLayout model={{ ...(model as TitleBulletsModel), layoutId: layout_id } as TitleBulletsModel} theme={theme} />;
+      case 'vocational_equipment_grid':
+        return <VocationalEquipmentGridLayout model={{ ...(model as TitleBulletsModel), layoutId: layout_id } as TitleBulletsModel} theme={theme} />;
+      case 'vocational_fault_diagnostic':
+        return <VocationalFaultDiagnosticLayout model={{ ...(model as TitleContentModel), layoutId: layout_id } as TitleContentModel} theme={theme} />;
+      case 'vocational_practice_sandbox':
+        return <VocationalPracticeSandboxLayout model={model} theme={theme} />;
+      case 'vocational_mission_complete':
+        return <VocationalMissionCompleteLayout model={model as EndingModel} theme={theme} />;
 
       // Modern scheme - 现代创新方案
       case 'sidebar_card':
@@ -336,7 +464,61 @@ export const SlideRenderer: React.FC<SlideRendererProps> = ({
       case 'edu_qa_case':
         return <EduQACaseLayout model={model as EduQACaseModel} theme={theme} />;
 
-      default:
+      // Blueprint scheme — 工业蓝图型专属布局
+      case 'blueprint_cover':
+        return <BlueprintCoverLayout model={model as CoverModel} theme={theme} />;
+      case 'blueprint_toc':
+        return <BlueprintTocLayout model={model as TocModel} theme={theme} />;
+      case 'blueprint_spec_card':
+        return <BlueprintSpecCardLayout model={model} theme={theme} />;
+      case 'blueprint_quote':
+        return <BlueprintQuoteLayout model={model as QuoteModel} theme={theme} />;
+      case 'blueprint_annotation':
+        return <BlueprintAnnotationLayout model={model} theme={theme} />;
+      case 'blueprint_section_title':
+        return <BlueprintSectionTitleLayout model={model as SectionTitleModel} theme={theme} />;
+      case 'blueprint_dual_panel':
+        return <BlueprintDualPanelLayout model={model as TwoColumnModel} theme={theme} />;
+      case 'blueprint_timeline':
+        return <BlueprintTimelineLayout model={model} theme={theme} />;
+      case 'blueprint_bento_grid':
+        return <BlueprintBentoGridLayout model={model} theme={theme} />;
+      case 'blueprint_tri_compare':
+        return <BlueprintTriCompareLayout model={model} theme={theme} />;
+      case 'blueprint_gallery':
+        return <BlueprintGalleryLayout model={model} theme={theme} />;
+      case 'blueprint_big_reveal':
+        return <BlueprintBigRevealLayout model={model} theme={theme} />;
+      case 'blueprint_closing':
+      return <BlueprintClosingLayout model={model as EndingModel} theme={theme} />;
+
+    // DATA VAULT specialized layouts
+    case 'vault_cover':
+      return <VaultCoverLayout model={model} theme={theme} />;
+    case 'vault_index':
+      return <VaultIndexLayout model={model} theme={theme} />;
+    case 'vault_kpi_grid':
+      return <VaultKpiGridLayout model={model} theme={theme} />;
+    case 'vault_heatmap':
+      return <VaultHeatmapLayout model={model} theme={theme} />;
+    case 'vault_timeline':
+      return <VaultTimelineLayout model={model} theme={theme} />;
+    case 'vault_split_brief':
+      return <VaultSplitBriefLayout model={model} theme={theme} />;
+    case 'vault_flow_circuit':
+      return <VaultFlowCircuitLayout model={model} theme={theme} />;
+    case 'vault_dashboard':
+      return <VaultDashboardLayout model={model} theme={theme} />;
+    case 'vault_deep_analysis':
+      return <VaultDeepAnalysisLayout model={model} theme={theme} />;
+    case 'vault_terminal':
+      return <VaultTerminalLayout model={model} theme={theme} />;
+    case 'vault_compare':
+      return <VaultCompareLayout model={model} theme={theme} />;
+    case 'vault_debrief':
+      return <VaultDebriefLayout model={model} theme={theme} />;
+
+    default:
         return (
           <div
             style={{

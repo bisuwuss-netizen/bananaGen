@@ -141,7 +141,66 @@ LAYOUT_SCHEMES = {'academic': {'layouts': {'academic_narrative': '长文叙述 -
                       'density': '极低密度，每页聚焦核心图像，文字仅作画外音',
                       'graphics': '全屏大图、比例尺、专业经纬度标签、标注红圈',
                       'rhythm': '定格现场 → 细节切片 → 逻辑对比 → 画廊陈列 → 愿景归宿',
-                      'signature': '现场观测页/标本特写页必须具备极高的画面清晰度'}}}
+                      'signature': '现场观测页/标本特写页必须具备极高的画面清晰度'}},
+
+
+ 'business_pro': {'layouts': {'cover': '案卷封面 - 机密档案风封面，带格式化编号',
+                              'edu_data_board': '核心部件仪表 - 替代原有利润表，显示设备额定运行关键值（避免商业金钱数据）',
+                              'timeline': '工艺发展脉络 - 硬派纵横切分流程流转',
+                              'edu_core_hub': '根因鱼骨图剖析 - 极细点阵线相连的问题溯源拆解',
+                              'comparison_table': '矩阵对比 - 密集的参数对比选型矩阵',
+                              'two_column': '典型故障辨析 - 左栏绿字标准操作，右栏红字致死失误',
+                              'process_steps': '标准作业程序(SOP) - 带有关卡锁定的操作流图解',
+                              'image_full': '场景切片剖析 - 现场故障带标记的高亮诊断图',
+                              'detail_zoom': '关联因素下钻 - 树状结构剥离技术细项',
+                              'safety_notice': '安全预警 - 黑黄相间或重墨警示规范底线',
+                              'edu_summary': '分析结论 - 诊断外推与工程回馈'},
+                  'name': '工业精密型(原实战)',
+                  'style': {'avoid': '饼图等商业大盘指标、柔和活泼的UI大圆角',
+                            'background': 'Dark Mode 深岩晶底色配合高对比的工业强调色（荧光青/警示橙）',
+                            'colors': '深海蓝底 + 白字 + 危险警示色(红/绿)',
+                            'density': '高密度，用于承接复杂的规程与诊断推演。绝对对齐。',
+                            'graphics': '尖锐的机械直角(0px)设计、1px微型实线指示',
+                            'rhythm': '档案启封 → 态势面板 → 原理下探 → 致命避坑 → SOP锁定',
+                            'signature': '必须包含强烈警示感的标准对故障剖析页面'}},
+ 'minimal_clean': {'layouts': {'cover': '原理解剖图 - 100%全屏设备透视图底图配合巨大标题',
+                               'quote': '大师引言 - 工艺金句强调核心准则',
+                               'detail_zoom': '微距与宏观 - 左全景右带引线显微镜特写卡片',
+                               'title_content': '透明叠层剖析 - 悬浮的玻璃质感(Glassmorphism)卡片附于底图之上',
+                               'section_title': '概念隐喻 - 杂志式转场留空',
+                               'two_column': '工程白皮书 - 左精细线框测绘图，右大段密文参数注解',
+                               'timeline': '工艺时序演进 - 细长深邃的工艺发生时间轴',
+                               'portfolio': '沉浸式画廊 - 合格标本的瀑布流陈列',
+                               'title_bullets': '巨幕参数 - 1~2个巨大的字号显示极小公差的参数震撼',
+                               'edu_tri_compare': '对比切片 - 两到三栏满血画面切割对比',
+                               'ending': '剧终收束 - 电影放映结束光的余晖感'},
+                   'name': '沉浸工艺型(原叙事)',
+                   'style': {'avoid': '密集的默认项目符号、花哨边框和色彩大杂烩',
+                             'background': '海量极致的留白或极深沉浸感纯色图，不设可见的死板边框',
+                             'colors': '象牙白 / 钛金灰 / 缟玛瑙黑',
+                             'density': '极低密度，单页突出极具张力的主次对比：巨大元素对冲微型注解卡片',
+                             'graphics': '毛玻璃悬浮UI、16px大圆滑角或0px极锐利的切割碰撞',
+                             'rhythm': '巨幕大观 → 原理剖切 → 流畅过渡 → 局部特写 → 结局',
+                             'signature': '必须出现满版大图叠加微调参数卡片的强对比页'}},
+ 'warm_edu': {'layouts': {'cover': '工作坊实测封面 - 大号行动导向标题带工时倒计时',
+                          'learning_objectives': 'SMART学习契约 - 达成技能目标与工时预算卡',
+                          'warmup_question': '探究式引子 - 抛出实操排障难点的破冰提问槽',
+                          'image_full': '模块化结构拆解 - 图形与轻量卡片相连的透视骨架',
+                          'vocational_bullets': '交互式防呆表 - 极其清晰带空心复选框的操作极简指南',
+                          'vocational_content': '临床情境剧本 - 交代特定危险工况或设备故障病历表的卡片',
+                          'vocational_comparison': '方案优劣对决 - 方案 A 与方案 B 并列讨论对抗预制板',
+                          'title_bullets': '常见坑位翻牌 - 以卡片翻牌隐喻交代致命操作错误项',
+                          'quiz': '实物状态预判 - 按下执行后的物理量单选或多选',
+                          'edu_summary': '结构化复盘矩阵 - Start / Stop / Continue 回顾框架',
+                          'ending': '日程推进板 - 带明确下一步实操期限的指令'},
+              'name': '实境交互型(原工作坊)',
+              'style': {'avoid': '手写体漫游、过于幼稚松散的凌乱便签画板（高职重在规范操作而非自由发散头脑风暴）',
+                        'background': '现代明亮的 Mocha 摩卡色、米灰 (Taupe) 或浅象牙白',
+                        'colors': '中性暖调（Sage 鼠尾草绿、冷岩沙色）配以悬浮微投影感',
+                        'density': '信息量聚集且有极强填表、交互、考核操作感',
+                        'graphics': '医疗仪器或现代 SaaS 界面的触控软圆角(8px-12px)、阴影悬浮卡、规范复选框、诊断单据特征',
+                        'rhythm': '任务契约 → 难题导入 → 防呆 SOP 推演 → 方案对抗 → 复盘表单',
+                        'signature': '防呆核准检验表或情境对抗矩阵必居其一'}}}
 
 
 SCHEME_ROLE_LAYOUTS = {'academic': {'cover': 'cover_academic', 'ending': 'ending_academic', 'toc': 'toc_academic'},
@@ -150,7 +209,10 @@ SCHEME_ROLE_LAYOUTS = {'academic': {'cover': 'cover_academic', 'ending': 'ending
  'modern': {'cover': 'cover_modern', 'ending': 'ending_modern', 'toc': 'toc_modern'},
  'practical': {'cover': 'cover_practical', 'ending': 'ending_practical', 'toc': 'checklist_verification'},
  'tech_blue': {'cover': 'cover_tech', 'ending': 'ending_tech', 'toc': 'toc_tech'},
- 'visual': {'cover': 'cover_field', 'ending': 'ending_field', 'toc': 'timeline_evolution'}}
+ 'visual': {'cover': 'cover_field', 'ending': 'ending_field', 'toc': 'timeline_evolution'},
+ 'business_pro': {'cover': 'cover', 'ending': 'edu_summary', 'toc': 'timeline'},
+ 'minimal_clean': {'cover': 'cover', 'ending': 'ending', 'toc': 'section_title'},
+ 'warm_edu': {'cover': 'cover', 'ending': 'ending', 'toc': 'learning_objectives'}}
 
 
 LAYOUT_ID_ALIASES = {
@@ -291,20 +353,20 @@ LAYOUT_SCHEMAS = {'cinematic_overlay': '{"label": "标签(如CASE STUDY)", "titl
  'warmup_question': '{"question": "思考问题", "thinkTime": 30, "hints": ["提示1", "提示2"], "background_image": "背景图片URL(可选)"}'}
 
 
-def get_layout_scheme(scheme_id: str = None) -> dict:
+def get_layout_scheme(scheme_id: Optional[str] = None) -> dict:
     scheme = scheme_id or 'edu_dark'
     return LAYOUT_SCHEMES.get(scheme, LAYOUT_SCHEMES['edu_dark'])
 
 
 
-def get_layout_types_description(scheme_id: str = None) -> str:
+def get_layout_types_description(scheme_id: Optional[str] = None) -> str:
     scheme = get_layout_scheme(scheme_id)
     layouts = scheme['layouts']
     return "\n".join([f"- {lid}: {desc}" for lid, desc in layouts.items()])
 
 
 
-def get_scheme_style_prompt(scheme_id: str = None) -> str:
+def get_scheme_style_prompt(scheme_id: Optional[str] = None) -> str:
     scheme = get_layout_scheme(scheme_id)
     style = scheme.get('style')
     if not style:
@@ -363,12 +425,41 @@ def get_scheme_style_prompt(scheme_id: str = None) -> str:
 """,
         'edu_dark': """
 - 专属布局使用场景：
-  * edu_core_hub（中心模型）：用于解释核心机制。
-  * edu_data_board（数据看板）：用于展示量化结果与基线对比。
+  * edu_core_hub（中心模型）：用于解释核心概念体系，中心节点放最核心概念，四周节点放关联要素，适合"X的核心要素/维度/机制"类页面。
+  * edu_data_board（数据看板）：展现量化成果对比，指标卡放具体数值（如"提升37%"），柱状区放对比组数据，适合数据驱动的结论页。
+  * edu_tri_compare（三栏对比）：三个并列概念/阶段/角色的深度对比，每栏有标题+要点列表，适合"痛点/行动/目标"或"过去/现在/未来"结构。
+  * edu_timeline_steps（推进时间轴）：纵向阶段推进，每阶段有标题+描述+高亮要点，适合实施路径、教学进度、发展历程。
+  * edu_qa_case（问答与案例）：必须给出真实问题情境+专业解答+分析逻辑，不能只是概念堆砌，适合典型案例展示页。
+  * edu_logic_flow（逻辑演进）：三阶段卡片+箭头，适合"课前预习→课中研讨→课后实训"等线性推进链路。
+  * 所有内容页（除封面/目录/结束）优先使用以上专属布局，仅在无法匹配时退回通用布局。
+""",
+        'business_pro': """
+- 专属布局使用场景（工业精密型，使用数据终端风格渲染）：
+  * 彻底剔除 KPI、增长率、商业汇报指标，替换为设备额定参数、误差范围等工程数据。
+  * edu_data_board（仪表看板）：展示额定电压/电流/转速/压力等物理量，绝不含金钱或增长率。
+  * edu_core_hub（根因分析）：追溯机械/工艺故障根因，使用因果链或鱼骨图逻辑。
+  * two_column（故障辨析）：左栏绿字标准操作，右栏红字致命错误对比，强化识别。
+  * process_steps（SOP流程）：每步有明确操作动作、参数要求和检验标准，类似标准作业程序。
+  * safety_notice（安全预警）：必须包含强冲击力的禁止操作清单与违规后果。
+  * 每页结构要绝对对齐，信息密度高，格式感强，避免装饰性软圆角和暖色。
+""",
+        'minimal_clean': """
+- 专属布局使用场景（沉浸工艺型，使用工业蓝图风格渲染）：
+  * 每页聚焦单一核心概念，大面积留白，文字极精简，视觉冲击来自元素本身的强度。
+  * detail_zoom（微距标注）：极致高清的部件特写+引线标注，体现精密工艺的视觉力量。
+  * title_bullets（参数展示）：1-2个巨大字号显示关键参数（如 0.01mm公差），配以微型注解。
+  * two_column（工程白皮书）：左侧精细线框测绘图，右侧密集参数注解，专业感极强。
+  * timeline（工艺演进）：细长深邃的时间轴展示工艺发展，每步有里程碑技术突破。
+  * section_title（概念隐喻）：杂志式转场，大量留白+单行关键词，制造强烈的阅读节奏感。
+  * 所有页面应呈现毛玻璃质感卡片或极锐利的0px切割感，颜色不超过3种（黑/白/一个强调色）。
+""",
+        'warm_edu': """
+- 禁忌自由与散漫感，工作坊必须聚焦操作纪律！
+  * vocational_bullets：将其理解为医学诊断中的临床防差错 CheckList 或者车间的必须执行清单。
 """
     }
 
-    if scheme_id in scheme_specific_guidance:
+    if scheme_id and scheme_id in scheme_specific_guidance:
         lines.append(scheme_specific_guidance[scheme_id])
 
     return "方案视觉与结构规范（必须遵循）：\n" + "\n".join(lines)
@@ -380,7 +471,7 @@ def resolve_layout_id(layout_id: str) -> str:
 
 
 
-def get_layout_constraints(scheme_id: str = None) -> str:
+def get_layout_constraints(scheme_id: Optional[str] = None) -> str:
     scheme = scheme_id or 'edu_dark'
     style = get_layout_scheme(scheme_id).get('style', {})
     layout_count = max(3, len(get_layout_scheme(scheme_id).get('layouts', {})) or 10)

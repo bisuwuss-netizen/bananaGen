@@ -8,7 +8,7 @@ type Props = {
 
 export function SlidePreviewStage({ hasPages, onBackToEdit, children }: Props) {
   return (
-    <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-gradient-to-b from-banana-50/40 to-slate-100/80">
+    <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ background: '#d4c9b0' }}>
       {!hasPages ? (
         <div className="flex-1 flex items-center justify-center overflow-y-auto">
           <div className="text-center">

@@ -71,9 +71,35 @@ export type LayoutId =
   | 'discussion_prompt'
   | 'ending_interactive'
   // Vocational specialized layouts
+  | 'vocational_intro_cover'
+  | 'vocational_mission_toc'
+  | 'vocational_target_lock'
+  | 'vocational_safety_check'
+  | 'vocational_equipment_grid'
+  | 'vocational_fault_diagnostic'
+  | 'vocational_practice_sandbox'
+  | 'vocational_mission_complete'
   | 'vocational_bullets'
   | 'vocational_content'
   | 'vocational_comparison'
+  | 'vocational_sop_banner'
+  | 'vocational_warning_split'
+  | 'vocational_blueprint_zoom'
+  | 'vocational_piv_hud'
+  // Blueprint specialized layouts — 工业蓝图型专属
+  | 'blueprint_cover'
+  | 'blueprint_toc'
+  | 'blueprint_spec_card'
+  | 'blueprint_quote'
+  | 'blueprint_annotation'
+  | 'blueprint_section_title'
+  | 'blueprint_dual_panel'
+  | 'blueprint_timeline'
+  | 'blueprint_bento_grid'
+  | 'blueprint_tri_compare'
+  | 'blueprint_gallery'
+  | 'blueprint_big_reveal'
+  | 'blueprint_closing'
   // Visual scheme
   | 'cover_visual'
   | 'timeline_navigation'
@@ -118,7 +144,20 @@ export type LayoutId =
   | 'edu_logic_flow'
   | 'edu_data_board'
   | 'edu_summary'
-  | 'edu_qa_case';
+  | 'edu_qa_case'
+  // DATA VAULT specialized layouts — 重工终端型重构专用
+  | 'vault_cover'
+  | 'vault_index'
+  | 'vault_kpi_grid'
+  | 'vault_heatmap'
+  | 'vault_timeline'
+  | 'vault_split_brief'
+  | 'vault_flow_circuit'
+  | 'vault_dashboard'
+  | 'vault_deep_analysis'
+  | 'vault_terminal'
+  | 'vault_compare'
+  | 'vault_debrief';
 
 // 布局Model联合类型
 export type LayoutModel =
@@ -170,7 +209,20 @@ export type LayoutModel =
   | EduLogicFlowModel
   | EduDataBoardModel
   | EduSummaryModel
-  | EduQACaseModel;
+  | EduQACaseModel
+  // DATA VAULT specialized models
+  | VaultCoverModel
+  | VaultIndexModel
+  | VaultKpiGridModel
+  | VaultHeatmapModel
+  | VaultTimelineModel
+  | VaultSplitBriefModel
+  | VaultFlowCircuitModel
+  | VaultDashboardModel
+  | VaultDeepAnalysisModel
+  | VaultTerminalModel
+  | VaultCompareModel
+  | VaultDebriefModel;
 
 // ==================== 各布局Model定义 ====================
 
@@ -284,6 +336,7 @@ export interface SectionTitleModel {
   section_number: string | number;
   title: string;
   subtitle?: string;
+  description?: string;  // 本节内容简介（可选）
   background_image?: string;
 }
 
@@ -773,6 +826,48 @@ export interface EduDataBoardModel {
   }[];
   insight?: string;
   background_image?: string;
+}
+
+// ==================== DATA VAULT specialized models ====================
+
+export interface VaultCoverModel extends CoverModel {
+  classification?: string;
+}
+
+export interface VaultIndexModel extends TocModel {}
+
+export interface VaultKpiGridModel extends TitleBulletsModel {}
+
+export interface VaultHeatmapModel extends TitleBulletsModel {}
+
+export interface VaultTimelineModel extends ProcessStepsModel {}
+
+export interface VaultSplitBriefModel extends TwoColumnModel {}
+
+export interface VaultFlowCircuitModel extends ProcessStepsModel {}
+
+export interface VaultDashboardModel extends EduDataBoardModel {}
+
+export interface VaultDeepAnalysisModel extends TitleBulletsModel {
+  content?: string;
+  sidebar_title?: string;
+}
+
+export interface VaultTerminalModel {
+  title: string;
+  subtitle?: string;
+  log_entries: (string | { text: string; type?: 'info' | 'warn' | 'error' })[];
+}
+
+export interface VaultCompareModel {
+  title: string;
+  subtitle?: string;
+  categories: (string | { name: string })[];
+  options: { name: string; values: string[] }[];
+}
+
+export interface VaultDebriefModel extends EndingModel {
+  keyTakeaway?: string;
 }
 
 export interface EduSummaryModel {

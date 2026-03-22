@@ -109,7 +109,7 @@ export const ReferenceFileCard: React.FC<ReferenceFileCardProps> = ({
     switch (file.parse_status) {
       case 'pending':
       case 'parsing':
-        return <Loader2 className="w-4 h-4 text-banana-500 animate-spin" />;
+        return <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />;
       case 'completed':
         return <CheckCircle2 className="w-4 h-4 text-green-500" />;
       case 'failed':
@@ -138,7 +138,7 @@ export const ReferenceFileCard: React.FC<ReferenceFileCardProps> = ({
     switch (file.parse_status) {
       case 'pending':
       case 'parsing':
-        return 'text-banana-500';
+        return 'text-gray-500';
       case 'completed':
         return 'text-green-600';
       case 'failed':
@@ -150,26 +150,27 @@ export const ReferenceFileCard: React.FC<ReferenceFileCardProps> = ({
 
   return (
     <div
-      className={`flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow ${
-        onClick ? 'cursor-pointer' : ''
+      className={`flex items-center gap-3 p-3 bg-white rounded-md transition-colors ${
+        onClick ? 'cursor-pointer hover:bg-gray-50' : ''
       }`}
+      style={{ border: '2px solid #1a1a1a' }}
       onClick={onClick}
     >
       {/* Checkbox */}
       {onToggle !== undefined && (
         <button
           onClick={(e) => { e.stopPropagation(); onToggle(file.id); }}
-          className="flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors focus:outline-none"
+          className="flex-shrink-0 w-5 h-5 rounded-sm border-2 flex items-center justify-center transition-colors focus:outline-none"
           style={{
-            borderColor: selected ? '#3b82f6' : '#d1d5db',
-            backgroundColor: selected ? '#3b82f6' : 'white',
+            borderColor: '#1a1a1a',
+            backgroundColor: selected ? '#f5d040' : 'white',
           }}
           aria-label={selected ? '取消选择' : '选择此文件'}
           aria-checked={selected}
           role="checkbox"
         >
           {selected && (
-            <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+            <svg className="w-3 h-3 text-gray-900" viewBox="0 0 12 12" fill="none">
               <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           )}
@@ -178,8 +179,8 @@ export const ReferenceFileCard: React.FC<ReferenceFileCardProps> = ({
 
       {/* File Icon */}
       <div className="flex-shrink-0">
-        <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-          <FileText className="w-5 h-5 text-banana-500" />
+        <div className="w-10 h-10 bg-[#f5d040] rounded-md border-2 border-gray-900 flex items-center justify-center">
+          <FileText className="w-5 h-5 text-gray-900" />
         </div>
       </div>
 
@@ -229,7 +230,7 @@ export const ReferenceFileCard: React.FC<ReferenceFileCardProps> = ({
               handleReparse();
             }}
             disabled={isReparsing}
-            className="flex-shrink-0 p-1 text-gray-400 hover:text-banana-500 hover:bg-banana-50 rounded transition-colors disabled:opacity-50"
+            className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
             title={file.parse_status === 'failed' ? '重试解析' : '重新解析'}
             aria-label={file.parse_status === 'failed' ? '重试解析' : '重新解析'}
           >

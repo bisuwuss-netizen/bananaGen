@@ -1,6 +1,7 @@
 """Reference file routes. Migrated from reference_file_controller.py."""
 import os
 import re
+import time
 import uuid
 import logging
 import threading
@@ -24,6 +25,8 @@ from services.runtime_state import runtime_context
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/reference-files", tags=["reference-files"])
+
+MAX_FILE_SIZE = 200 * 1024 * 1024  # 200MB
 
 
 def _allowed_file(filename: str, allowed: set) -> bool:
@@ -55,9 +58,17 @@ def _parse_file_async(file_id: str, file_path: str, filename: str):
                 image_caption_model=config["IMAGE_CAPTION_MODEL"],
                 provider_format="openai",
             )
-            batch_id, markdown_content, extract_id, error_message, failed_count = parser.parse_file(
-                file_path, filename
-            )
+
+            batch_id = markdown_content = extract_id = error_message = None
+            failed_count = 0
+            for attempt in range(3):
+                batch_id, markdown_content, extract_id, error_message, failed_count = parser.parse_file(
+                    file_path, filename
+                )
+                if not error_message:
+                    break
+                if attempt < 2:
+                    time.sleep(2 ** attempt)
 
             ref.mineru_batch_id = batch_id
             if error_message:
@@ -121,6 +132,8 @@ async def upload_reference_file(
     file_path = ref_dir / unique_filename
 
     content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail="文件过大，最大支持 200MB")
     with open(str(file_path), "wb") as f:
         f.write(content)
     file_size = os.path.getsize(file_path)

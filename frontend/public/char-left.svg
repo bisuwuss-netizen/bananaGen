@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 280" width="220" height="280">
+  <!-- ══ Snake plant (虎皮兰) — wide swooping leaves ══ -->
+  <!-- Leaf 1 (far left) -->
+  <path d="M28,230 C20,195 12,155 18,115 C20,100 30,96 35,110 C38,140 36,190 34,230Z"
+        fill="#4d7c55" stroke="#1a1a1a" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M28,115 C30,150 34,195 32,225" stroke="#6b9e5e" stroke-width="1.4" fill="none" opacity="0.5" stroke-linecap="round"/>
+  <!-- Leaf 2 (center-left, tallest) -->
+  <path d="M36,230 C30,190 28,140 34,92 C36,78 46,74 50,88 C52,120 48,185 44,230Z"
+        fill="#3a6644" stroke="#1a1a1a" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M42,82 C44,130 44,185 42,225" stroke="#5a8a50" stroke-width="1.6" fill="none" opacity="0.45" stroke-linecap="round"/>
+  <!-- Leaf 3 (center) -->
+  <path d="M44,230 C42,200 44,155 50,108 C52,94 60,90 64,102 C66,130 58,195 54,230Z"
+        fill="#4d7c55" stroke="#1a1a1a" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M56,96 C58,140 56,190 52,225" stroke="#6b9e5e" stroke-width="1.4" fill="none" opacity="0.5" stroke-linecap="round"/>
+  <!-- Leaf 4 (right, shorter) -->
+  <path d="M52,230 C56,205 64,172 66,140 C67,126 62,120 57,125 C52,138 50,195 52,230Z"
+        fill="#3a6644" stroke="#1a1a1a" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M62,128 C60,160 56,200 53,225" stroke="#5a8a50" stroke-width="1.2" fill="none" opacity="0.45" stroke-linecap="round"/>
+  <!-- Pot rim -->
+  <rect x="12" y="226" width="62" height="9" rx="3" fill="#d4894a" stroke="#1a1a1a" stroke-width="2.5"/>
+  <!-- Pot body -->
+  <path d="M16,235 L70,235 L66,268 L20,268Z" fill="#c47840" stroke="#1a1a1a" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M24,248 L62,248" stroke="#b36830" stroke-width="1" opacity="0.3" stroke-linecap="round"/>
+
+  <!-- ══ Purple character ══ -->
+  <!-- Torso -->
+  <path d="M110,108 C100,108 94,116 94,130 L94,170 C94,180 100,186 110,186 L156,186 C166,186 172,180 172,170 L172,130 C172,116 166,108 156,108Z"
+        fill="#9178d0" stroke="#1a1a1a" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- Left arm on hip -->
+  <path d="M94,130 C80,136 72,150 74,164 C76,174 84,174 94,164"
+        fill="none" stroke="#9178d0" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M94,130 C80,136 72,150 74,164 C76,174 84,174 94,164"
+        fill="none" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Right arm pointing -->
+  <path d="M172,128 C186,120 200,116 212,112"
+        fill="none" stroke="#9178d0" stroke-width="20" stroke-linecap="round"/>
+  <path d="M172,128 C186,120 200,116 212,112"
+        fill="none" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Pointing finger -->
+  <line x1="212" y1="112" x2="220" y2="107" stroke="#9178d0" stroke-width="8" stroke-linecap="round"/>
+  <line x1="212" y1="112" x2="220" y2="107" stroke="#1a1a1a" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Left leg -->
+  <path d="M116,186 C112,206 108,232 106,256"
+        fill="none" stroke="#9178d0" stroke-width="20" stroke-linecap="round"/>
+  <path d="M116,186 C112,206 108,232 106,256"
+        fill="none" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Left foot -->
+  <path d="M106,252 L96,256 C92,258 90,264 96,266 L112,266 C116,266 118,262 116,258Z"
+        fill="#7b5fb8" stroke="#1a1a1a" stroke-width="2.2" stroke-linejoin="round"/>
+  <!-- Right leg -->
+  <path d="M150,186 C154,206 156,232 158,256"
+        fill="none" stroke="#9178d0" stroke-width="20" stroke-linecap="round"/>
+  <path d="M150,186 C154,206 156,232 158,256"
+        fill="none" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Right foot -->
+  <path d="M158,252 L168,256 C172,258 174,264 168,266 L152,266 C148,266 146,262 148,258Z"
+        fill="#7b5fb8" stroke="#1a1a1a" stroke-width="2.2" stroke-linejoin="round"/>
+  <!-- Head (octagon) -->
+  <path d="M112,30 L154,30 L174,50 L174,80 L154,100 L112,100 L92,80 L92,50Z"
+        fill="#9178d0" stroke="#1a1a1a" stroke-width="2.8" stroke-linejoin="round"/>
+  <!-- Eyes (gentle arc) -->
+  <path d="M112,60 Q117,54 122,60" stroke="#1a1a1a" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+  <path d="M142,60 Q147,54 152,60" stroke="#1a1a1a" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+  <!-- Smile -->
+  <path d="M120,76 Q133,86 146,76" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+</svg>

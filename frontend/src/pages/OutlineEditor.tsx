@@ -235,74 +235,49 @@ export const OutlineEditor: React.FC = () => {
   const outlineTaskProgress = taskProgress as TaskProgress | null;
 
   return (
-    <div className="app-shell min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col" style={{ background: '#ede4d0' }}>
       {/* 顶栏 */}
-      <header className="app-navbar px-3 md:px-6 py-2 md:py-3 flex-shrink-0">
-        <div className="flex items-center justify-between gap-2 md:gap-4">
-          {/* 左侧：Logo 和标题 */}
-          <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={<Home size={16} className="md:w-[18px] md:h-[18px]" />}
-              onClick={redirectHomepage}
-              className="text-xs md:text-sm"
-            >
-              <span className="hidden sm:inline">主页</span>
-              <span className="sm:hidden">主页</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={<ArrowLeft size={16} className="md:w-[18px] md:h-[18px]" />}
-              onClick={() => {
-                if (fromHistory) {
-                  navigate('/history');
-                } else {
-                  navigate('/');
-                }
-              }}
-              className="flex-shrink-0"
-            >
-              <span className="hidden sm:inline">返回</span>
-            </Button>
-            {/*<div className="flex items-center gap-1.5 md:gap-2">
-              <span className="text-xl md:text-2xl">🍌</span>
-              <span className="text-base md:text-xl font-bold">蕉幻</span>
-            </div>
-            <span className="text-gray-400 hidden lg:inline">|</span>*/}
-            <span className="text-sm md:text-lg font-semibold hidden lg:inline">编辑大纲</span>
-          </div>
-          
-          {/* 右侧：操作按钮 */}
-          <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
-            <Button
-              variant="secondary" 
-              size="sm" 
-              icon={<Save size={16} className="md:w-[18px] md:h-[18px]" />}
-              onClick={async () => await saveAllPages()}
-              className="hidden md:inline-flex"
-            >
-              <span className="hidden lg:inline">保存</span>
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              icon={<ArrowRight size={16} className="md:w-[18px] md:h-[18px]" />}
-              onClick={async () => {
-                await saveAllPages();
-                navigate(`/project/${projectId}/detail`);
-              }}
-              className="text-xs md:text-sm"
-            >
-              <span className="hidden sm:inline">下一步</span>
-            </Button>
-          </div>
+      <header className="h-12 flex items-center px-4 md:px-6 flex-shrink-0" style={{ background: '#ede4d0', borderBottom: '2px solid #1a1a1a' }}>
+        <div className="flex items-center gap-1.5 flex-1">
+          <button
+            onClick={redirectHomepage}
+            className="flex items-center gap-1 px-3 py-1 text-sm font-bold rounded-md border-2 border-gray-900"
+            style={{ background: '#f5d040', boxShadow: '2px 2px 0 #1a1a1a' }}
+          >
+            <Home size={14} /><span>主页</span>
+          </button>
+          <button
+            onClick={() => fromHistory ? navigate('/history') : navigate('/')}
+            className="flex items-center gap-1 px-3 py-1 text-sm font-bold rounded-md border-2 border-gray-900"
+            style={{ background: '#ede4d0' }}
+          >
+            <ArrowLeft size={14} /><span className="hidden sm:inline">返回</span>
+          </button>
+          <span className="text-sm font-black text-gray-900 hidden lg:inline ml-2">编辑大纲</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<Save size={16} />}
+            onClick={async () => await saveAllPages()}
+            className="hidden md:inline-flex"
+          >
+            <span className="hidden lg:inline">保存</span>
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            icon={<ArrowRight size={16} />}
+            onClick={async () => { await saveAllPages(); navigate(`/project/${projectId}/detail`); }}
+          >
+            <span className="hidden sm:inline">下一步</span>
+          </Button>
         </div>
       </header>
 
       {/* 上下文栏 */}
-      <div className="bg-white/70 border-b border-slate-200 px-3 md:px-6 py-2 md:py-3 max-h-32 overflow-y-auto flex-shrink-0 backdrop-blur-sm">
+      <div className="bg-white/80 px-4 md:px-6 py-2 md:py-3 max-h-32 overflow-y-auto flex-shrink-0" style={{ borderBottom: '1px solid rgba(26,26,26,0.15)' }}>
         <div className="flex items-start gap-1.5 md:gap-2 text-xs md:text-sm">
           {currentProject.creation_type === 'idea' && (
             <span className="font-medium text-gray-700 flex-shrink-0 flex items-center">
@@ -428,7 +403,7 @@ export const OutlineEditor: React.FC = () => {
         </div>
 
         {!isGlobalLoading && (
-          <div className="hidden md:block w-96 bg-white border-l border-gray-200 p-4 md:p-6 overflow-y-auto flex-shrink-0">
+          <div className="hidden md:block w-96 bg-white p-4 md:p-6 overflow-y-auto flex-shrink-0" style={{ borderLeft: '2px solid #1a1a1a' }}>
             <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">预览</h3>
             
             {selectedPage ? (

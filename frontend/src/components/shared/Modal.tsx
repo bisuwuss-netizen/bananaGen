@@ -31,34 +31,36 @@ export const Modal: React.FC<ModalProps> = ({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* 遮罩 */}
       <div
-        className="fixed inset-0 bg-black/50 transition-opacity duration-200"
+        className="fixed inset-0 bg-black/40"
         onClick={onClose}
       />
-      
+
       {/* 对话框 */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div
-          className={cn(
-            'relative bg-white rounded-panel shadow-xl w-full transition-all duration-200',
-            sizes[size]
-          )}
+          className={cn('relative bg-white rounded-lg w-full', sizes[size])}
+          style={{ border: '2px solid #1a1a1a', boxShadow: '8px 8px 0 #1a1a1a' }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* 标题栏 */}
           {title && (
-            <div className="flex items-center justify-between px-8 py-6 bg-banana-50 rounded-t-panel">
-              <h2 className="text-2xl font-semibold text-gray-900">{title}</h2>
+            <div
+              className="flex items-center justify-between px-6 py-4 rounded-t-lg"
+              style={{ background: '#ede4d0', borderBottom: '2px solid #1a1a1a' }}
+            >
+              <h2 className="text-xl font-black text-gray-900">{title}</h2>
               <button
                 onClick={onClose}
-                className="text-gray-500 hover:text-gray-700 transition-colors"
+                className="flex items-center justify-center w-8 h-8 rounded-md border-2 border-gray-900 bg-white hover:bg-gray-50 transition-colors"
+                style={{ boxShadow: '2px 2px 0 #1a1a1a' }}
               >
-                <X size={24} />
+                <X size={16} />
               </button>
             </div>
           )}
-          
+
           {/* 内容 */}
-          <div className="px-8 py-6">
+          <div className="px-6 py-5">
             {children}
           </div>
         </div>
@@ -67,4 +69,3 @@ export const Modal: React.FC<ModalProps> = ({
     document.body
   );
 };
-

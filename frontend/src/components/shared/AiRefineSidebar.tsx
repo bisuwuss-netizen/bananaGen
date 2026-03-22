@@ -38,27 +38,27 @@ const ThinkingBubble: React.FC<{ text: string; userMessage?: string }> = ({
     {/* 用户消息（已发送） */}
     {userMessage && (
       <div className="flex justify-end mb-1.5">
-        <div className="max-w-[85%] px-3.5 py-2.5 rounded-2xl rounded-tr-md text-[13px] leading-relaxed bg-gradient-to-br from-banana-400 to-banana-500 text-white shadow-sm">
+        <div className="max-w-[85%] px-3.5 py-2.5 rounded-md text-[13px] leading-relaxed font-medium border-2 border-gray-900 bg-[#f5d040] text-gray-900">
           {userMessage}
         </div>
       </div>
     )}
     {/* AI 思考状态 */}
     <div className="flex items-start gap-1.5 ml-1">
-      <div className="w-5 h-5 rounded-full flex items-center justify-center bg-banana-50 animate-pulse">
-        <Sparkles size={11} className="text-banana-500" />
+      <div className="w-5 h-5 rounded-md border-2 border-gray-900 flex items-center justify-center bg-[#f5d040] animate-pulse">
+        <Sparkles size={11} className="text-gray-900" />
       </div>
       <div className="flex-1">
-        <div className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl rounded-tl-md bg-gradient-to-br from-banana-50 to-orange-50 border border-banana-100">
-          <Loader2 size={13} className="animate-spin text-banana-500" />
-          <span className="text-[13px] text-banana-700 font-medium">{text}</span>
+        <div className="inline-flex items-center gap-2 px-3 py-2 rounded-md border-2 border-gray-900 bg-[#f5d040]">
+          <Loader2 size={13} className="animate-spin text-gray-900" />
+          <span className="text-[13px] text-gray-900 font-bold">{text}</span>
         </div>
         {/* 三个跳动的点 */}
         <div className="flex items-center gap-1 mt-1.5 ml-2">
           {[0, 1, 2].map((i) => (
             <span
               key={i}
-              className="w-1.5 h-1.5 rounded-full bg-banana-400 animate-pulse"
+              className="w-1.5 h-1.5 rounded-full bg-gray-900 animate-pulse"
               style={{ animationDelay: `${i * 0.2}s` }}
             />
           ))}
@@ -217,49 +217,44 @@ const AiRefineSidebarComponent: React.FC<AiRefineSidebarProps> = ({
 
       {/* 侧边栏面板 */}
       <div
-        className={`fixed top-0 right-0 h-screen z-50 flex flex-col
-          bg-white/95 backdrop-blur-xl shadow-2xl border-l border-slate-200/60
+        className={`fixed top-0 right-0 h-screen z-50 flex flex-col bg-white
           transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]
           w-[340px] md:w-[400px] overflow-hidden
           ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{ borderLeft: '2px solid #1a1a1a' }}
       >
         {/* 头部 */}
-        <div className="flex-shrink-0 relative overflow-hidden">
-          {/* 头部装饰背景 */}
-          <div className="absolute inset-0 bg-gradient-to-br from-banana-400/90 via-banana-500/85 to-orange-500/90" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(255,255,255,0.2),transparent_50%)]" />
-
-          <div className="relative px-5 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                <Sparkles size={18} className="text-white" />
-              </div>
-              <div>
-                <h2 className="text-[15px] font-semibold text-white tracking-tight">
-                  {title}
-                </h2>
-                <p className="text-[11px] text-white/70 mt-0.5">
-                  用自然语言描述你想要的修改
-                </p>
-              </div>
+        <div className="flex-shrink-0 px-5 py-4 flex items-center justify-between" style={{ background: '#ede4d0', borderBottom: '2px solid #1a1a1a' }}>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-md border-2 border-gray-900 bg-[#f5d040] flex items-center justify-center" style={{ boxShadow: '2px 2px 0 #1a1a1a' }}>
+              <Sparkles size={18} className="text-gray-900" />
             </div>
-            <button
-              onClick={() => onToggle(false)}
-              className="w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors"
-            >
-              <X size={16} className="text-white" />
-            </button>
+            <div>
+              <h2 className="text-[15px] font-black text-gray-900">
+                {title}
+              </h2>
+              <p className="text-[11px] text-gray-500 mt-0.5">
+                用自然语言描述你想要的修改
+              </p>
+            </div>
           </div>
+          <button
+            onClick={() => onToggle(false)}
+            className="w-8 h-8 rounded-md border-2 border-gray-900 bg-white flex items-center justify-center transition-colors hover:bg-gray-50"
+            style={{ boxShadow: '2px 2px 0 #1a1a1a' }}
+          >
+            <X size={16} className="text-gray-900" />
+          </button>
         </div>
 
         {/* 历史记录区域 */}
         <div className="flex-1 overflow-y-auto min-h-0">
           {history.length === 0 && !isSubmitting ? (
             <div className="flex flex-col items-center justify-center h-full text-center px-8 py-12">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-banana-50 to-orange-50 flex items-center justify-center mb-4">
+              <div className="w-16 h-16 rounded-md border-2 border-gray-900 bg-[#f5d040] flex items-center justify-center mb-4" style={{ boxShadow: '4px 4px 0 #1a1a1a' }}>
                 <MessageSquarePlus
                   size={28}
-                  className="text-banana-400"
+                  className="text-gray-900"
                 />
               </div>
               <p className="text-sm font-medium text-gray-700 mb-1">
@@ -285,9 +280,8 @@ const AiRefineSidebarComponent: React.FC<AiRefineSidebarProps> = ({
                       setRequirement(suggestion);
                       inputRef.current?.focus();
                     }}
-                    className="w-full text-left px-3 py-2 text-xs text-gray-500 bg-gray-50/80 
-                      hover:bg-banana-50 hover:text-banana-700 rounded-lg transition-colors 
-                      border border-gray-100 hover:border-banana-200"
+                    className="w-full text-left px-3 py-2 text-xs text-gray-700 font-medium bg-gray-50
+                      hover:bg-[#f5d040] rounded-md transition-colors border-2 border-gray-900"
                   >
                     {suggestion}
                   </button>
@@ -317,11 +311,11 @@ const AiRefineSidebarComponent: React.FC<AiRefineSidebarProps> = ({
                   {/* 用户消息 */}
                   <div className="flex justify-end">
                     <div
-                      className={`max-w-[90%] px-3.5 py-2.5 rounded-2xl rounded-tr-md text-[13px] leading-relaxed
+                      className={`max-w-[90%] px-3.5 py-2.5 rounded-md text-[13px] leading-relaxed font-medium border-2 border-gray-900
                         ${
                           item.status === 'success'
-                            ? 'bg-gradient-to-br from-banana-400 to-banana-500 text-white shadow-sm'
-                            : 'bg-red-50 text-red-700 border border-red-200'
+                            ? 'bg-[#f5d040] text-gray-900'
+                            : 'bg-red-50 text-red-700 border-red-600'
                         }`}
                     >
                       {item.text}
@@ -358,8 +352,8 @@ const AiRefineSidebarComponent: React.FC<AiRefineSidebarProps> = ({
                       </div>
                       {/* 摘要内容 */}
                       {item.summary && (
-                        <div className="text-[12px] text-gray-600 bg-gray-50 rounded-lg px-3 py-2 leading-relaxed">
-                          <span className="text-banana-600 font-medium">修改摘要：</span>
+                        <div className="text-[12px] text-gray-700 bg-gray-50 rounded-md border-2 border-gray-900 px-3 py-2 leading-relaxed">
+                          <span className="text-gray-900 font-bold">修改摘要：</span>
                           {item.summary}
                         </div>
                       )}
@@ -381,11 +375,11 @@ const AiRefineSidebarComponent: React.FC<AiRefineSidebarProps> = ({
         </div>
 
         {/* 底部输入区域 */}
-        <div className="flex-shrink-0 border-t border-gray-100 bg-white/80 backdrop-blur-sm">
+        <div className="flex-shrink-0 bg-white" style={{ borderTop: '2px solid #1a1a1a' }}>
           {/* 提交中动画条 */}
           {isSubmitting && (
-            <div className="h-0.5 bg-gray-100 overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-banana-400 via-orange-400 to-banana-400 animate-shimmer bg-[length:200%_100%]" />
+            <div className="h-1 bg-gray-200 overflow-hidden">
+              <div className="h-full bg-[#f5d040] animate-shimmer bg-[length:200%_100%]" />
             </div>
           )}
 
@@ -400,13 +394,12 @@ const AiRefineSidebarComponent: React.FC<AiRefineSidebarProps> = ({
                   onKeyDown={handleKeyDown}
                   placeholder={placeholder}
                   disabled={isSubmitting || disabled}
-                  className={`w-full px-3.5 py-2.5 text-[13px] border border-gray-200 rounded-xl 
-                    focus:outline-none focus:ring-2 focus:ring-banana-400/40 focus:border-banana-400
-                    transition-all placeholder:text-gray-400
+                  className={`w-full px-3.5 py-2.5 text-[13px] border-2 border-gray-900 rounded-md
+                    focus:outline-none transition-all placeholder:text-gray-400 font-medium
                     ${
                       isSubmitting
                         ? 'bg-gray-50 text-gray-400 cursor-wait'
-                        : 'bg-white hover:border-gray-300'
+                        : 'bg-white'
                     }
                     ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                 />
@@ -414,12 +407,13 @@ const AiRefineSidebarComponent: React.FC<AiRefineSidebarProps> = ({
               <button
                 onClick={handleSubmit}
                 disabled={!requirement.trim() || isSubmitting || disabled}
-                className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-200
+                className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-md border-2 border-gray-900 transition-all duration-200
                   ${
                     !requirement.trim() || isSubmitting || disabled
-                      ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
-                      : 'bg-gradient-to-br from-banana-400 to-banana-500 text-white shadow-md shadow-banana-500/25 hover:shadow-lg hover:shadow-banana-500/30 active:scale-95'
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-[#f5d040] text-gray-900 hover:bg-[#f0c830] active:scale-95'
                   }`}
+                style={{ boxShadow: (!requirement.trim() || isSubmitting || disabled) ? 'none' : '2px 2px 0 #1a1a1a' }}
                 title="提交 (Ctrl+Enter)"
               >
                 <Send
@@ -448,14 +442,14 @@ const AiRefineSidebarComponent: React.FC<AiRefineSidebarProps> = ({
           onClick={() => onToggle(true)}
           className="fixed right-0 top-1/2 -translate-y-1/2 z-30
             flex items-center gap-1.5 pl-3 pr-2 py-3
-            bg-gradient-to-br from-banana-400 to-banana-500 
-            text-white text-xs font-medium
-            rounded-l-xl shadow-lg shadow-banana-500/30
-            hover:shadow-xl hover:shadow-banana-500/40 hover:pr-3
+            bg-[#f5d040] text-gray-900 text-xs font-black
+            rounded-l-md border-t-2 border-b-2 border-l-2 border-gray-900
+            hover:bg-[#f0c830] hover:pr-3
             transition-all duration-200 group"
+          style={{ boxShadow: '-2px 2px 0 #1a1a1a' }}
           title="打开 AI 修改面板"
         >
-          <Sparkles size={15} className="group-hover:animate-pulse" />
+          <Sparkles size={15} />
           <span className="hidden md:inline">AI 修改</span>
           <ChevronRight
             size={14}

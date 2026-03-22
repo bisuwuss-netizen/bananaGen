@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 270" width="220" height="270">
+  <!-- ══ Gray character ══ -->
+  <!-- Torso (rounder, bean-like) -->
+  <path d="M46,100 C34,102 26,114 26,130 L26,164 C26,178 34,186 46,186 L100,186 C112,186 120,178 120,164 L120,130 C120,114 112,102 100,100Z"
+        fill="#9ca3af" stroke="#1a1a1a" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- Left arm extended toward card -->
+  <path d="M26,128 C14,122 6,118 0,116"
+        fill="none" stroke="#9ca3af" stroke-width="20" stroke-linecap="round"/>
+  <path d="M26,128 C14,122 6,118 0,116"
+        fill="none" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Right arm tucked/resting -->
+  <path d="M120,130 C132,138 136,152 130,164 C126,170 120,168 118,162"
+        fill="none" stroke="#9ca3af" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M120,130 C132,138 136,152 130,164 C126,170 120,168 118,162"
+        fill="none" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Left leg -->
+  <path d="M56,186 C52,206 48,228 46,248"
+        fill="none" stroke="#9ca3af" stroke-width="20" stroke-linecap="round"/>
+  <path d="M56,186 C52,206 48,228 46,248"
+        fill="none" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Left foot -->
+  <path d="M46,244 L36,248 C32,250 30,256 36,258 L52,258 C56,258 58,254 56,250Z"
+        fill="#7a8290" stroke="#1a1a1a" stroke-width="2.2" stroke-linejoin="round"/>
+  <!-- Right leg -->
+  <path d="M90,186 C94,206 96,228 98,248"
+        fill="none" stroke="#9ca3af" stroke-width="20" stroke-linecap="round"/>
+  <path d="M90,186 C94,206 96,228 98,248"
+        fill="none" stroke="#1a1a1a" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Right foot -->
+  <path d="M98,244 L108,248 C112,250 114,256 108,258 L92,258 C88,258 86,254 88,250Z"
+        fill="#7a8290" stroke="#1a1a1a" stroke-width="2.2" stroke-linejoin="round"/>
+  <!-- Head (circle) -->
+  <circle cx="73" cy="58" r="36" fill="#9ca3af" stroke="#1a1a1a" stroke-width="2.8"/>
+  <!-- Eyes (dots with highlights) -->
+  <circle cx="62" cy="54" r="3.5" fill="#1a1a1a"/>
+  <circle cx="84" cy="54" r="3.5" fill="#1a1a1a"/>
+  <circle cx="63.5" cy="52.5" r="1.2" fill="white" opacity="0.65"/>
+  <circle cx="85.5" cy="52.5" r="1.2" fill="white" opacity="0.65"/>
+  <!-- Neutral/slight smile -->
+  <path d="M64,70 Q73,76 82,70" stroke="#1a1a1a" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+
+  <!-- ══ Stem plant (茎叶盆栽) ══ -->
+  <!-- Main stem -->
+  <path d="M178,232 C178,212 176,185 178,158 C179,145 180,135 180,128"
+        stroke="#4a7a50" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <!-- Branch + Leaf pair 1 (bottom, biggest) -->
+  <path d="M177,210 L164,200" stroke="#4a7a50" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <path d="M164,200 C158,192 152,180 158,174 C164,170 168,180 168,192Z"
+        fill="#5a8f5e" stroke="#1a1a1a" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M160,184 L166,196" stroke="#7aad6a" stroke-width="1" fill="none" opacity="0.5"/>
+  <path d="M179,210 L194,202" stroke="#4a7a50" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <path d="M194,202 C200,194 206,182 200,176 C194,172 190,182 190,194Z"
+        fill="#4d7c55" stroke="#1a1a1a" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M198,186 L192,196" stroke="#6b9e5e" stroke-width="1" fill="none" opacity="0.5"/>
+  <!-- Branch + Leaf pair 2 -->
+  <path d="M177,182 L166,174" stroke="#4a7a50" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M166,174 C160,166 156,156 162,150 C168,148 168,158 168,168Z"
+        fill="#4d7c55" stroke="#1a1a1a" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M164,158 L167,170" stroke="#6b9e5e" stroke-width="1" fill="none" opacity="0.5"/>
+  <path d="M179,182 L192,176" stroke="#4a7a50" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M192,176 C198,168 202,158 196,152 C190,150 190,160 190,170Z"
+        fill="#5a8f5e" stroke="#1a1a1a" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M194,160 L191,172" stroke="#7aad6a" stroke-width="1" fill="none" opacity="0.5"/>
+  <!-- Branch + Leaf pair 3 (smaller) -->
+  <path d="M178,156 L170,148" stroke="#4a7a50" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <path d="M170,148 C166,142 164,134 168,130 C172,128 174,136 172,144Z"
+        fill="#5a8f5e" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M179,156 L188,150" stroke="#4a7a50" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <path d="M188,150 C192,144 196,136 192,130 C188,128 186,136 186,144Z"
+        fill="#4d7c55" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+  <!-- Top leaf -->
+  <path d="M180,132 C176,122 176,112 180,108 C184,112 184,122 180,132Z"
+        fill="#5a8f5e" stroke="#1a1a1a" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- Pot rim -->
+  <rect x="160" y="230" width="40" height="8" rx="3" fill="#d4894a" stroke="#1a1a1a" stroke-width="2.5"/>
+  <!-- Pot body -->
+  <path d="M163,238 L197,238 L193,268 L167,268Z" fill="#c47840" stroke="#1a1a1a" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M170,250 L190,250" stroke="#b36830" stroke-width="1" opacity="0.3" stroke-linecap="round"/>
+</svg>

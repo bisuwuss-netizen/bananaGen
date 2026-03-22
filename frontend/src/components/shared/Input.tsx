@@ -21,10 +21,9 @@ export const Input: React.FC<InputProps> = ({
       )}
       <input
         className={cn(
-          'w-full h-10 px-4 rounded-xl border border-slate-300/90 bg-white/95',
-          'focus:outline-none focus:ring-2 focus:ring-banana-300 focus:border-banana-400',
-          'placeholder:text-slate-400 transition-all',
-          error && 'border-red-500 focus:ring-red-500',
+          'w-full h-10 px-4 rounded-md border-2 border-gray-900 bg-white font-medium',
+          'focus:outline-none placeholder:text-gray-400 transition-all',
+          error && 'border-red-500',
           className
         )}
         {...props}

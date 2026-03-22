@@ -267,47 +267,33 @@ export const History: React.FC = () => {
   }, [handleSaveEdit, handleCancelEdit]);
 
   return (
-    <div className="app-shell min-h-screen">
+    <div className="min-h-screen" style={{ background: '#ede4d0' }}>
       {/* 导航栏 */}
-      <nav className="app-navbar h-14 md:h-16">
-        <div className="mx-auto px-3 md:px-6 h-full flex items-center justify-between">
-          {/*<div className="flex items-center gap-2">
-            <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-banana-500 to-banana-600 rounded-lg flex items-center justify-center text-xl md:text-2xl">
-              🍌
-            </div>
-            <span className="text-lg md:text-xl font-bold text-gray-900">蕉幻</span>
-          </div>*/}
-          <div className="flex items-center gap-2 md:gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={<Home size={16} className="md:w-[18px] md:h-[18px]" />}
-              onClick={redirectHomepage}
-              className="text-xs md:text-sm"
-            >
-              <span className="hidden sm:inline">主页</span>
-              <span className="sm:hidden">主页</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={<ArrowLeft size={16} className="md:w-[18px] md:h-[18px]" />}
-              onClick={() => navigate('/')}
-              className="text-xs md:text-sm"
-            >
-              <span className="hidden sm:inline">返回</span>
-              <span className="sm:hidden">返回</span>
-            </Button>
-          </div>
+      <nav className="h-12 flex items-center px-4 md:px-6" style={{ background: '#ede4d0', borderBottom: '2px solid #1a1a1a' }}>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={redirectHomepage}
+            className="flex items-center gap-1 px-3 py-1 text-sm font-bold rounded-md border-2 border-gray-900"
+            style={{ background: '#f5d040', boxShadow: '2px 2px 0 #1a1a1a' }}
+          >
+            <Home size={14} /><span>主页</span>
+          </button>
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center gap-1 px-3 py-1 text-sm font-bold rounded-md border-2 border-gray-900"
+            style={{ background: '#ede4d0' }}
+          >
+            <ArrowLeft size={14} /><span>返回</span>
+          </button>
         </div>
       </nav>
 
       {/* 主内容 */}
-      <main className="max-w-6xl mx-auto px-3 md:px-4 py-6 md:py-8">
+      <main className="max-w-5xl mx-auto px-4 py-6 md:py-8">
         <div className="mb-6 md:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="page-title text-2xl md:text-3xl font-bold text-gray-900 mb-1 md:mb-2">历史项目</h1>
-            <p className="text-sm md:text-base text-gray-600">查看和管理你的所有项目</p>
+            <h1 className="text-2xl md:text-3xl font-black text-gray-900 mb-1">历史项目</h1>
+            <p className="text-sm text-gray-600">查看和管理你的所有项目</p>
           </div>
           {projects.length > 0 && selectedProjects.size > 0 && (
             <div className="flex items-center gap-3">
@@ -365,7 +351,7 @@ export const History: React.FC = () => {
           <div className="space-y-4">
             {/* 全选工具栏 */}
             {projects.length > 0 && (
-              <div className="flex items-center gap-3 pb-2 border-b border-gray-200">
+              <div className="flex items-center gap-3 pb-2 border-b-2 border-gray-900">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"

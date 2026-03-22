@@ -226,14 +226,20 @@ async def generate_knowledge_base_outline_task(
                         continue
 
                     percent = min(90, 20 + chunk_count)
+                    if chunk_count < 30:
+                        step_msg = "正在生成大纲框架..."
+                    elif chunk_count < 70:
+                        step_msg = "正在丰富大纲内容..."
+                    else:
+                        step_msg = "正在优化大纲结构..."
                     await _set_task_progress(
                         session,
                         task,
                         total=total,
                         completed=0,
                         percent=percent,
-                        current_step="正在生成大纲...",
-                        messages=_append_message(messages, "正在生成大纲..."),
+                        current_step=step_msg,
+                        messages=_append_message(messages, step_msg),
                         reference_file_ids=reference_file_ids,
                         reference_file_names=reference_file_names,
                         extra_requirements=extra_requirements,

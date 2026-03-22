@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, Eye, Sparkles } from 'lucide-react';
+import { Check, Eye } from 'lucide-react';
 
 import { layoutSchemes, type LayoutScheme } from '@/data/layoutSchemes';
 import { SlideRenderer } from '@/experimental/html-renderer/components/SlideRenderer';
@@ -37,76 +37,70 @@ const SchemeCard: React.FC<{
   onPreviewOpen: (schemeId: string, button: HTMLButtonElement) => void;
 }> = ({ scheme, selected, previewOpen, onSelect, onPreviewOpen }) => {
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={onSelect}
-        aria-pressed={selected}
-        className={`relative w-full touch-manipulation text-left rounded-[26px] border p-5 pr-28 duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-banana-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f6f1e7] transition-[border-color,box-shadow,background-color] ${
-          selected
-            ? 'border-banana-400 bg-gradient-to-br from-[#fff9f0] via-white to-[#fff5e8] shadow-[0_18px_50px_rgba(245,158,11,0.12)]'
-            : 'border-slate-200 bg-white/80 hover:border-banana-300 hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)]'
-        }`}
-      >
-        <div
-          className="absolute inset-x-5 top-0 h-[1px] rounded-full opacity-80"
-          style={{ background: `linear-gradient(90deg, ${scheme.accent}, transparent)` }}
-        />
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <span
-                className="inline-block h-3 w-3 rounded-full shadow-sm"
-                style={{ backgroundColor: scheme.accent }}
-              />
-              <h4 className="text-lg font-semibold text-slate-900">{scheme.name}</h4>
-            </div>
-            <p className="mt-2 text-sm leading-6 text-slate-600">{scheme.description}</p>
-          </div>
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className="group relative w-full h-full touch-manipulation text-left rounded-xl overflow-hidden
+        border-2 border-gray-900 bg-white flex flex-col
+        transition-all duration-150 focus-visible:outline-none
+        hover:-translate-x-0.5 hover:-translate-y-0.5"
+      style={{
+        boxShadow: selected
+          ? '5px 5px 0 #1a1a1a'
+          : '3px 3px 0 #1a1a1a',
+      }}
+    >
+      {/* 左侧彩色竖条 */}
+      <div
+        className="absolute left-0 top-0 bottom-0 w-1 flex-shrink-0"
+        style={{ backgroundColor: scheme.accent }}
+      />
+
+      {/* 内容区（左侧留出竖条宽度） */}
+      <div className="flex flex-col flex-1 pl-4 pr-2.5 py-2.5 gap-2">
+        {/* 标题 + 勾选 */}
+        <div className="flex items-start justify-between gap-1">
+          <h4 className="text-[13px] font-black text-gray-900 leading-snug truncate">{scheme.name}</h4>
+          {selected && (
+            <span
+              className="flex-shrink-0 inline-flex h-4 w-4 items-center justify-center rounded-full border-2 border-gray-900"
+              style={{ backgroundColor: '#f5d040' }}
+            >
+              <Check size={8} strokeWidth={3} className="text-gray-900" />
+            </span>
+          )}
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {scheme.tags.map((tag) => (
+
+        {/* 标签 */}
+        <div className="flex flex-wrap gap-1">
+          {scheme.tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
-              className="rounded-full border border-slate-200 bg-white/90 px-2.5 py-1 text-[11px] font-medium text-slate-600"
+              className="rounded-full border border-gray-400 px-1.5 py-0.5 text-[10px] text-gray-500 bg-white leading-none"
             >
               {tag}
             </span>
           ))}
         </div>
-        <div className="mt-4 flex items-center gap-2 text-[11px] uppercase tracking-[0.24em] text-slate-400">
-          <Sparkles size={12} />
-          <span>{scheme.preview.label}</span>
-        </div>
-        <div className="mt-2 text-sm text-slate-500">
-          {scheme.preview.pages.length} 种布局 · 可滚动故事预览
-        </div>
-      </button>
 
-      <div className="absolute right-4 top-4 flex items-center gap-2">
-        <button
-          type="button"
-          aria-label={`预览 ${scheme.name} 模板`}
-          aria-haspopup="dialog"
-          aria-expanded={previewOpen}
-          aria-controls={previewOpen ? 'scheme-preview-dialog' : undefined}
-          className="inline-flex touch-manipulation items-center gap-1.5 rounded-full border border-slate-200 bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm duration-200 hover:border-banana-300 hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-banana-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#f6f1e7] transition-[border-color,color,box-shadow,background-color]"
-          onClick={(event) => {
-            event.stopPropagation();
-            onPreviewOpen(scheme.id, event.currentTarget);
-          }}
-        >
-          <Eye size={14} />
-          预览模板
-        </button>
-
-        {selected && (
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-banana-500 text-white shadow-sm">
-            <Check size={16} />
+        {/* 底部：布局数 + 预览 */}
+        <div className="flex items-center justify-between mt-auto">
+          <span className="text-[10px] text-gray-400">{scheme.preview.pages.length} 种布局</span>
+          <span
+            role="button"
+            tabIndex={-1}
+            aria-label={`预览 ${scheme.name}`}
+            aria-haspopup="dialog"
+            aria-expanded={previewOpen}
+            className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+            onClick={(e) => { e.stopPropagation(); onPreviewOpen(scheme.id, e.currentTarget as HTMLButtonElement); }}
+          >
+            <Eye size={10} />
           </span>
-        )}
+        </div>
       </div>
-    </div>
+    </button>
   );
 };
 
@@ -169,17 +163,16 @@ export const SchemeSelector: React.FC<SchemeSelectorProps> = ({ value, onChange 
 
   return (
     <>
-      <div className="flex gap-4 overflow-x-auto pb-3 snap-x snap-mandatory" style={{ scrollbarWidth: 'thin' }}>
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 auto-rows-fr">
         {layoutSchemes.map((scheme) => (
-          <div key={scheme.id} className="flex-shrink-0 w-[340px] snap-start">
-            <SchemeCard
-              scheme={scheme}
-              selected={scheme.id === value}
-              previewOpen={scheme.id === activePreviewSchemeId}
-              onSelect={() => onChange(scheme.id)}
-              onPreviewOpen={openPreview}
-            />
-          </div>
+          <SchemeCard
+            key={scheme.id}
+            scheme={scheme}
+            selected={scheme.id === value}
+            previewOpen={scheme.id === activePreviewSchemeId}
+            onSelect={() => onChange(scheme.id)}
+            onPreviewOpen={openPreview}
+          />
         ))}
       </div>
 
@@ -187,7 +180,7 @@ export const SchemeSelector: React.FC<SchemeSelectorProps> = ({ value, onChange 
         ? createPortal(
             <div className="fixed inset-0 z-[90]" data-testid="scheme-preview-overlay">
               <div
-                className="absolute inset-0 bg-slate-950/28 backdrop-blur-[3px]"
+                className="absolute inset-0 bg-black/40"
                 onClick={closePreview}
               />
               <div className="relative flex h-full items-center justify-center p-4 md:p-8">
@@ -197,28 +190,29 @@ export const SchemeSelector: React.FC<SchemeSelectorProps> = ({ value, onChange 
                   aria-modal="true"
                   aria-labelledby="scheme-preview-title"
                   aria-describedby="scheme-preview-description"
-                  className="relative flex h-[min(84vh,980px)] w-full max-w-[980px] flex-col overflow-hidden rounded-[34px] border border-white/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(248,250,252,0.9)_100%)] shadow-[0_36px_120px_rgba(15,23,42,0.26)] backdrop-blur-2xl"
+                  className="relative flex h-[min(84vh,980px)] w-full max-w-[980px] flex-col overflow-hidden rounded-lg bg-white"
+                  style={{ border: '2px solid #1a1a1a', boxShadow: '8px 8px 0 #1a1a1a' }}
                   onClick={(event) => event.stopPropagation()}
                 >
-                  <div className="border-b border-slate-200/80 bg-white/68 px-5 py-5 backdrop-blur-xl md:px-8">
+                  <div className="px-5 py-5 md:px-8 flex-shrink-0" style={{ background: '#ede4d0', borderBottom: '2px solid #1a1a1a' }}>
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
-                        <div className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-slate-400">
+                        <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-gray-500">
                           <span
-                            className="inline-block h-2.5 w-2.5 rounded-full"
+                            className="inline-block h-2.5 w-2.5 rounded-full flex-shrink-0"
                             style={{ backgroundColor: activeScheme.accent }}
                           />
                           模板故事板
                         </div>
                         <h4
                           id="scheme-preview-title"
-                          className="text-pretty text-2xl font-semibold text-slate-900 md:text-[30px]"
+                          className="text-2xl font-black text-gray-900 md:text-[30px]"
                         >
                           {activeScheme.name}
                         </h4>
                         <p
                           id="scheme-preview-description"
-                          className="mt-2 max-w-[720px] break-words text-sm leading-6 text-slate-600 md:text-[15px]"
+                          className="mt-2 max-w-[720px] break-words text-sm leading-6 text-gray-600 md:text-[15px]"
                         >
                           {activeScheme.preview.description}
                         </p>
@@ -226,23 +220,24 @@ export const SchemeSelector: React.FC<SchemeSelectorProps> = ({ value, onChange 
                       <button
                         type="button"
                         onClick={closePreview}
-                        className="rounded-full border border-slate-200 bg-white/90 px-4 py-2 text-sm font-medium text-slate-500 duration-200 hover:border-slate-300 hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-banana-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-[border-color,color,background-color]"
+                        className="rounded-md border-2 border-gray-900 bg-white px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-50 transition-colors flex-shrink-0"
+                        style={{ boxShadow: '2px 2px 0 #1a1a1a' }}
                       >
                         关闭
                       </button>
                     </div>
 
                     <div className="mt-4 flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-slate-900 px-3 py-1 text-[11px] font-medium text-white">
+                      <span className="rounded-md border-2 border-gray-900 bg-[#f5d040] px-3 py-1 text-[11px] font-bold text-gray-900">
                         {activeScheme.preview.pages.length} 张真实布局示例
                       </span>
-                      <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-[11px] font-medium text-slate-500">
+                      <span className="rounded-md border-2 border-gray-900 bg-white px-3 py-1 text-[11px] font-bold text-gray-600">
                         向下滚动查看完整故事预览
                       </span>
                       {activeScheme.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-[11px] font-medium text-slate-500"
+                          className="rounded-md border-2 border-gray-900 bg-white px-3 py-1 text-[11px] font-bold text-gray-600"
                         >
                           {tag}
                         </span>
@@ -252,6 +247,7 @@ export const SchemeSelector: React.FC<SchemeSelectorProps> = ({ value, onChange 
 
                   <div
                     className="flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-4 pb-6 pt-4 md:px-6 md:pb-8 md:pt-5"
+                    style={{ background: '#ede4d0' }}
                     data-testid="scheme-preview-scroll-area"
                   >
                     <div className="space-y-4 md:space-y-5">
@@ -259,28 +255,29 @@ export const SchemeSelector: React.FC<SchemeSelectorProps> = ({ value, onChange 
                         <section
                           key={previewPage.id}
                           data-testid="scheme-preview-story-card"
-                          className="rounded-[28px] border border-slate-200/80 bg-white/78 p-4 shadow-[0_18px_56px_rgba(15,23,42,0.1)] backdrop-blur-xl md:p-5"
+                          className="rounded-lg bg-white p-4 md:p-5"
+                          style={{ border: '2px solid #1a1a1a', boxShadow: '4px 4px 0 #1a1a1a' }}
                         >
                           <div className="mb-4 flex items-start justify-between gap-4">
                             <div className="min-w-0">
-                              <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.24em] text-slate-400">
+                              <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400">
                                 第 {index + 1} 张 / 共 {activeScheme.preview.pages.length} 张
                               </div>
-                              <h5 className="text-pretty text-lg font-semibold text-slate-900 md:text-xl">
+                              <h5 className="text-lg font-black text-gray-900 md:text-xl">
                                 {previewPage.label}
                               </h5>
-                              <p className="mt-2 max-w-[720px] break-words text-sm leading-6 text-slate-600">
+                              <p className="mt-2 max-w-[720px] break-words text-sm leading-6 text-gray-600">
                                 {previewPage.summary}
                               </p>
                             </div>
-                            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-medium text-slate-500">
+                            <span className="rounded-md border-2 border-gray-900 bg-gray-50 px-3 py-1 text-[11px] font-bold text-gray-600 flex-shrink-0">
                               实时布局渲染
                             </span>
                           </div>
 
-                          <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#eef2f7_100%)] p-3 md:p-4">
+                          <div className="overflow-hidden rounded-md p-3 md:p-4" style={{ background: '#d4c9b0', border: '2px solid #1a1a1a' }}>
                             <div
-                              className="overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-[0_20px_54px_rgba(15,23,42,0.16)]"
+                              className="overflow-hidden rounded-md border-2 border-gray-900 bg-white"
                               style={{
                                 width: `${activeTheme.sizes.slideWidth * previewScale}px`,
                                 height: `${activeTheme.sizes.slideHeight * previewScale}px`,

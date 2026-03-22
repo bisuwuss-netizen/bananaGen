@@ -69,4 +69,28 @@ export const layoutSchemes: LayoutScheme[] = [
     accent: '#f97316',
     preview: layoutSchemePreviews.modern,
   },
+  {
+    id: 'minimal_clean',
+    name: '工业蓝图型',
+    description: '采用极简冷峻的重工业美学，以CAD透视线稿和微距瞄准框放大精密结构，适合硬核机械与制造类教学。',
+    tags: ['蓝图', '微距', '精密', '冷峻'],
+    accent: '#00FFCC',
+    preview: layoutSchemePreviews.minimal_clean,
+  },
+  {
+    id: 'warm_edu',
+    name: '高危实训型',
+    description: '采用绝对安全导向的重工现场风格，以刺眼的红黄对比色和硬朗醒目的SOP排版，适合对防呆标准极高的电气实操。',
+    tags: ['高危', 'SOP', '警戒', '防呆'],
+    accent: '#FF3333',
+    preview: layoutSchemePreviews.warm_edu,
+  },
+  {
+    id: 'business_pro',
+    name: '重工终端型',
+    description: '借鉴机组主控室监控台与战斗级HUD界面，使用深色高反差雷达表盘和战术终端设计，适合高压环境与设备运维。',
+    tags: ['终端', 'HUD', '矩阵', '暗域'],
+    accent: '#39FF14',
+    preview: layoutSchemePreviews.business_pro,
+  },
 ];

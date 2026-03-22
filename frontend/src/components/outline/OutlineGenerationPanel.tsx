@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { CheckCircle2, Clock3, Sparkles } from 'lucide-react';
 
 import { Skeleton } from '@/components/shared';
@@ -42,21 +42,20 @@ const PreviewCardItem: React.FC<{
   const isReady = card.status === 'ready';
 
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/85 p-4 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.55)] transition-transform duration-300 hover:-translate-y-0.5">
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-banana-400/80 to-transparent" />
+    <div className="rounded-md bg-white p-4" style={{ border: '2px solid #1a1a1a' }}>
       <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-banana-100 text-sm font-semibold text-banana-700">
+        <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border-2 border-gray-900 bg-[#f5d040] text-sm font-black text-gray-900">
           {index + 1}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h4 className="truncate text-sm font-semibold text-slate-900 md:text-base">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h4 className="truncate text-sm font-bold text-gray-900 md:text-base">
               {card.title || '正在生成标题'}
             </h4>
             <span
               className={[
-                'inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium',
-                isReady ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500',
+                'inline-flex rounded-md border-2 border-gray-900 px-2 py-0.5 text-[11px] font-bold',
+                isReady ? 'bg-[#f5d040] text-gray-900' : 'bg-gray-100 text-gray-600',
               ].join(' ')}
             >
               {isReady ? '已成形' : '规划中'}
@@ -64,18 +63,18 @@ const PreviewCardItem: React.FC<{
           </div>
 
           {points.length > 0 ? (
-            <ul className="mt-3 space-y-1.5 text-xs text-slate-600 md:text-sm">
+            <ul className="mt-2 space-y-1 text-xs text-gray-600 md:text-sm">
               {points.map((point, pointIndex) => (
                 <li key={`${card.id || card.title}-${pointIndex}`} className="flex items-start gap-2">
-                  <span className="mt-[5px] h-1.5 w-1.5 rounded-full bg-banana-500" />
+                  <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-gray-900" />
                   <span>{point}</span>
                 </li>
               ))}
             </ul>
           ) : (
-            <div className="mt-3 space-y-2">
-              <Skeleton className="h-3 w-11/12 rounded-full" />
-              <Skeleton className="h-3 w-8/12 rounded-full" />
+            <div className="mt-2 space-y-2">
+              <Skeleton className="h-3 w-11/12 rounded" />
+              <Skeleton className="h-3 w-8/12 rounded" />
             </div>
           )}
         </div>
@@ -98,6 +97,10 @@ export const OutlineGenerationPanel: React.FC<OutlineGenerationPanelProps> = ({
     [project, progress]
   );
   const messages = useMemo(() => getOutlineProgressMessages(progress), [progress]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
   const stageText = getOutlineProgressStageText(progress);
   const hasConfirmedPageCount = hasConfirmedOutlinePageCount(progress);
   const actualTotalPages = hasConfirmedPageCount
@@ -118,136 +121,151 @@ export const OutlineGenerationPanel: React.FC<OutlineGenerationPanelProps> = ({
   return (
     <div className="mx-auto max-w-6xl px-3 py-6 md:px-6 md:py-8">
       <div className="grid gap-5 xl:grid-cols-[1.12fr_0.88fr]">
-        <section className="app-panel overflow-hidden rounded-[28px] border border-white/70 bg-[radial-gradient(circle_at_top_left,rgba(255,214,140,0.35),transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.96),rgba(249,251,255,0.92))] p-5 md:p-7">
-          <div className="inline-flex items-center gap-2 rounded-full border border-banana-200 bg-banana-50/90 px-3 py-1 text-xs font-medium text-banana-700">
-            <Sparkles size={14} />
+
+        {/* 左栏：进度面板 */}
+        <section className="rounded-lg bg-white p-5 md:p-7" style={{ border: '2px solid #1a1a1a', boxShadow: '4px 4px 0 #1a1a1a' }}>
+          {/* 状态徽标 */}
+          <div className="inline-flex items-center gap-2 rounded-md border-2 border-gray-900 bg-[#f5d040] px-3 py-1 text-xs font-bold text-gray-900" style={{ boxShadow: '2px 2px 0 #1a1a1a' }}>
+            <Sparkles size={13} />
             AI 正在起草大纲
           </div>
 
           <div className="mt-4 flex flex-col gap-3">
             <div>
-              <h2 className="page-title text-2xl font-semibold tracking-tight text-slate-900 md:text-[30px]">
+              <h2 className="text-2xl font-black tracking-tight text-gray-900 md:text-[28px]">
                 AI 正在为您规划大纲结构
               </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 md:text-[15px]">
+              <p className="mt-1.5 text-sm leading-6 text-gray-600 md:text-[15px]">
                 {stageText}
               </p>
             </div>
 
+            {/* 数据统计格 */}
             <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-white/80 bg-white/80 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-400">已生成页数</div>
-                <div className="mt-2 text-2xl font-semibold text-slate-900">{generatedCards.length}</div>
+              <div className="rounded-md bg-gray-50 p-4" style={{ border: '2px solid #1a1a1a' }}>
+                <div className="text-xs font-bold uppercase tracking-[0.15em] text-gray-500">已生成页数</div>
+                <div className="mt-2 text-2xl font-black text-gray-900">{generatedCards.length}</div>
               </div>
-              <div className="rounded-2xl border border-white/80 bg-white/80 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-400">待生成页数</div>
-                <div className={`mt-2 font-semibold text-slate-900 ${hasConfirmedPageCount ? 'text-2xl' : 'text-lg'}`}>
+              <div className="rounded-md bg-gray-50 p-4" style={{ border: '2px solid #1a1a1a' }}>
+                <div className="text-xs font-bold uppercase tracking-[0.15em] text-gray-500">待生成页数</div>
+                <div className={`mt-2 font-black text-gray-900 ${hasConfirmedPageCount ? 'text-2xl' : 'text-lg'}`}>
                   {hasConfirmedPageCount ? queuedCards.length : '待确定'}
                 </div>
               </div>
-              <div className="rounded-2xl border border-white/80 bg-white/80 p-4">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-400">总页数 / 模式</div>
-                <div className="mt-2 text-lg font-semibold text-slate-900">
+              <div className="rounded-md bg-gray-50 p-4" style={{ border: '2px solid #1a1a1a' }}>
+                <div className="text-xs font-bold uppercase tracking-[0.15em] text-gray-500">总页数 / 模式</div>
+                <div className="mt-2 text-lg font-black text-gray-900">
                   {hasConfirmedPageCount ? `${actualTotalPages} · ${renderMode}` : `待规划 · ${renderMode}`}
                 </div>
-                {!hasConfirmedPageCount ? (
-                  <div className="mt-1 text-xs text-slate-400">结构确定后再显示真实页数</div>
-                ) : null}
-                {hasReferenceFiles ? (
-                  <div className="mt-1 text-xs text-slate-400">已上传资料 {referenceCount}</div>
-                ) : null}
+                {!hasConfirmedPageCount && (
+                  <div className="mt-1 text-xs text-gray-400">结构确定后再显示真实页数</div>
+                )}
+                {hasReferenceFiles && (
+                  <div className="mt-1 text-xs text-gray-400">已上传资料 {referenceCount}</div>
+                )}
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200/80 bg-white/80 p-4">
+            {/* 进度条 */}
+            <div className="rounded-md bg-white p-4" style={{ border: '2px solid #1a1a1a' }}>
               <div className="mb-2 flex items-center justify-between text-sm">
-                <span className="font-medium text-slate-700">生成进度</span>
-                <span className="font-semibold text-banana-700">{percent}%</span>
+                <span className="font-bold text-gray-900">生成进度</span>
+                <span className="font-black text-gray-900">{percent}%</span>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-3 overflow-hidden rounded-sm bg-gray-200" style={{ border: '1.5px solid #1a1a1a' }}>
                 <div
-                  className="h-full rounded-full bg-[linear-gradient(90deg,#f59e0b_0%,#f97316_45%,#eab308_100%)] transition-all duration-500"
+                  className="h-full bg-[#f5d040] transition-all duration-500"
                   style={{ width: `${percent}%` }}
                 />
               </div>
-              <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 md:text-sm">
-                <Clock3 size={14} />
+              <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
+                <Clock3 size={13} />
                 <span>完成后会自动刷新为可编辑大纲列表。</span>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200/80 bg-slate-950/[0.025] p-4">
-              <div className="mb-3 text-sm font-medium text-slate-700">实时阶段日志</div>
-              <div className="space-y-2">
+            {/* 实时日志 */}
+            <div className="rounded-md bg-white p-4" style={{ border: '2px solid #1a1a1a' }}>
+              <div className="mb-3 text-sm font-black text-gray-900">实时阶段日志</div>
+              <div className="max-h-48 overflow-y-auto space-y-2">
                 {messages.map((message, index) => {
                   const isLatest = index === messages.length - 1;
                   return (
                     <div
                       key={`${message}-${index}`}
                       className={[
-                        'flex items-start gap-2 rounded-xl px-3 py-2 text-sm',
-                        isLatest ? 'bg-banana-50 text-banana-800' : 'bg-white/70 text-slate-500',
+                        'flex items-start gap-2 rounded-md px-3 py-2 text-sm',
+                        isLatest
+                          ? 'bg-[#f5d040] font-bold text-gray-900'
+                          : 'bg-gray-50 text-gray-500',
                       ].join(' ')}
                     >
-                      {isLatest ? <Clock3 size={15} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={15} className="mt-0.5 shrink-0" />}
+                      {isLatest
+                        ? <Clock3 size={14} className="mt-0.5 flex-shrink-0" />
+                        : <CheckCircle2 size={14} className="mt-0.5 flex-shrink-0" />}
                       <span>{message}</span>
                     </div>
                   );
                 })}
+                <div ref={messagesEndRef} />
               </div>
             </div>
           </div>
         </section>
 
-        <section className="app-panel rounded-[28px] border border-white/70 bg-white/90 p-5 md:p-7">
-          <div className="flex items-center justify-between gap-3">
+        {/* 右栏：预览 */}
+        <section className="rounded-lg bg-white p-5 md:p-7" style={{ border: '2px solid #1a1a1a', boxShadow: '4px 4px 0 #1a1a1a' }}>
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Preview</div>
-              <h3 className="mt-1 text-lg font-semibold text-slate-900 md:text-xl">{previewHeading}</h3>
+              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Preview</div>
+              <h3 className="mt-1 text-base font-black text-gray-900 md:text-lg">{previewHeading}</h3>
             </div>
-            <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">
+            <span className="flex-shrink-0 rounded-md border-2 border-gray-900 bg-gray-100 px-3 py-1 text-xs font-bold text-gray-700">
               {hasConfirmedPageCount && actualTotalPages ? `${generatedCards.length}/${actualTotalPages} 已完成` : '页数规划中'}
-            </div>
+            </span>
           </div>
 
-          <div className="mt-5">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="text-sm font-medium text-slate-700">已生成卡片</div>
-              <div className="text-xs text-emerald-600">{generatedCards.length} 张</div>
+          <div className="mt-5 max-h-[520px] overflow-y-auto pr-1 space-y-6">
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <div className="text-sm font-black text-gray-900">已生成卡片</div>
+                <div className="text-xs font-bold text-gray-500">{generatedCards.length} 张</div>
+              </div>
+              {generatedCards.length > 0 ? (
+                <div className="space-y-3">
+                  {generatedCards.map((card, index) => (
+                    <PreviewCardItem
+                      key={card.id || `${card.title}-${index}`}
+                      card={card}
+                      index={index}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-md border-2 border-dashed border-gray-900 bg-gray-50 px-4 py-5 text-sm text-gray-500">
+                  {generatedPlaceholderText}
+                </div>
+              )}
             </div>
-            {generatedCards.length > 0 ? (
+
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <div className="text-sm font-black text-gray-900">{queueSectionTitle}</div>
+                <div className="text-xs font-bold text-gray-500">{queueSectionMeta}</div>
+              </div>
               <div className="space-y-3">
-                {generatedCards.map((card, index) => (
+                {queuedCards.map((card, index) => (
                   <PreviewCardItem
                     key={card.id || `${card.title}-${index}`}
                     card={card}
-                    index={index}
+                    index={generatedCards.length + index}
                   />
                 ))}
               </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-5 text-sm text-slate-500">
-                {generatedPlaceholderText}
-              </div>
-            )}
-          </div>
-
-          <div className="mt-6">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="text-sm font-medium text-slate-700">{queueSectionTitle}</div>
-              <div className="text-xs text-slate-400">{queueSectionMeta}</div>
-            </div>
-            <div className="space-y-3">
-              {queuedCards.map((card, index) => (
-                <PreviewCardItem
-                  key={card.id || `${card.title}-${index}`}
-                  card={card}
-                  index={generatedCards.length + index}
-                />
-              ))}
             </div>
           </div>
         </section>
+
       </div>
     </div>
   );

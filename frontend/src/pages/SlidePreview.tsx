@@ -24,6 +24,7 @@ import {
   BackgroundPickerModal,
   HtmlFileInputs,
   HtmlUrlModal,
+  ImageSlotPickerModal,
   ProjectAuxiliaryModals,
   SlidePreviewFooter,
   SlidePreviewHeader,
@@ -119,6 +120,7 @@ export const SlidePreview: React.FC = () => {
   const [backgroundPickerMode, setBackgroundPickerMode] = useState<'menu' | 'material'>('menu');
   const [backgroundMaterials, setBackgroundMaterials] = useState<Material[]>([]);
   const [isLoadingBackgroundMaterials, setIsLoadingBackgroundMaterials] = useState(false);
+  const [isSlotPickerOpen, setIsSlotPickerOpen] = useState(false);
   const [imageVersions, setImageVersions] = useState<ImageVersion[]>([]);
   const [showVersionMenu, setShowVersionMenu] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
@@ -1638,18 +1640,45 @@ export const SlidePreview: React.FC = () => {
     show({ message: '背景图已清除', type: 'success' });
   }, [show]);
 
-  // 处理图片上传触发（支持指定页面）
+  // 处理图片上传触发（支持指定页面）- 现在先弹出选择器
   const triggerImageUpload = useCallback((slotPath: string, pageIdOverride?: string) => {
     if (!currentProject) return;
     const pageId = pageIdOverride || currentProject.pages[selectedIndex]?.id;
     if (!pageId) return;
 
     setUploadTarget({ pageId, slotPath });
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''; // 清空以前的选择
-      fileInputRef.current.click();
-    }
+    setIsSlotPickerOpen(true);
   }, [currentProject, selectedIndex]);
+
+  const handleSelectMaterialForSlot = useCallback(async (material: Material) => {
+    if (!uploadTarget || !currentProject?.id) return;
+    setIsSlotPickerOpen(false);
+    try {
+      const file = await materialUrlToFile(material);
+      const base64 = await fileToBase64(file);
+
+      setHtmlPageImages(prev => {
+        const newImages = { ...prev };
+        if (!newImages[uploadTarget.pageId]) newImages[uploadTarget.pageId] = {};
+        newImages[uploadTarget.pageId][uploadTarget.slotPath] = base64;
+        return newImages;
+      });
+
+      try {
+        const response = await saveHtmlImage(currentProject.id, uploadTarget.pageId, uploadTarget.slotPath, base64);
+        if (response.data) await syncProject(currentProject.id);
+        show({ message: '素材已应用', type: 'success' });
+      } catch (saveError) {
+        console.error('保存图片失败:', saveError);
+        show({ message: '图片已应用但保存失败，请重试', type: 'warning' });
+      }
+    } catch (error) {
+      console.error('应用素材失败:', error);
+      show({ message: '应用素材失败', type: 'error' });
+    } finally {
+      setUploadTarget(null);
+    }
+  }, [uploadTarget, currentProject, show]);
 
   // 处理文件选择
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2323,7 +2352,7 @@ export const SlidePreview: React.FC = () => {
   );
 
   return (
-    <div className="app-shell h-screen flex flex-col overflow-hidden">
+    <div className="h-screen flex flex-col overflow-hidden" style={{ background: '#ede4d0' }}>
       <SlidePreviewHeader
         projectId={projectId}
         pages={currentProject.pages}
@@ -2715,6 +2744,20 @@ export const SlidePreview: React.FC = () => {
           await loadBackgroundMaterials();
         }}
         onSelectMaterial={handleSelectBackgroundMaterial}
+      />
+
+      <ImageSlotPickerModal
+        isOpen={isSlotPickerOpen}
+        projectId={projectId}
+        onClose={() => { setIsSlotPickerOpen(false); setUploadTarget(null); }}
+        onPickLocal={() => {
+          setIsSlotPickerOpen(false);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+            fileInputRef.current.click();
+          }
+        }}
+        onSelectMaterial={handleSelectMaterialForSlot}
       />
 
       <ToastContainer />

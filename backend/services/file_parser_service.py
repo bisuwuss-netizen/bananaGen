@@ -2,13 +2,38 @@
 
 from __future__ import annotations
 
+import base64
+import concurrent.futures as _futures
 import logging
+import re
 from pathlib import Path
 from typing import Optional
 
 from markitdown import MarkItDown
 
 logger = logging.getLogger(__name__)
+
+_BASE64_IMG_RE = re.compile(r'!\[([^\]]*)\]\(data:image/(\w+);base64,([^)]+)\)')
+
+
+def _localize_images(markdown: str, file_path: str) -> str:
+    """Replace base64-inlined images with local /files/ paths."""
+    file_stem = Path(file_path).stem
+    img_dir = Path(file_path).parent / file_stem
+
+    def replace(m: re.Match) -> str:
+        alt, ext, b64_data = m.group(1), m.group(2), m.group(3)
+        try:
+            img_bytes = base64.b64decode(b64_data)
+            img_dir.mkdir(parents=True, exist_ok=True)
+            idx = len(list(img_dir.glob("img_*")))
+            img_file = img_dir / f"img_{idx}.{ext}"
+            img_file.write_bytes(img_bytes)
+            return f"![{alt}](/files/reference_files/{file_stem}/img_{idx}.{ext})"
+        except Exception:
+            return m.group(0)
+
+    return _BASE64_IMG_RE.sub(replace, markdown)
 
 
 class FileParserService:
@@ -69,10 +94,16 @@ class FileParserService:
 
         # Other formats: rely on MarkItDown local conversion.
         try:
-            result = self._converter.convert(str(path))
+            with _futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(self._converter.convert, str(path))
+                try:
+                    result = future.result(timeout=120)
+                except _futures.TimeoutError:
+                    return None, None, None, "解析超时，文件可能过大或格式复杂", 0
             markdown = (result.text_content or "").strip()
             if not markdown:
                 return None, None, None, "Parsed content is empty", 0
+            markdown = _localize_images(markdown, file_path)
             return None, markdown, None, None, 0
         except Exception as exc:
             logger.error("Failed to parse file via MarkItDown: %s", exc, exc_info=True)

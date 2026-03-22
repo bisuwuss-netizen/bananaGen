@@ -5,6 +5,9 @@ import { visualTheme } from './visual';
 import { practicalTheme } from './practical';
 import { modernTheme } from './modern';
 import { eduDarkTheme } from './edu-dark';
+import { minimalCleanTheme } from './minimal-clean';
+import { warmEduTheme } from './warm-edu';
+import { businessProTheme } from './business-pro';
 import type { ThemeConfig } from '../types/schema';
 
 export const themeMap: Record<string, ThemeConfig> = {
@@ -15,6 +18,9 @@ export const themeMap: Record<string, ThemeConfig> = {
   practical: practicalTheme,
   modern: modernTheme,
   edu_dark: eduDarkTheme,
+  minimal_clean: minimalCleanTheme,
+  warm_edu: warmEduTheme,
+  business_pro: businessProTheme,
 };
 
 export const getThemeByScheme = (schemeId?: string): ThemeConfig => {
@@ -30,4 +36,7 @@ export {
   practicalTheme,
   modernTheme,
   eduDarkTheme,
+  minimalCleanTheme,
+  warmEduTheme,
+  businessProTheme,
 };

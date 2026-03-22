@@ -919,13 +919,19 @@ def _guard_title_bullets_model(model: Dict[str, Any], page_title: str) -> Dict[s
                 bullet.get("description"),
                 f"说明{text}的作用、适用场景与注意事项",
             )
-            normalized.append(
-                {
-                    "icon": _clean_short(bullet.get("icon")) or "fa-lightbulb",
-                    "text": text,
-                    "description": description,
-                }
-            )
+            item: Dict[str, Any] = {
+                "icon": _clean_short(bullet.get("icon")) or "fa-lightbulb",
+                "text": text,
+                "description": description,
+            }
+            # 保留富信息字段，让前端 TitleBulletsLayout 渲染完整卡片
+            if bullet.get("example"):
+                item["example"] = str(bullet["example"])
+            if bullet.get("note"):
+                item["note"] = str(bullet["note"])
+            if isinstance(bullet.get("dataPoint"), dict):
+                item["dataPoint"] = bullet["dataPoint"]
+            normalized.append(item)
         else:
             text = _clean_short(bullet)
             if not text:
@@ -954,6 +960,8 @@ def _guard_title_bullets_model(model: Dict[str, Any], page_title: str) -> Dict[s
         )
 
     model["bullets"] = normalized[:6]
+    if model.get("keyTakeaway"):
+        model["keyTakeaway"] = str(model["keyTakeaway"])
     return model
 
 

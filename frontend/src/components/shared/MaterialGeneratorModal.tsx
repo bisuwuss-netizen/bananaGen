@@ -11,12 +11,14 @@ interface MaterialGeneratorModalProps {
   projectId?: string | null;
   isOpen: boolean;
   onClose: () => void;
+  onSelectMaterial?: (material: Material) => void;
 }
 
 export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
   projectId,
   isOpen,
   onClose,
+  onSelectMaterial,
 }) => {
   const { show } = useToast();
   const [prompt, setPrompt] = useState('');
@@ -264,10 +266,10 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
                       key={tpl}
                       type="button"
                       onClick={() => setPrompt(tpl)}
-                      className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                      className={`rounded-md border-2 border-gray-900 px-2.5 py-1 text-[11px] font-medium transition-colors ${
                         prompt === tpl
-                          ? 'border-banana-400 bg-banana-50 text-banana-600'
-                          : 'border-gray-200 text-gray-600 hover:border-banana-400 hover:bg-banana-50 hover:text-banana-600'
+                          ? 'bg-[#f5d040] text-gray-900'
+                          : 'bg-white text-gray-700 hover:bg-gray-50'
                       }`}
                     >
                       {tpl}
@@ -279,7 +281,7 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
           </div>
 
           {/* 参考图上传 */}
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <div className="rounded-md p-3" style={{ border: '2px solid #1a1a1a', background: '#f9f6f0' }}>
             <div className="mb-2 flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
                 <ImagePlus size={13} />
@@ -296,7 +298,7 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
             </div>
             <div className="flex flex-wrap gap-2">
               {/* 主参考图 */}
-              <label className="relative flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded border-2 border-dashed border-gray-300 bg-white transition-colors hover:border-banana-500 group">
+              <label className="relative flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed border-gray-900 bg-white transition-colors hover:bg-gray-50 group">
                 {refImage ? (
                   <>
                     <img src={refImageUrl!} alt="主参考图" className="h-full w-full rounded object-cover" />
@@ -348,9 +350,20 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
                 <Skeleton className="h-full w-full" />
               </div>
             ) : previewUrl ? (
-              <div className="aspect-video overflow-hidden rounded-lg border border-gray-200 bg-white flex items-center justify-center">
-                <img src={previewUrl} alt="生成的素材" className="h-full w-full object-contain" />
-              </div>
+              <>
+                <div className="aspect-video overflow-hidden rounded-lg border border-gray-200 bg-white flex items-center justify-center">
+                  <img src={previewUrl} alt="生成的素材" className="h-full w-full object-contain" />
+                </div>
+                {onSelectMaterial && materials.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onSelectMaterial(materials[0])}
+                    className="mt-2 w-full rounded-md bg-banana-500 py-1.5 text-sm font-medium text-white hover:bg-banana-600 transition-colors"
+                  >
+                    使用此素材
+                  </button>
+                )}
+              </>
             ) : (
               <div className="aspect-video rounded-lg bg-gray-100 flex flex-col items-center justify-center text-gray-400 text-sm">
                 <div className="mb-2 text-3xl">🎨</div>
@@ -377,38 +390,45 @@ export const MaterialGeneratorModal: React.FC<MaterialGeneratorModalProps> = ({
             ) : materials.length === 0 ? (
               <div className="py-6 text-center text-sm text-gray-400">暂无素材</div>
             ) : (
-              <div className="grid grid-cols-4 gap-2">
-                {materials.map((material) => (
-                  <button
-                    key={material.id}
-                    type="button"
-                    onClick={() => setPreviewMaterial(material)}
-                    className="group relative aspect-video overflow-hidden rounded border border-gray-200 text-left"
-                  >
-                    {failedImageUrls.has(material.url) ? (
-                      <div className="flex h-full w-full items-center justify-center bg-gray-100 p-2 text-center text-[10px] text-gray-400">
-                        加载失败
-                      </div>
-                    ) : (
-                      <img
-                        src={getImageUrl(material.url)}
-                        alt={material.filename}
-                        className="h-full w-full object-cover"
-                        onError={() => setFailedImageUrls((prev) => new Set(prev).add(material.url))}
-                      />
-                    )}
+              <>
+                <div className="grid grid-cols-4 gap-2">
+                  {materials.map((material) => (
                     <button
+                      key={material.id}
                       type="button"
-                      onClick={(e) => { e.stopPropagation(); handleDeleteMaterial(material.id); }}
-                      disabled={deletingIds.has(material.id)}
-                      className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow transition-opacity group-hover:opacity-100 disabled:opacity-60"
-                      aria-label="删除素材"
+                      onClick={() => onSelectMaterial ? onSelectMaterial(material) : setPreviewMaterial(material)}
+                      className={`group relative aspect-video overflow-hidden rounded border text-left transition-all ${onSelectMaterial ? 'border-gray-200 hover:border-banana-400 hover:ring-2 hover:ring-banana-200' : 'border-gray-200'}`}
                     >
-                      <X size={10} />
+                      {failedImageUrls.has(material.url) ? (
+                        <div className="flex h-full w-full items-center justify-center bg-gray-100 p-2 text-center text-[10px] text-gray-400">
+                          加载失败
+                        </div>
+                      ) : (
+                        <img
+                          src={getImageUrl(material.url)}
+                          alt={material.filename}
+                          className="h-full w-full object-cover"
+                          onError={() => setFailedImageUrls((prev) => new Set(prev).add(material.url))}
+                        />
+                      )}
+                      {!onSelectMaterial && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteMaterial(material.id); }}
+                          disabled={deletingIds.has(material.id)}
+                          className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow transition-opacity group-hover:opacity-100 disabled:opacity-60"
+                          aria-label="删除素材"
+                        >
+                          <X size={10} />
+                        </button>
+                      )}
                     </button>
-                  </button>
-                ))}
-              </div>
+                  ))}
+                </div>
+                {onSelectMaterial && (
+                  <div className="mt-2 text-center text-[11px] text-gray-400">点击选择</div>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -1,4 +1,5 @@
 export { BackgroundPickerModal } from './BackgroundPickerModal';
+export { ImageSlotPickerModal } from './ImageSlotPickerModal';
 export { HtmlFileInputs } from './HtmlFileInputs';
 export { HtmlUrlModal } from './HtmlUrlModal';
 export { ProjectAuxiliaryModals } from './ProjectAuxiliaryModals';

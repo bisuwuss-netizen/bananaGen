@@ -16,16 +16,23 @@ export const Button: React.FC<ButtonProps> = ({
   icon,
   className,
   disabled,
+  style,
   ...props
 }) => {
-  const baseStyles = 'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-banana-500/60 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation';
-  
+  const baseStyles = 'inline-flex items-center justify-center font-bold rounded-md transition-all duration-150 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation border-2 border-gray-900';
+
   const variants = {
-    primary: 'bg-banana-500 bg-gradient-to-br from-banana-500 to-banana-600 text-white hover:shadow-yellow hover:-translate-y-0.5 active:translate-y-0 shadow-md border border-banana-500/20',
-    secondary: 'bg-white/90 border border-slate-300 text-slate-700 hover:bg-banana-50 hover:border-banana-300',
-    ghost: 'bg-transparent text-slate-700 hover:bg-slate-100/80',
+    primary: 'bg-[#f5d040] text-gray-900 hover:bg-[#f0c830]',
+    secondary: 'bg-white text-gray-900 hover:bg-gray-50',
+    ghost: 'bg-transparent border-transparent text-gray-700 hover:bg-gray-100',
   };
-  
+
+  const shadows = {
+    primary: '2px 2px 0 #1a1a1a',
+    secondary: '2px 2px 0 #1a1a1a',
+    ghost: 'none',
+  };
+
   const sizes = {
     sm: 'h-9 px-3.5 text-sm',
     md: 'h-10 px-6 text-[15px]',
@@ -34,13 +41,9 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <button
-      className={cn(
-        baseStyles,
-        variants[variant],
-        sizes[size],
-        className
-      )}
+      className={cn(baseStyles, variants[variant], sizes[size], className)}
       disabled={disabled || loading}
+      style={{ boxShadow: (disabled || loading) ? 'none' : shadows[variant], ...style }}
       {...props}
     >
       {loading && (
@@ -50,14 +53,7 @@ export const Button: React.FC<ButtonProps> = ({
           fill="none"
           viewBox="0 0 24 24"
         >
-          <circle
-            className="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="4"
-          />
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path
             className="opacity-75"
             fill="currentColor"
@@ -65,9 +61,7 @@ export const Button: React.FC<ButtonProps> = ({
           />
         </svg>
       )}
-      {!loading && icon && (
-        <span className={children ? 'mr-2' : ''}>{icon}</span>
-      )}
+      {!loading && icon && <span className={children ? 'mr-2' : ''}>{icon}</span>}
       {children}
     </button>
   );

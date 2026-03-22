@@ -29,8 +29,8 @@ export function SlideThumbnailRail({
   children,
 }: Props) {
   return (
-    <aside className="w-full md:w-80 bg-white border-b md:border-b-0 md:border-r border-gray-200 flex flex-col flex-shrink-0">
-      <div className="p-3 md:p-4 border-b border-gray-200 flex-shrink-0 space-y-2 md:space-y-3">
+    <aside className="w-full md:w-80 flex flex-col flex-shrink-0" style={{ background: '#ede4d0', borderRight: '2px solid #1a1a1a', borderBottom: '2px solid #1a1a1a' }}>
+      <div className="p-3 md:p-4 flex-shrink-0 space-y-2 md:space-y-3" style={{ borderBottom: '2px solid #1a1a1a' }}>
         <Button
           variant="primary"
           icon={isGeneratingHtmlImages ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} className="md:w-[18px] md:h-[18px]" />}

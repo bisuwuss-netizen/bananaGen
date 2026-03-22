@@ -28,29 +28,28 @@ export const GenerationProgress: React.FC<GenerationProgressProps> = ({
     }}>
       {/* Spinner */}
       <div style={{ marginBottom: 28, position: 'relative' }}>
-        <Loader2 size={48} className="animate-spin" style={{ color: '#06b6d4' }} />
+        <Loader2 size={48} className="animate-spin" style={{ color: '#f5d040' }} />
       </div>
 
       {/* Title */}
-      <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, letterSpacing: 1 }}>
+      <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 8, letterSpacing: 1 }}>
         {label}
       </div>
 
       {/* Counter */}
-      <div style={{ fontSize: 40, fontWeight: 900, color: '#06b6d4', marginBottom: 6, fontVariantNumeric: 'tabular-nums' }}>
-        {completed}<span style={{ color: '#475569', fontSize: 24 }}>/{total}</span>
+      <div style={{ fontSize: 40, fontWeight: 900, color: '#f5d040', marginBottom: 6, fontVariantNumeric: 'tabular-nums' }}>
+        {completed}<span style={{ color: '#94a3b8', fontSize: 24 }}>/{total}</span>
       </div>
 
       {/* Progress bar */}
       <div style={{
-        width: 320, height: 6, borderRadius: 3, background: '#1e293b',
+        width: 320, height: 8, borderRadius: 2, background: '#334155',
         overflow: 'hidden', marginBottom: 20,
+        border: '2px solid #f5d040',
       }}>
         <div style={{
-          height: '100%', borderRadius: 3,
-          background: isComplete
-            ? 'linear-gradient(90deg, #10b981, #34d399)'
-            : 'linear-gradient(90deg, #06b6d4, #3b82f6)',
+          height: '100%',
+          background: isComplete ? '#4ade80' : '#f5d040',
           width: `${percent}%`,
           transition: 'width 0.5s ease-out',
         }} />
@@ -74,7 +73,7 @@ export const GenerationProgress: React.FC<GenerationProgressProps> = ({
       )}
 
       {isComplete && (
-        <div style={{ fontSize: 14, color: '#6ee7b7' }}>
+        <div style={{ fontSize: 14, color: '#4ade80', fontWeight: 700 }}>
           全部完成，正在加载预览...
         </div>
       )}

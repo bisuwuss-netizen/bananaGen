@@ -15,11 +15,13 @@ interface SectionTitleLayoutProps {
 }
 
 export const SectionTitleLayout: React.FC<SectionTitleLayoutProps> = ({ model, theme }) => {
-  const { section_number, title, subtitle, background_image } = model;
+  const { section_number, title, subtitle, description, background_image } = model;
 
   const slideStyle: React.CSSProperties = {
     ...getBaseSlideStyle(theme),
     padding: '0',
+    position: 'relative',
+    overflow: 'hidden',
     backgroundColor: theme.colors.backgroundAlt,
     ...(background_image
       ? {
@@ -31,41 +33,44 @@ export const SectionTitleLayout: React.FC<SectionTitleLayoutProps> = ({ model, t
       : {}),
   };
 
-  const contentStyle = toInlineStyle({
-    position: 'absolute',
-    top: '50%',
-    left: '0',
-    transform: 'translateY(-50%)',
-    width: '100%',
-    display: 'flex',
-    alignItems: 'center',
-  });
-
-  const leftBarStyle = toInlineStyle({
-    width: '12px',
-    height: '200px',
-    backgroundColor: theme.colors.secondary,
-    marginRight: '60px',
-  });
-
-  const textContainerStyle = toInlineStyle({
-    flex: '1',
-    paddingRight: '80px',
-  });
-
-  const numberStyle = toInlineStyle({
-    fontSize: '120px',
+  const numberBgStyle: React.CSSProperties = {
+    fontSize: '200px',
     fontWeight: 'bold',
     color: theme.colors.secondary,
-    opacity: '0.2',
+    opacity: 0.08,
     position: 'absolute',
-    right: '80px',
-    top: '50%',
-    transform: 'translateY(-50%)',
+    right: '-20px',
+    bottom: '-30px',
     fontFamily: theme.fonts.title,
-  });
+    lineHeight: '1',
+    userSelect: 'none',
+    pointerEvents: 'none',
+  };
 
-  const sectionLabelStyle = toInlineStyle({
+  const contentStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: '0',
+    left: '0',
+    right: '0',
+    bottom: '0',
+    display: 'flex',
+    alignItems: 'center',
+  };
+
+  const leftBarStyle: React.CSSProperties = {
+    width: '12px',
+    alignSelf: 'stretch',
+    backgroundColor: theme.colors.secondary,
+    marginRight: '60px',
+    flexShrink: 0,
+  };
+
+  const textContainerStyle: React.CSSProperties = {
+    flex: 1,
+    paddingRight: '200px',
+  };
+
+  const sectionLabelStyle: React.CSSProperties = {
     fontSize: '18px',
     color: theme.colors.accent,
     textTransform: 'uppercase',
@@ -73,45 +78,52 @@ export const SectionTitleLayout: React.FC<SectionTitleLayoutProps> = ({ model, t
     margin: '0',
     marginBottom: '16px',
     fontWeight: '600',
-  });
+  };
 
-  const titleStyle = toInlineStyle({
+  const titleStyle: React.CSSProperties = {
     fontSize: '48px',
     fontWeight: 'bold',
     color: theme.colors.primary,
     margin: '0',
     lineHeight: '1.2',
-  });
+  };
 
-  const subtitleStyle = toInlineStyle({
+  const subtitleStyle: React.CSSProperties = {
     fontSize: '22px',
     color: theme.colors.textLight,
     margin: '0',
     marginTop: '16px',
     lineHeight: '1.4',
-  });
+  };
+
+  const descriptionStyle: React.CSSProperties = {
+    fontSize: '16px',
+    color: theme.colors.textLight,
+    margin: '0',
+    marginTop: '20px',
+    lineHeight: '1.6',
+    maxWidth: '600px',
+    opacity: 0.85,
+  };
 
   return (
     <section style={slideStyle}>
-      <div style={parseStyle(contentStyle)}>
-        <div style={parseStyle(leftBarStyle)} />
-        <div style={parseStyle(textContainerStyle)}>
-          <p style={parseStyle(sectionLabelStyle)}>
-            第 {section_number} 部分
-          </p>
-          <h1 style={parseStyle(titleStyle)}>{title}</h1>
-          {subtitle && <p style={parseStyle(subtitleStyle)}>{subtitle}</p>}
+      <span style={numberBgStyle}>{String(section_number).padStart(2, '0')}</span>
+      <div style={contentStyle}>
+        <div style={leftBarStyle} />
+        <div style={textContainerStyle}>
+          <p style={sectionLabelStyle}>第 {section_number} 部分</p>
+          <h1 style={titleStyle}>{title}</h1>
+          {subtitle && <p style={subtitleStyle}>{subtitle}</p>}
+          {description && <p style={descriptionStyle}>{description}</p>}
         </div>
-        <span style={parseStyle(numberStyle)}>
-          {String(section_number).padStart(2, '0')}
-        </span>
       </div>
     </section>
   );
 };
 
 export function renderSectionTitleLayoutHTML(model: SectionTitleModel, theme: ThemeConfig): string {
-  const { section_number, title, subtitle, background_image } = model;
+  const { section_number, title, subtitle, description, background_image } = model;
 
   const slideStyle = toInlineStyle({
     width: `${theme.sizes.slideWidth}px`,
@@ -129,38 +141,41 @@ export function renderSectionTitleLayoutHTML(model: SectionTitleModel, theme: Th
       : {}),
   });
 
+  const numberBgStyle = toInlineStyle({
+    fontSize: '200px',
+    fontWeight: 'bold',
+    color: theme.colors.secondary,
+    opacity: '0.08',
+    position: 'absolute',
+    right: '-20px',
+    bottom: '-30px',
+    fontFamily: theme.fonts.title,
+    lineHeight: '1',
+    userSelect: 'none',
+    pointerEvents: 'none',
+  });
+
   const contentStyle = toInlineStyle({
     position: 'absolute',
-    top: '50%',
+    top: '0',
     left: '0',
-    transform: 'translateY(-50%)',
-    width: '100%',
+    right: '0',
+    bottom: '0',
     display: 'flex',
     alignItems: 'center',
   });
 
   const leftBarStyle = toInlineStyle({
     width: '12px',
-    height: '200px',
+    alignSelf: 'stretch',
     backgroundColor: theme.colors.secondary,
     marginRight: '60px',
+    flexShrink: '0',
   });
 
   const textContainerStyle = toInlineStyle({
     flex: '1',
-    paddingRight: '80px',
-  });
-
-  const numberStyle = toInlineStyle({
-    fontSize: '120px',
-    fontWeight: 'bold',
-    color: theme.colors.secondary,
-    opacity: '0.2',
-    position: 'absolute',
-    right: '80px',
-    top: '50%',
-    transform: 'translateY(-50%)',
-    fontFamily: theme.fonts.title,
+    paddingRight: '200px',
   });
 
   const sectionLabelStyle = toInlineStyle({
@@ -189,15 +204,26 @@ export function renderSectionTitleLayoutHTML(model: SectionTitleModel, theme: Th
     lineHeight: '1.4',
   });
 
+  const descriptionStyle = toInlineStyle({
+    fontSize: '16px',
+    color: theme.colors.textLight,
+    margin: '0',
+    marginTop: '20px',
+    lineHeight: '1.6',
+    maxWidth: '600px',
+    opacity: '0.85',
+  });
+
   return `<section style="${slideStyle}">
+  <span style="${numberBgStyle}">${String(section_number).padStart(2, '0')}</span>
   <div style="${contentStyle}">
     <div style="${leftBarStyle}"></div>
     <div style="${textContainerStyle}">
       <p style="${sectionLabelStyle}">第 ${section_number} 部分</p>
       <h1 style="${titleStyle}">${title}</h1>
       ${subtitle ? `<p style="${subtitleStyle}">${subtitle}</p>` : ''}
+      ${description ? `<p style="${descriptionStyle}">${description}</p>` : ''}
     </div>
-    <span style="${numberStyle}">${String(section_number).padStart(2, '0')}</span>
   </div>
 </section>`;
 }
