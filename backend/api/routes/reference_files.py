@@ -1,10 +1,10 @@
 """Reference file routes. Migrated from reference_file_controller.py."""
+import asyncio
 import os
 import re
 import time
 import uuid
 import logging
-import threading
 from pathlib import Path
 from typing import Optional
 from datetime import datetime
@@ -15,13 +15,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from werkzeug.utils import secure_filename
 
-from deps import CurrentUser, get_db, get_project_for_user, require_current_user
+from deps import CurrentUser, get_db, get_project_for_user, require_current_user, async_session_factory
 from models.project import Project
 from models.reference_file import ReferenceFile
 from schemas.common import SuccessResponse
 from config_fastapi import settings as app_settings
 from config import Config
-from services.runtime_state import runtime_context
+from services.runtime_state import load_runtime_config
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/reference-files", tags=["reference-files"])
@@ -39,37 +39,43 @@ def _get_file_type(filename: str) -> str:
     return "unknown"
 
 
-def _parse_file_async(file_id: str, file_path: str, filename: str):
-    """Parse file in background thread using runtime config and sync ORM."""
-    with runtime_context() as config:
-        from models import db, ReferenceFile as RF
-        from services.file_parser_service import FileParserService
+async def _parse_file_async(file_id: str, file_path: str, filename: str):
+    """Parse file in background using async ORM and thread-pooled file parsing."""
+    from services.file_parser_service import FileParserService
 
-        try:
-            ref = RF.query.get(file_id)
+    # Load runtime config (may query DB synchronously for settings overrides)
+    config = await asyncio.to_thread(load_runtime_config)
+
+    try:
+        async with async_session_factory() as session:
+            ref = await session.get(ReferenceFile, file_id)
             if not ref:
                 return
             ref.parse_status = "parsing"
-            db.session.commit()
+            await session.commit()
 
-            parser = FileParserService(
-                openai_api_key=config.get("OPENAI_API_KEY", ""),
-                openai_api_base=config.get("OPENAI_API_BASE", ""),
-                image_caption_model=config["IMAGE_CAPTION_MODEL"],
-                provider_format="openai",
+        parser_svc = FileParserService(
+            openai_api_key=config.get("OPENAI_API_KEY", ""),
+            openai_api_base=config.get("OPENAI_API_BASE", ""),
+            image_caption_model=config["IMAGE_CAPTION_MODEL"],
+            provider_format="openai",
+        )
+
+        batch_id = markdown_content = extract_id = error_message = None
+        failed_count = 0
+        for attempt in range(3):
+            batch_id, markdown_content, extract_id, error_message, failed_count = (
+                await asyncio.to_thread(parser_svc.parse_file, file_path, filename)
             )
+            if not error_message:
+                break
+            if attempt < 2:
+                await asyncio.sleep(2 ** attempt)
 
-            batch_id = markdown_content = extract_id = error_message = None
-            failed_count = 0
-            for attempt in range(3):
-                batch_id, markdown_content, extract_id, error_message, failed_count = parser.parse_file(
-                    file_path, filename
-                )
-                if not error_message:
-                    break
-                if attempt < 2:
-                    time.sleep(2 ** attempt)
-
+        async with async_session_factory() as session:
+            ref = await session.get(ReferenceFile, file_id)
+            if not ref:
+                return
             ref.mineru_batch_id = batch_id
             if error_message:
                 ref.parse_status = "failed"
@@ -79,17 +85,18 @@ def _parse_file_async(file_id: str, file_path: str, filename: str):
                 ref.markdown_content = markdown_content
 
             ref.updated_at = datetime.utcnow()
-            db.session.commit()
-        except Exception as e:
-            logger.error(f"Async file parsing error: {e}", exc_info=True)
-            try:
-                ref = RF.query.get(file_id)
+            await session.commit()
+    except Exception as e:
+        logger.error(f"Async file parsing error: {e}", exc_info=True)
+        try:
+            async with async_session_factory() as session:
+                ref = await session.get(ReferenceFile, file_id)
                 if ref:
                     ref.parse_status = "failed"
                     ref.error_message = str(e)
-                    db.session.commit()
-            except Exception:
-                pass
+                    await session.commit()
+        except Exception:
+            pass
 
 
 @router.post("/upload", response_model=SuccessResponse)
@@ -240,12 +247,7 @@ async def trigger_file_parse(
     if not file_path.exists():
         raise HTTPException(404, f"File not found on disk")
 
-    thread = threading.Thread(
-        target=_parse_file_async,
-        args=(ref.id, str(file_path), ref.filename),
-        daemon=True,
-    )
-    thread.start()
+    asyncio.create_task(_parse_file_async(ref.id, str(file_path), ref.filename))
 
     return SuccessResponse(data={"file": ref.to_dict(), "message": "Parsing started"})
 
