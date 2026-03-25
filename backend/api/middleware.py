@@ -12,6 +12,9 @@ from config_fastapi import settings
 from deps import async_session_factory, get_optional_current_user, is_auth_enabled
 from models.project import Project
 
+# Rate limiting imports
+from services.rate_limiter import rate_limiter, rate_limit_whitelist
+
 logger = logging.getLogger(__name__)
 
 _PROJECT_FILE_BUCKETS = {"exports", "pages", "template", "materials"}
@@ -88,6 +91,57 @@ def setup_middleware(app: FastAPI) -> None:
             )
 
         return await call_next(request)
+
+    # ── Rate Limiting Middleware ────────────────────────────────
+    @app.middleware("http")
+    async def rate_limit_middleware(request: Request, call_next):
+        """
+        全局限流中间件
+        
+        根据路径自动应用不同限流策略：
+        - AI生成接口：更严格
+        - 普通API：标准限制
+        - 监控/健康检查：较宽松
+        """
+        # 跳过静态文件和特定路径
+        path = request.url.path
+        skip_paths = {
+            "/", "/docs", "/openapi.json", "/health",
+            "/favicon.ico", "/robots.txt"
+        }
+        if path in skip_paths or path.startswith("/static"):
+            return await call_next(request)
+        
+        # 检查白名单
+        if await rate_limit_whitelist.is_whitelisted(request):
+            return await call_next(request)
+        
+        # 检查限流
+        result = await rate_limiter.check_request(request)
+        
+        if not result.allowed:
+            logger.warning(f"Rate limit exceeded for {path} by {rate_limiter._get_client_key(request)}")
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "status": "error",
+                    "error": {
+                        "message": f"Rate limit exceeded. Please try again after {int(result.retry_after)} seconds.",
+                        "code": 429,
+                        "retry_after": int(result.retry_after)
+                    }
+                },
+                headers=result.to_headers()
+            )
+        
+        # 继续处理请求
+        response = await call_next(request)
+        
+        # 添加限流响应头
+        if hasattr(response, 'headers'):
+            response.headers.update(result.to_headers())
+        
+        return response
 
     # ── Global Exception Handler ────────────────────────────────
     @app.exception_handler(Exception)

@@ -116,6 +116,7 @@ from api.routes.smart_ppt_log import router as smart_ppt_log_router
 from api.routes.auth import router as auth_router
 from api.routes.knowledge_base import router as knowledge_base_router
 from features.home_characters.router import router as home_characters_router
+from api.routes.monitoring import router as monitoring_router
 
 app.include_router(auth_router)
 app.include_router(projects_router)
@@ -136,6 +137,7 @@ app.include_router(html_images_router)
 app.include_router(smart_ppt_log_router)
 app.include_router(home_characters_router)
 app.include_router(knowledge_base_router)
+app.include_router(monitoring_router)
 
 
 # ── Static Files (uploads) ──────────────────────────────────────
